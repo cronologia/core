@@ -8,8 +8,11 @@ in a project repo.
 ```
 template/   Skeleton for a new chronology project: zero-dependency compiler,
             schema validator, node:test suite, corrected deploy workflow
-            (main-gated + manual dispatch), base stylesheet with accent tokens,
-            AGENTS.md skeleton, example data.
+            (main-gated + manual dispatch), Wayback preservation pipeline
+            (scripts/archive-refs.js + weekly wayback.yml workflow that
+            snapshots every reference URL and commits data/archives.json),
+            base stylesheet with accent tokens, AGENTS.md skeleton,
+            example data.
 tools/      new-project.sh     instantiate the template with a project accent
             yt-transcript.sh   YouTube captions -> clean transcript (the
                                incantation that works from sandboxes)
@@ -39,9 +42,18 @@ The template is the canonical copy of the shared files. When it changes,
 propagate deliberately (a PR per project) — projects may carry per-subject
 extensions (fsspx's genealogy renderer, tl's map) on top of the shared base.
 
-Still to port here from `cronologia/fsp`: the Wayback archiving pipeline
-(`archive-refs.js`, document vault, CI harvesting) — tracked in the issues.
-The *why* of this architecture lives in fsp's ADRs (`fsp/docs/adrs/`).
+The Wayback pipeline is ported: `template/scripts/archive-refs.js` looks up
+an existing Internet Archive snapshot for every `references[].url`, triggers
+polite Save Page Now captures for URLs without one (>=10s between saves,
+capped per run via `ARCHIVE_MAX_SAVES`, 429/403 treated as retry-later), and
+writes `data/archives.json`, which `build.js` renders as "archived" fallback
+links. `template/.github/workflows/wayback.yml` runs it weekly on GitHub
+runners (per fsp ADR-0006: when a sandbox blocks archive.org, run in CI —
+never route around egress policy) and commits the result.
+
+Still to port from `cronologia/fsp`: the document vault and CI harvesting —
+tracked in the issues. The *why* of this architecture lives in fsp's ADRs
+(`fsp/docs/adrs/`).
 
 ## License
 

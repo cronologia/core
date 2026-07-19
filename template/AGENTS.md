@@ -15,11 +15,14 @@ compiles it into static HTML served by GitHub Pages.
 
 ```
 data/chronology.json     SOURCE OF TRUTH — facts, events, figures, organizations, references (hand-edited)
+data/archives.json       MACHINE-GENERATED Wayback snapshot cache (written by scripts/archive-refs.js; committed)
 src/styles.css           Stylesheet (copied into the build)
 scripts/validate-data.js Schema check (runs in CI before the build)
-build.js                 Compiler: data/chronology.json -> docs/
+scripts/archive-refs.js  Wayback preservation: snapshot lookup + Save Page Now for references[] -> data/archives.json
+build.js                 Compiler: data/chronology.json (+ data/archives.json fallback links) -> docs/
 test/                    node:test suites (helpers + data invariants + drift check)
 .github/workflows/deploy.yml  CI: validate, test, build, drift check, Pages deploy (main + manual dispatch)
+.github/workflows/wayback.yml CI: weekly archive-refs run; commits data/archives.json + rebuilt docs/
 docs/                    COMPILED OUTPUT, served by GitHub Pages (committed)
 ```
 
