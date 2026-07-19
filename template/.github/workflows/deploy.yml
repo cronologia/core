@@ -1,0 +1,75 @@
+name: Build & deploy
+
+# Validates the data, rebuilds the site, checks that committed docs/ is in sync,
+# and (on the default branch) deploys docs/ to GitHub Pages.
+#
+# The `build` job (validate + test + build + drift check) always runs and gates
+# every push/PR. The `deploy` job is opt-in: it only runs once GitHub Pages is
+# enabled AND the repo variable ENABLE_PAGES is set to "true". This keeps the
+# default branch green until Pages is turned on, instead of failing on a 404
+# from actions/deploy-pages.
+#
+# To go live:
+#   1. Settings → Pages → Build and deployment → Source: GitHub Actions
+#   2. Settings → Secrets and variables → Actions → Variables → ENABLE_PAGES = true
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate data
+        run: node scripts/validate-data.js
+
+      - name: Run tests
+        run: node --test
+
+      - name: Build
+        run: node build.js
+
+      - name: Check docs/ is in sync with the build
+        run: |
+          if ! git diff --quiet -- docs/; then
+            echo "::error::docs/ is out of date — run 'node build.js' and commit the result."
+            git diff --stat -- docs/
+            exit 1
+          fi
+          echo "docs/ is in sync."
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "title": "<Subject> — Cronologia",
+    "subtitle": "Chronology of <subject> (<years>)",
+    "description": "An open, source-referenced chronology of <subject>.",
+    "language": "en",
+    "lastUpdated": "2026-01-01",
+    "dataQualityNote": "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome."
+  },
+  "facts": [
+    { "label": "What it is", "value": "<one-sentence neutral description>", "sources": ["example-ref"] },
+    { "label": "Founded", "value": "<date, place — with the founding actor>", "sources": ["example-ref"] }
+  ],
+  "events": [
+    { "year": 1970, "date": "1970-01-01", "dateVerified": true, "place": "<city, country>", "title": "<event>", "text": "<one neutral sentence>", "sources": ["example-ref"] },
+    { "year": 1980, "date": "1980", "dateVerified": false, "place": "<city>", "title": "<event with uncertain date>", "text": "<sources disagree — say how>", "sources": ["example-ref"] }
+  ],
+  "figures": [
+    { "name": "<name>", "role": "<role, neutrally described; attribute any contested characterization>", "dates": "1900–1990", "country": "<country>", "sources": ["example-ref"] }
+  ],
+  "organizations": [
+    { "name": "<related organization>", "founded": "1975", "place": "<place>", "relation": "<relationship to the subject — including what it is NOT, for common confusions>", "sources": ["example-ref"] }
+  ],
+  "disambiguation": {
+    "note": "<why this subject is contested terrain>",
+    "items": [
+      { "title": "<X ≠ Y>", "text": "<the distinction people flatten, stated with attribution>", "sources": ["example-ref"] }
+    ]
+  },
+  "references": [
+    { "id": "example-ref", "title": "<title>", "url": "https://example.org", "publisher": "<publisher (perspective label if not obvious)>", "type": "encyclopedia" }
+  ]
+}
