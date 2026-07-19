@@ -42,6 +42,15 @@ else {
   if (d.meta.lastUpdated && !/^\d{4}-\d{2}-\d{2}$/.test(d.meta.lastUpdated)) {
     err(`meta.lastUpdated must be YYYY-MM-DD, got ${d.meta.lastUpdated}`);
   }
+  // Optional header pill links to visual sections (viz-chips).
+  if (d.meta.vizChips !== undefined) {
+    if (!isArr(d.meta.vizChips)) err('meta.vizChips must be an array');
+    else d.meta.vizChips.forEach((c, i) => {
+      const at = `meta.vizChips[${i}]`;
+      if (!isStr(c.href) || !c.href.startsWith('#')) err(`${at}.href must be a "#section" anchor`);
+      if (!isStr(c.label)) err(`${at}.label missing`);
+    });
+  }
 }
 
 // ---- references (validated first so sources[] can be checked against ids) --

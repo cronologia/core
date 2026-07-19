@@ -85,6 +85,21 @@ function renderCites(sources, refNumById) {
   return marks ? `<sup class="cite">${marks}</sup>` : '';
 }
 
+/**
+ * Render the header viz-chips — pill links from the header to the site's
+ * visual sections (pattern shipped in the fsp/fsspx sites). Driven by the
+ * optional `meta.vizChips` array of { href, label } objects, e.g.
+ * [{ "href": "#chronology", "label": "📜 Chronology" }]. Returns '' when the
+ * project declares none, so the header stays unchanged by default.
+ */
+function renderVizChips(vizChips) {
+  if (!Array.isArray(vizChips) || vizChips.length === 0) return '';
+  const links = vizChips
+    .map((c) => `        <a href="${esc(c.href)}">${esc(c.label)}</a>`)
+    .join('\n');
+  return `\n      <div class="viz-chips">\n${links}\n      </div>`;
+}
+
 /** Group events by decade for the chronology's section headers. */
 function decadeOf(year) {
   return `${Math.floor(year / 10) * 10}s`;
@@ -188,7 +203,7 @@ ${ANALYTICS}
       <h1>${esc(meta.title)}</h1>
       <p class="subtitle">${esc(meta.subtitle)}</p>
       <p class="lead">${esc(meta.description)}</p>
-      <p class="updated">Last updated: ${esc(meta.lastUpdated)}</p>
+      <p class="updated">Last updated: ${esc(meta.lastUpdated)}</p>${renderVizChips(meta.vizChips)}
     </div>
   </header>
 
@@ -292,4 +307,4 @@ function main() {
 // the pure helpers so they can be unit-tested without generating docs/.
 if (require.main === module) main();
 
-module.exports = { esc, formatArchiveTs, renderCites, decadeOf, renderPage };
+module.exports = { esc, formatArchiveTs, renderCites, renderVizChips, decadeOf, renderPage };
