@@ -46,6 +46,62 @@ function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+/* ---------------------------------------------------------------------------
+ * Glossary cross-links (optional, off by default).
+ *
+ * A prose text field may embed an inline marker that the build turns into a
+ * link to the shared Cronologia glossary's per-term page:
+ *
+ *     [[term-id]]                -> link, visible text = the term-id
+ *     [[term-id|visible text]]   -> link, visible text = "visible text"
+ *
+ * rendered as
+ *     <a class="glossary-link" href="https://cronologia.github.io/glossary/<term-id>/">…</a>
+ *
+ * `term-id` is a glossary slug ([a-z0-9] then [a-z0-9-]*, e.g. `latae-sententiae`).
+ * The visible text may be any run of characters except `|` and `]`.
+ *
+ * The expansion runs AFTER esc(), on the already-escaped string, and only when
+ * a `[[` is present — so a field with no marker renders as exactly esc(field)
+ * and datasets that don't use the feature are byte-for-byte identical to a
+ * build without it (the same optional-feature contract as the viz renderers).
+ * The validator (scripts/validate-data.js) fails the build on any marker whose
+ * id is not in the vendored data/glossary-terms.json list.
+ * ------------------------------------------------------------------------- */
+
+const GLOSSARY_BASE = 'https://cronologia.github.io/glossary/';
+// Single source of the marker grammar, shared with the validator. Group 1 is
+// the term-id, group 2 the optional visible text.
+const GLOSSARY_MARKER = /\[\[([a-z0-9][a-z0-9-]*)(?:\|([^\]|]*))?\]\]/;
+
+/** Extract the term-ids referenced by every [[…]] marker in a raw text field. */
+function glossaryMarkerIds(text) {
+  if (typeof text !== 'string' || text.indexOf('[[') === -1) return [];
+  const re = new RegExp(GLOSSARY_MARKER.source, 'g');
+  const ids = [];
+  let m;
+  while ((m = re.exec(text)) !== null) ids.push(m[1]);
+  return ids;
+}
+
+/**
+ * Expand glossary markers in an already-HTML-escaped string. No-op (returns the
+ * input unchanged) when no marker is present, keeping output byte-identical for
+ * marker-free text.
+ */
+function renderGlossaryLinks(escaped) {
+  if (typeof escaped !== 'string' || escaped.indexOf('[[') === -1) return escaped;
+  return escaped.replace(new RegExp(GLOSSARY_MARKER.source, 'g'), (_m, id, label) => {
+    const text = label && label.trim() ? label : id;
+    return `<a class="glossary-link" href="${GLOSSARY_BASE}${id}/">${text}</a>`;
+  });
+}
+
+/** Render a prose text field: escape it, then expand any glossary markers. */
+function renderText(value) {
+  return renderGlossaryLinks(esc(value));
+}
+
 /** Format a 14-digit Wayback timestamp (YYYYMMDDhhmmss) as YYYY-MM-DD. */
 function formatArchiveTs(ts) {
   if (!ts || ts.length < 8) return '';
@@ -348,7 +404,7 @@ function renderEventRow(ev, refNumById) {
   const flag = ev.dateVerified === false
     ? ' <span class="flag" title="Date not yet verified against a primary source">?</span>'
     : '';
-  const text = ev.text ? ` <span class="muted">— ${esc(ev.text)}</span>` : '';
+  const text = ev.text ? ` <span class="muted">— ${renderText(ev.text)}</span>` : '';
   return `        <tr>
           <td class="year">${esc(ev.year)}</td>
           <td>${esc(ev.date || '')}${flag}</td>
@@ -362,8 +418,8 @@ function renderFigureCard(fig, refNumById) {
   return `      <div class="party-card">
         <h3>${esc(fig.name)}</h3>
         ${meta ? `<p class="country">${meta}</p>` : ''}
-        <p class="figures">${esc(fig.role)}${renderCites(fig.sources, refNumById)}</p>
-        ${fig.notes ? `<p class="party-notes">${esc(fig.notes)}</p>` : ''}
+        <p class="figures">${renderText(fig.role)}${renderCites(fig.sources, refNumById)}</p>
+        ${fig.notes ? `<p class="party-notes">${renderText(fig.notes)}</p>` : ''}
       </div>`;
 }
 
@@ -372,8 +428,8 @@ function renderOrgCard(org, refNumById) {
   return `      <div class="related-card">
         <h3>${esc(org.name)}</h3>
         ${meta ? `<p class="related-meta">${meta}</p>` : ''}
-        <p>${esc(org.relation)}${renderCites(org.sources, refNumById)}</p>
-        ${org.notes ? `<p class="related-meta">${esc(org.notes)}</p>` : ''}
+        <p>${renderText(org.relation)}${renderCites(org.sources, refNumById)}</p>
+        ${org.notes ? `<p class="related-meta">${renderText(org.notes)}</p>` : ''}
         ${org.url ? `<p class="related-link"><a href="${esc(org.url)}" rel="noopener noreferrer" target="_blank">${esc(org.url)}</a></p>` : ''}
       </div>`;
 }
@@ -421,14 +477,14 @@ function renderPage(data, archives) {
   const factRows = (facts || [])
     .map((f) => {
       const flag = f.verified === false ? ' <span class="flag" title="Not yet verified against a primary source">?</span>' : '';
-      return `        <dt>${esc(f.label)}</dt>\n        <dd>${esc(f.value)}${flag}${renderCites(f.sources, refNumById)}</dd>`;
+      return `        <dt>${esc(f.label)}</dt>\n        <dd>${renderText(f.value)}${flag}${renderCites(f.sources, refNumById)}</dd>`;
     })
     .join('\n');
 
   const disambigCards = ((disambiguation && disambiguation.items) || [])
     .map((it) => `      <div class="cp-card">
         <h3>${esc(it.title)}</h3>
-        <p>${esc(it.text)}${renderCites(it.sources, refNumById)}</p>
+        <p>${renderText(it.text)}${renderCites(it.sources, refNumById)}</p>
       </div>`)
     .join('\n');
 
@@ -556,6 +612,7 @@ if (require.main === module) main();
 
 module.exports = {
   esc, formatArchiveTs, renderCites, renderVizChips, decadeOf,
+  GLOSSARY_BASE, GLOSSARY_MARKER, glossaryMarkerIds, renderGlossaryLinks, renderText,
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   renderPage,

@@ -12,9 +12,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const { glossaryMarkerIds } = require('../build.js');
 
 const ROOT = path.join(__dirname, '..');
 const FILE = 'data/chronology.json';
+const GLOSSARY_TERMS_FILE = 'data/glossary-terms.json';
 const errors = [];
 
 const isStr = (v) => typeof v === 'string' && v.length > 0;
@@ -228,6 +230,45 @@ if (d.disambiguation !== undefined) {
     checkSources(at, it.sources, false);
   });
 }
+
+// ---- glossary cross-links -------------------------------------------------
+// Every [[term-id]] marker (see build.js) must resolve to a known glossary
+// term. The known ids are read from the vendored, pinned list in
+// data/glossary-terms.json (refresh with scripts/sync-glossary-terms.js) — a
+// deterministic, offline check, consistent with this repo's no-network build.
+// A dataset with no markers is unaffected: the vendored list is consulted only
+// when a marker is actually present, so the feature stays fully opt-in.
+(function checkGlossaryLinks() {
+  // Collect every [[…]] marker across all string fields, remembering where.
+  const found = []; // { id, at }
+  const walk = (node, at) => {
+    if (typeof node === 'string') {
+      for (const id of glossaryMarkerIds(node)) found.push({ id, at });
+    } else if (Array.isArray(node)) {
+      node.forEach((v, i) => walk(v, `${at}[${i}]`));
+    } else if (node && typeof node === 'object') {
+      for (const k of Object.keys(node)) walk(node[k], at ? `${at}.${k}` : k);
+    }
+  };
+  walk(d, '');
+  if (found.length === 0) return; // feature unused — nothing to validate
+
+  let known;
+  try {
+    const g = JSON.parse(fs.readFileSync(path.join(ROOT, GLOSSARY_TERMS_FILE), 'utf8'));
+    known = new Set(g.terms || []);
+  } catch (e) {
+    err(`${found.length} glossary [[…]] marker(s) present but ${GLOSSARY_TERMS_FILE} is missing or unreadable (${e.message}). Run: node scripts/sync-glossary-terms.js`);
+    return;
+  }
+  const unknown = new Map(); // id -> first location
+  for (const { id, at } of found) {
+    if (!known.has(id) && !unknown.has(id)) unknown.set(id, at);
+  }
+  for (const [id, at] of unknown) {
+    err(`${at}: unknown glossary term id "${id}" — not in ${GLOSSARY_TERMS_FILE} (re-run scripts/sync-glossary-terms.js if the glossary added it)`);
+  }
+})();
 
 if (errors.length) {
   console.error(`✗ ${errors.length} problem(s):\n` + errors.map((e) => `  - ${e}`).join('\n'));

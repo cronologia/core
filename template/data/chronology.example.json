@@ -18,7 +18,7 @@
   ],
   "events": [
     { "year": 1970, "date": "1970-01-01", "dateVerified": true, "place": "<city, country>", "title": "<event>", "text": "<one neutral sentence>", "sources": ["example-ref"] },
-    { "year": 1980, "date": "1980", "dateVerified": false, "place": "<city>", "title": "<event with uncertain date>", "text": "<sources disagree — say how>", "sources": ["example-ref"] }
+    { "year": 1980, "date": "1980", "dateVerified": false, "place": "<city>", "title": "<event with uncertain date>", "text": "<sources disagree — say how. Prose fields may cross-link the shared glossary with an inline marker, e.g. a [[latae-sententiae|latae sententiae]] penalty or plain [[schism]].>", "sources": ["example-ref"] }
   ],
   "figures": [
     { "name": "<name>", "role": "<role, neutrally described; attribute any contested characterization>", "dates": "1900–1990", "country": "<country>", "sources": ["example-ref"] }
@@ -80,7 +80,7 @@
   "disambiguation": {
     "note": "<why this subject is contested terrain>",
     "items": [
-      { "title": "<X ≠ Y>", "text": "<the distinction people flatten, stated with attribution>", "sources": ["example-ref"] }
+      { "title": "<X ≠ Y>", "text": "<the distinction people flatten, stated with attribution — e.g. [[sedevacantism]] is not the same as [[schism]] (link ids must exist in data/glossary-terms.json)>", "sources": ["example-ref"] }
     ]
   },
   "references": [
