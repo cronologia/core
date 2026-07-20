@@ -11,6 +11,10 @@ template/   Skeleton for a new chronology project: zero-dependency compiler,
             (main-gated + manual dispatch), Wayback preservation pipeline
             (scripts/archive-refs.js + weekly wayback.yml workflow that
             snapshots every reference URL and commits data/archives.json),
+            link-health checker (scripts/check-links.js + weekly
+            link-health.yml workflow that checks every reference URL for
+            rot and opens/updates a single "link health" issue — never
+            edits data),
             glossary cross-links ([[term-id]] markers in prose fields ->
             links to cronologia.github.io/glossary/<id>/, validated offline
             against a pinned data/glossary-terms.json synced by
@@ -55,6 +59,21 @@ runners (per fsp ADR-0006: when a sandbox blocks archive.org, run in CI —
 never route around egress policy) and commits the result. For the networking
 and geoblocked-source policy (which hosts 403/geoblock, and the sanctioned
 workarounds), see `cronologia/archive` ADR-0002.
+
+The link-health checker ties into the same discipline:
+`template/scripts/check-links.js` reads every `references[].url` and reports its
+HTTP status (a `HEAD` probe, falling back to a ranged `GET` when HEAD is
+blocked), a soft-404 heuristic (a redirect or 200 whose page `<title>` no longer
+matches the reference, or reads as a not-found page, is flagged *suspect*), and
+whether a Wayback snapshot exists — emitting a JSON report plus a Markdown
+summary. A URL that is dead or suspect **and has no snapshot** is marked
+top-priority for archiving (feeding `archive-refs.js`). It throttles to ≥ 1
+req/s with a project-named User-Agent and treats `403`/`429` (and `5xx`/
+timeouts) as *inconclusive*, never "dead". It never touches
+`data/chronology.json`. Like Wayback, it runs out of band, never in the
+network-free build: `template/.github/workflows/link-health.yml` runs it weekly
+on GitHub runners (`schedule` + `workflow_dispatch`) and opens/updates a single
+"link health" issue per repo with the failures.
 
 Still to port from `cronologia/fsp`: the document vault and CI harvesting —
 tracked in the issues. The *why* of this architecture lives in fsp's ADRs
