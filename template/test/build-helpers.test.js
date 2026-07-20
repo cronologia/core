@@ -2,7 +2,7 @@
 // Unit tests for build.js's pure helpers (zero-dependency; node --test).
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { esc, formatArchiveTs, renderCites, decadeOf } = require('../build.js');
+const { esc, formatArchiveTs, renderCites, renderVizChips, decadeOf } = require('../build.js');
 
 test('esc escapes HTML metacharacters', () => {
   assert.equal(esc('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
@@ -25,6 +25,15 @@ test('renderCites links known ids, passes raw URLs through, drops unknowns', () 
   assert.equal(renderCites(['nope'], nums), '');
   assert.equal(renderCites([], nums), '');
   assert.equal(renderCites(undefined, nums), '');
+});
+
+test('renderVizChips renders header pill links, or nothing when undeclared', () => {
+  const html = renderVizChips([{ href: '#chronology', label: '📜 Chronology' }]);
+  assert.match(html, /class="viz-chips"/);
+  assert.match(html, /<a href="#chronology">📜 Chronology<\/a>/);
+  assert.equal(renderVizChips([]), '');
+  assert.equal(renderVizChips(undefined), '');
+  assert.match(renderVizChips([{ href: '#a"b', label: '<x>' }]), /#a&quot;b.*&lt;x&gt;/);
 });
 
 test('decadeOf groups years into decades', () => {

@@ -1,0 +1,53 @@
+name: Wayback preservation
+
+# Weekly Internet Archive preservation of every reference URL in
+# data/chronology.json. Runs scripts/archive-refs.js (availability lookup +
+# polite Save Page Now for unarchived URLs), rebuilds the site so the
+# "archived" fallback links render, and commits data/archives.json + docs/
+# when anything changed.
+#
+# Template file — projects copy it (with scripts/archive-refs.js) verbatim.
+#
+# Why CI and not a local sandbox (fsp ADR-0006): this must be able to run on
+# GitHub-hosted runners so that when a development sandbox blocks archive.org,
+# the pipeline still runs here — never route around an egress policy.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # weekly, Monday 06:17 UTC (off the top of the hour)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wayback
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Archive reference URLs
+        run: node scripts/archive-refs.js
+
+      - name: Rebuild site (archive fallback links come from data/archives.json)
+        run: node build.js
+
+      - name: Commit updated archives
+        run: |
+          if git diff --quiet -- data/archives.json docs/; then
+            echo "No archive changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/archives.json docs/
+          git commit -m "Wayback: refresh data/archives.json (scheduled preservation run)"
+          git push

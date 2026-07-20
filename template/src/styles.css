@@ -34,6 +34,9 @@ body {
 .site-header .subtitle { margin: 0 0 1rem; font-size: 1.1rem; opacity: .92; }
 .site-header .lead { margin: 0 0 1rem; max-width: 64ch; opacity: .95; }
 .site-header .updated { margin: 0; font-size: .85rem; opacity: .8; }
+.viz-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin: .9rem 0 0; }
+.viz-chips a { display: inline-block; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff; text-decoration: none; font-size: .82rem; font-weight: 600; padding: .3rem .75rem; border-radius: 999px; white-space: nowrap; }
+.viz-chips a:hover { background: rgba(255,255,255,.28); }
 
 /* Nav */
 .site-nav { position: sticky; top: 0; z-index: 10; background: #2a2f3a; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
@@ -115,7 +118,82 @@ ol.references a:hover { text-decoration: underline; }
 .site-footer { border-top: 1px solid var(--line); padding: 1.5rem 0; color: var(--muted); font-size: .85rem; }
 .site-footer code { background: #efece6; padding: .1rem .35rem; border-radius: 3px; }
 
+/* Genealogy / lineage trees (fsspx pattern; rendered only when the data
+   declares `lineage`/`episcopalLineage`) */
+.lineage-branch { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 1rem 1.25rem; margin: 1rem 0; }
+.lineage-branch h3 { margin: 0 0 .25rem; }
+.lineage-branch.lineage-separate { border-left-color: #c47f17; background: #fffdf7; }
+ul.tree, ul.tree ul { list-style: none; margin: 0; padding-left: 1.4rem; }
+ul.tree { padding-left: 0; margin-top: .6rem; }
+ul.tree ul { position: relative; }
+ul.tree ul::before { content: ""; position: absolute; top: 0; bottom: .75em; left: .35rem; border-left: 2px solid var(--line); }
+ul.tree li { position: relative; padding: .25rem 0 .25rem .5rem; }
+ul.tree ul li::before { content: ""; position: absolute; top: 1em; left: -1.05rem; width: 1.3rem; border-top: 2px solid var(--line); }
+.tree-node strong { color: var(--ink); }
+.tree-detail { color: var(--muted); font-size: .85rem; }
+.tree-status { font-size: .78rem; color: var(--accent-dark); background: var(--accent-soft); display: inline-block; border-radius: 999px; padding: .05rem .6rem; margin: .15rem 0 0; }
+.lineage-separate .tree-status { color: #7a5410; background: #f7ecd4; }
+
+/* Typed edges: solid connector = direct consecration/initiation (default);
+   dashed connector = indirect reference/association, NOT lineage */
+ul.tree ul li.tree-edge-indirect::before { border-top-style: dashed; }
+.tree-edge-label { font-size: .72rem; font-style: italic; color: var(--muted); background: #f3f1ec; border: 1px dashed var(--line); border-radius: 999px; padding: 0 .5rem; white-space: nowrap; }
+.lineage-legend { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: .75rem 0 .25rem; font-size: .82rem; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: .45rem; }
+.legend-swatch { display: inline-block; width: 2rem; height: 0; border-top: 2px solid var(--muted); }
+.legend-swatch.legend-indirect { border-top-style: dashed; }
+
+/* Branch timeline ("subway diagram"; rendered only when the data declares
+   `branchTimeline`). The SVG keeps its natural size inside a horizontal
+   scroll container on small screens; print scales it to the page. */
+.viz-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+figure.branch-timeline { margin: 1rem 0 0; }
+.branch-timeline-svg { display: block; }
+.branch-timeline-svg text { font-family: inherit; }
+.branch-timeline-svg .bt-tick line { stroke: var(--line); stroke-width: 1; }
+.branch-timeline-svg .bt-tick text { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+.branch-timeline-svg .bt-line line, .branch-timeline-svg .bt-line path { stroke-width: 4; fill: none; stroke-linecap: round; }
+.branch-timeline-svg .bt-label { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.branch-timeline-svg .bt-trunk line { stroke: var(--accent); }
+.branch-timeline-svg .bt-trunk circle { fill: var(--accent); }
+.branch-timeline-svg .bt-c0 path { stroke: #c2571f; } .branch-timeline-svg .bt-c0 circle { fill: #c2571f; }
+.branch-timeline-svg .bt-c1 path { stroke: #2f7d4f; } .branch-timeline-svg .bt-c1 circle { fill: #2f7d4f; }
+.branch-timeline-svg .bt-c2 path { stroke: #7b4fa6; } .branch-timeline-svg .bt-c2 circle { fill: #7b4fa6; }
+.branch-timeline-svg .bt-c3 path { stroke: #b02a37; } .branch-timeline-svg .bt-c3 circle { fill: #b02a37; }
+.branch-timeline-svg .bt-c4 path { stroke: #0f7f8b; } .branch-timeline-svg .bt-c4 circle { fill: #0f7f8b; }
+.branch-timeline-svg .bt-c5 path { stroke: #946200; } .branch-timeline-svg .bt-c5 circle { fill: #946200; }
+figure.branch-timeline figcaption { margin-top: .75rem; }
+ol.branch-notes { margin: 0; padding-left: 1.25rem; font-size: .88rem; }
+ol.branch-notes li { margin-bottom: .35rem; }
+
+/* Mobile baseline: compact header + nav as a single horizontal scroll strip */
 @media (max-width: 560px) {
+  .site-header { padding: 1.4rem 0 1.1rem; }
+  .site-header h1 { font-size: 1.5rem; }
+  .site-header .subtitle { font-size: .95rem; margin-bottom: .5rem; }
+  .site-header .lead { display: none; }
+  .site-header .updated { font-size: .78rem; }
+  .site-nav .wrap { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 1rem; padding: .55rem 1rem; }
+  .site-nav .wrap::-webkit-scrollbar { display: none; }
+  .site-nav a { font-size: .82rem; }
   .facts { grid-template-columns: 1fr; gap: .1rem; }
   .facts dt { margin-top: .5rem; }
+}
+
+/* Print baseline (book series): every visualization is a static figure that
+   fits a book page — no scroll containers, no navigation chrome */
+@media print {
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body { background: #fff; }
+  .site-header { background: none; color: var(--ink); padding: 1rem 0; }
+  .site-nav, .viz-chips { display: none; }
+  a { color: inherit; }
+  section { margin: 1.25rem 0; }
+  table.meetings thead th { position: static; }
+  /* Figures must not split across pages */
+  .lineage-branch, figure.branch-timeline, .party-card, .related-card, .cp-card { break-inside: avoid; page-break-inside: avoid; }
+  /* Trees are static HTML/CSS and print as-is; the subway SVG scales to the
+     page width via its viewBox instead of scrolling */
+  .viz-scroll { overflow: visible; }
+  .branch-timeline-svg { width: 100% !important; height: auto !important; }
 }

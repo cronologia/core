@@ -5,7 +5,12 @@
     "description": "An open, source-referenced chronology of <subject>.",
     "language": "en",
     "lastUpdated": "2026-01-01",
-    "dataQualityNote": "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome."
+    "dataQualityNote": "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome.",
+    "vizChips": [
+      { "href": "#chronology", "label": "📜 Chronology" },
+      { "href": "#lineage", "label": "🌳 Genealogy" },
+      { "href": "#branch-timeline", "label": "🚇 Divisions" }
+    ]
   },
   "facts": [
     { "label": "What it is", "value": "<one-sentence neutral description>", "sources": ["example-ref"] },
@@ -21,6 +26,57 @@
   "organizations": [
     { "name": "<related organization>", "founded": "1975", "place": "<place>", "relation": "<relationship to the subject — including what it is NOT, for common confusions>", "sources": ["example-ref"] }
   ],
+  "lineage": {
+    "heading": "Genealogy",
+    "navLabel": "Genealogy",
+    "note": "<who consecrated/initiated whom — and which links are NOT lineage. Attribute contested validity/status characterizations to who says so and when.>",
+    "trees": [
+      {
+        "title": "<main line — from <founder>>",
+        "summary": "<one-sentence orientation for this branch>",
+        "sources": ["example-ref"],
+        "root": {
+          "name": "<founder>",
+          "detail": "<consecrated/initiated when, where, by whom>",
+          "sources": ["example-ref"],
+          "children": [
+            {
+              "name": "<direct successor>",
+              "detail": "<place, date>",
+              "status": "<time-bounded status, attributed (e.g. 'X declared ... in YYYY; the group disputes it')>",
+              "sources": ["example-ref"]
+            },
+            {
+              "name": "<associated figure — NOT a successor>",
+              "edge": "indirect",
+              "edgeLabel": "association, not consecration",
+              "detail": "<the indirect link, attributed — renders with a DASHED connector>",
+              "sources": ["example-ref"]
+            }
+          ]
+        }
+      },
+      {
+        "title": "<separate line — no connection to the main line>",
+        "separate": true,
+        "summary": "<included for disambiguation only; `separate: true` sets it apart visually>",
+        "sources": ["example-ref"],
+        "root": { "name": "<other founder>", "detail": "<origin of this distinct line>", "sources": ["example-ref"] }
+      }
+    ]
+  },
+  "branchTimeline": {
+    "heading": "Divisions at a glance",
+    "navLabel": "Divisions",
+    "note": "<how the organization's divisions forked over time; contested labels ('schism', 'expulsion') attributed to who uses them>",
+    "end": 2026,
+    "trunk": { "id": "main", "label": "<organization>", "start": 1970, "note": "<founding — date, place, actor>", "sources": ["example-ref"] },
+    "branches": [
+      { "id": "split-a", "label": "<first split>", "year": 1983, "note": "<who left / was expelled and why — attributed>", "sources": ["example-ref"] },
+      { "id": "split-b", "label": "<group that ended>", "year": 1988, "end": 2002, "note": "<a branch with an `end` year (merged/reconciled/dissolved) renders a terminal dot>", "sources": ["example-ref"] },
+      { "id": "split-c", "label": "<split from a split>", "year": 2012, "from": "split-a", "note": "<`from` forks this branch off split-a's line instead of the trunk>", "sources": ["example-ref"] }
+    ]
+  },
   "disambiguation": {
     "note": "<why this subject is contested terrain>",
     "items": [
