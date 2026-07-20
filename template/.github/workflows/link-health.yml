@@ -1,0 +1,73 @@
+name: Link health
+
+# Weekly reference link-rot check for data/chronology.json. Runs
+# scripts/check-links.js (HEAD/ranged-GET status, soft-404 heuristic, Wayback
+# snapshot lookup) and opens/updates a SINGLE "link health" issue per repo with
+# the failures. It NEVER edits data/chronology.json — the references are the
+# product; a human decides how to fix rot (correct the URL, or archive it).
+#
+# Template file — projects copy it (with scripts/check-links.js) verbatim.
+#
+# Why CI and not a local sandbox (fsp ADR-0006): the checker needs live egress
+# to the reference hosts and to archive.org. That egress happens here, on
+# GitHub-hosted runners — the same reason wayback.yml runs here. Never route
+# around a development sandbox's egress policy; run in CI instead.
+
+on:
+  schedule:
+    - cron: '41 6 * * 1' # weekly, Monday 06:41 UTC (off the top of the hour, after wayback)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: link-health
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check reference links
+        run: node scripts/check-links.js --json link-health-report.json --md link-health-issue.md
+        # Runs the out-of-band checker (never part of the network-free build).
+
+      - name: Job summary
+        if: always()
+        run: cat link-health-issue.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Open or update the single "link health" issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: 'Link health report'
+        run: |
+          set -euo pipefail
+          flagged=$(node -e "process.stdout.write(String(require('./link-health-report.json').summary.flagged))")
+          # Find the existing open issue with our exact title (single per repo).
+          existing=$(gh issue list --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq ".[] | select(.title==\"$TITLE\") | .number" | head -n1 || true)
+          if [ "$flagged" = "0" ]; then
+            if [ -n "$existing" ]; then
+              echo "No flagged links; updating issue #$existing to the all-clear report."
+              gh issue edit "$existing" --body-file link-health-issue.md
+            else
+              echo "No flagged links and no existing issue — nothing to open."
+            fi
+            exit 0
+          fi
+          if [ -n "$existing" ]; then
+            echo "Updating existing link-health issue #$existing."
+            gh issue edit "$existing" --body-file link-health-issue.md
+          else
+            echo "Opening a new link-health issue."
+            gh issue create --title "$TITLE" --body-file link-health-issue.md
+          fi

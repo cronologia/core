@@ -20,11 +20,13 @@ data/glossary-terms.json VENDORED, PINNED list of cronologia/glossary term ids (
 src/styles.css           Stylesheet (copied into the build)
 scripts/validate-data.js Schema check (runs in CI before the build) — also fails on unknown glossary [[term-id]] links
 scripts/archive-refs.js  Wayback preservation: snapshot lookup + Save Page Now for references[] -> data/archives.json
+scripts/check-links.js   Link-health checker (out-of-band/CI): HEAD/ranged-GET status + soft-404 heuristic + Wayback lookup for references[]; JSON + Markdown report. Never edits data.
 scripts/sync-glossary-terms.js  Refresh data/glossary-terms.json from cronologia/glossary (out-of-band; needs network)
 build.js                 Compiler: data/chronology.json (+ data/archives.json fallback links) -> docs/
 test/                    node:test suites (helpers + data invariants + drift check)
 .github/workflows/deploy.yml  CI: validate, test, build, drift check, Pages deploy (main + manual dispatch)
 .github/workflows/wayback.yml CI: weekly archive-refs run; commits data/archives.json + rebuilt docs/
+.github/workflows/link-health.yml CI: weekly check-links run; opens/updates a single "link health" issue with the failures (never edits data)
 docs/                    COMPILED OUTPUT, served by GitHub Pages (committed)
 ```
 
@@ -56,6 +58,17 @@ byte-identical to a build without the feature. Shapes are shown in
   `end` terminates a branch (dot) instead of running to the right edge.
   Every trunk/branch entry needs `sources[]` — the figure's claims are cited
   in its `<figcaption>` list.
+- **`numbersChart`** — contested-numbers / series chart (`renderNumbersChart`):
+  for figures that must NOT be silently unified (e.g. a movement's
+  self-reported participant count vs. an external survey's population share).
+  Each `series[]` is drawn as its OWN panel on its OWN axis, with its OWN
+  `unit`, its OWN `sourceLabel` (WHO reported it), and its OWN `sources[]` —
+  the series are never merged onto one scale. A required `unitNote` renders the
+  explicit **"not directly comparable"** banner. `axisMax` sets that series'
+  axis top (defaults to its largest point); each `points[]` entry has a numeric
+  `value`, a human-readable attributed `display`, and an optional `year`. The
+  `<figcaption>` cites every series. `heading`/`navLabel` default to "Numbers".
+  Sits in its own `.viz-scroll` container; prints as static panels.
 
 Print baseline: `src/styles.css` ships an `@media print` block (nav/chips
 hidden, figures `break-inside: avoid`, the subway SVG scaled to page width) —
@@ -90,6 +103,34 @@ the glossary changes and commit the diff:
 node scripts/sync-glossary-terms.js                       # sibling ../glossary or the published raw JSON
 node scripts/sync-glossary-terms.js ../glossary/data/glossary.json   # explicit local source
 ```
+
+## Link-health checker (out-of-band / CI only)
+
+The references ARE the product, so link-rot is tracked automatically.
+`scripts/check-links.js` reads every `references[].url` and reports, per URL:
+its HTTP status (a `HEAD` probe, falling back to a **ranged `GET`** when HEAD is
+unsupported or blocked); whether it redirected, plus a **soft-404 heuristic**
+(a redirect — or a 200 — whose page `<title>` no longer matches the reference's
+declared title, or reads as a not-found/parking page, is flagged **SUSPECT**);
+and whether an Internet Archive snapshot exists. A URL that is **dead or suspect
+AND has no snapshot** is marked `priorityArchive` — top of the queue for
+`scripts/archive-refs.js`.
+
+- **It hits the live network, so it is NEVER part of the build** (the build is
+  network-free). Run it out of band or in CI:
+  `node scripts/check-links.js --json report.json --md issue.md`.
+- **Politeness / semantics:** ≥ 1 request/second (global throttle), a
+  User-Agent that names the project, bounded per-request timeout. `403`/`429`
+  (and `5xx`/timeouts) are **INCONCLUSIVE, never "dead"** — many publishers
+  block bots or HEAD; only real `4xx` (404/410/451…) count as dead.
+- **It never edits `data/chronology.json`.** Fixing rot (correct the URL, or
+  archive it) is a human decision.
+- `.github/workflows/link-health.yml` runs it weekly on GitHub runners
+  (`schedule` + `workflow_dispatch`) and opens/updates a **single** "Link health
+  report" issue with the failures. Like `wayback.yml`, it runs in CI precisely
+  so it never routes around a sandbox's egress policy (fsp ADR-0006).
+- Offline helpers (title parsing, the soft-404 rule, status classification, the
+  Wayback parser) are unit-tested in `test/link-health.test.js`.
 
 ## Working agreements
 

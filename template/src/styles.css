@@ -170,6 +170,26 @@ figure.branch-timeline figcaption { margin-top: .75rem; }
 ol.branch-notes { margin: 0; padding-left: 1.25rem; font-size: .88rem; }
 ol.branch-notes li { margin-bottom: .35rem; }
 
+/* Contested-numbers chart (rendered only when the data declares
+   `numbersChart`). Each series is a self-contained panel on its OWN axis and
+   unit — the series are deliberately never merged onto one scale. */
+figure.numbers-chart { margin: 1rem 0 0; }
+.nc-series { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: .85rem 1rem; margin: 0 0 1rem; }
+.nc-series-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .35rem .75rem; }
+.nc-series-label { font-weight: 700; }
+.nc-source-badge { font-size: .74rem; font-weight: 600; color: var(--accent-dark); background: var(--accent-soft); border-radius: 999px; padding: .1rem .6rem; white-space: nowrap; }
+.nc-axis-note { font-size: .76rem; color: var(--muted); margin: .1rem 0 .55rem; }
+.nc-row { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .6rem; margin: .35rem 0; }
+.nc-year { flex: 0 0 2.4rem; font-weight: 700; font-size: .8rem; color: var(--muted); }
+.nc-track { flex: 1 1 140px; min-width: 120px; height: 1.05rem; background: #f0ece5; border-radius: 3px; overflow: hidden; }
+.nc-bar { display: block; height: 100%; border-radius: 3px; }
+.nc-value { flex: 1 1 100%; margin-left: 3rem; font-size: .82rem; color: var(--ink); }
+.nc-axis { display: flex; align-items: center; gap: .6rem; margin-top: .15rem; }
+.nc-ticks { flex: 1 1 140px; min-width: 120px; display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); }
+.nc-c0 { background: #c2571f; } .nc-c1 { background: #2f7d4f; } .nc-c2 { background: #7b4fa6; }
+.nc-c3 { background: #b02a37; } .nc-c4 { background: #0f7f8b; } .nc-c5 { background: #946200; }
+figure.numbers-chart figcaption { margin-top: .25rem; }
+
 /* Mobile baseline: compact header + nav as a single horizontal scroll strip */
 @media (max-width: 560px) {
   .site-header { padding: 1.4rem 0 1.1rem; }
@@ -182,6 +202,7 @@ ol.branch-notes li { margin-bottom: .35rem; }
   .site-nav a { font-size: .82rem; }
   .facts { grid-template-columns: 1fr; gap: .1rem; }
   .facts dt { margin-top: .5rem; }
+  .nc-value { margin-left: 0; }
 }
 
 /* Print baseline (book series): every visualization is a static figure that
@@ -195,7 +216,7 @@ ol.branch-notes li { margin-bottom: .35rem; }
   section { margin: 1.25rem 0; }
   table.meetings thead th { position: static; }
   /* Figures must not split across pages */
-  .lineage-branch, figure.branch-timeline, .party-card, .related-card, .cp-card { break-inside: avoid; page-break-inside: avoid; }
+  .lineage-branch, figure.branch-timeline, figure.numbers-chart, .nc-series, .party-card, .related-card, .cp-card { break-inside: avoid; page-break-inside: avoid; }
   /* Trees are static HTML/CSS and print as-is; the subway SVG scales to the
      page width via its viewBox instead of scrolling */
   .viz-scroll { overflow: visible; }
