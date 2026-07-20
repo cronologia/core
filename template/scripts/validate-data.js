@@ -219,6 +219,50 @@ if (d.branchTimeline !== undefined) {
   }
 }
 
+// ---- numbersChart (contested-numbers chart) -------------------------------
+// Design principle: contested numbers are never silently unified. Each series
+// carries its OWN unit and its OWN source label and its OWN citation; the chart
+// as a whole carries an explicit "not directly comparable" banner (unitNote).
+if (d.numbersChart !== undefined) {
+  const nc = d.numbersChart;
+  const at = 'numbersChart';
+  for (const k of ['heading', 'navLabel', 'note']) {
+    if (nc[k] !== undefined && !isStr(nc[k])) err(`${at}.${k} must be a string`);
+  }
+  // The "not directly comparable" banner is mandatory — it is the honesty flag
+  // that keeps incomparable series from reading as one comparable measurement.
+  if (!isStr(nc.unitNote)) err(`${at}.unitNote missing (the explicit "not directly comparable" banner is required)`);
+  if (!isArr(nc.series) || nc.series.length === 0) {
+    err(`${at}.series must be a non-empty array`);
+  } else {
+    nc.series.forEach((s, i) => {
+      const sAt = `${at}.series[${i}]`;
+      if (!isStr(s.label)) err(`${sAt}.label missing`);
+      // Per-series source label (WHO reported it) and unit — the series are
+      // never merged onto one scale, so each declares its own.
+      if (!isStr(s.sourceLabel)) err(`${sAt}.sourceLabel missing (name who reported this series)`);
+      if (!isStr(s.unit)) err(`${sAt}.unit missing (each series keeps its own unit)`);
+      if (s.axisMax !== undefined && (!isNum(s.axisMax) || s.axisMax <= 0)) {
+        err(`${sAt}.axisMax must be a positive number`);
+      }
+      // Every series must be cited — the bars never assert an uncited number.
+      checkSources(sAt, s.sources, true);
+      if (!isArr(s.points) || s.points.length === 0) {
+        err(`${sAt}.points must be a non-empty array`);
+      } else {
+        s.points.forEach((p, j) => {
+          const pAt = `${sAt}.points[${j}]`;
+          if (!isNum(p.value)) err(`${pAt}.value must be a number`);
+          if (!isStr(p.display)) err(`${pAt}.display missing (the human-readable, attributed value)`);
+          if (p.year !== undefined && !isNum(p.year) && !isStr(p.year)) {
+            err(`${pAt}.year must be a number or string`);
+          }
+        });
+      }
+    });
+  }
+}
+
 // ---- disambiguation -------------------------------------------------------
 if (d.disambiguation !== undefined) {
   const items = d.disambiguation.items;

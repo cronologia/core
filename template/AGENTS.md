@@ -56,6 +56,17 @@ byte-identical to a build without the feature. Shapes are shown in
   `end` terminates a branch (dot) instead of running to the right edge.
   Every trunk/branch entry needs `sources[]` — the figure's claims are cited
   in its `<figcaption>` list.
+- **`numbersChart`** — contested-numbers / series chart (`renderNumbersChart`):
+  for figures that must NOT be silently unified (e.g. a movement's
+  self-reported participant count vs. an external survey's population share).
+  Each `series[]` is drawn as its OWN panel on its OWN axis, with its OWN
+  `unit`, its OWN `sourceLabel` (WHO reported it), and its OWN `sources[]` —
+  the series are never merged onto one scale. A required `unitNote` renders the
+  explicit **"not directly comparable"** banner. `axisMax` sets that series'
+  axis top (defaults to its largest point); each `points[]` entry has a numeric
+  `value`, a human-readable attributed `display`, and an optional `year`. The
+  `<figcaption>` cites every series. `heading`/`navLabel` default to "Numbers".
+  Sits in its own `.viz-scroll` container; prints as static panels.
 
 Print baseline: `src/styles.css` ships an `@media print` block (nav/chips
 hidden, figures `break-inside: avoid`, the subway SVG scaled to page width) —

@@ -9,7 +9,8 @@
     "vizChips": [
       { "href": "#chronology", "label": "📜 Chronology" },
       { "href": "#lineage", "label": "🌳 Genealogy" },
-      { "href": "#branch-timeline", "label": "🚇 Divisions" }
+      { "href": "#branch-timeline", "label": "🚇 Divisions" },
+      { "href": "#numbers-chart", "label": "📊 Numbers" }
     ]
   },
   "facts": [
@@ -77,6 +78,34 @@
       { "id": "split-c", "label": "<split from a split>", "year": 2012, "from": "split-a", "note": "<`from` forks this branch off split-a's line instead of the trunk>", "sources": ["example-ref"] }
     ]
   },
+  "numbersChart": {
+    "heading": "How big is it? — contested numbers",
+    "navLabel": "Numbers",
+    "note": "<two different questions, two different methods — e.g. a movement counts its own participants while an external survey estimates a population share. Both bear on 'how big is it', but they are not the same measurement.>",
+    "unitNote": "These series use different units and different methods (self-report vs. external survey). They are shown on separate axes and are NOT directly comparable — only their sources make either number meaningful. Contested numbers are never silently unified onto one scale.",
+    "series": [
+      {
+        "label": "<what this series measures — the movement's own estimate>",
+        "sourceLabel": "<who reported it — e.g. the movement itself, self-report>",
+        "unit": "million participants",
+        "axisMax": 4,
+        "sources": ["example-ref"],
+        "points": [
+          { "year": 1994, "value": 3.8, "display": "≈ 3.8 million participants (1994, self-reported)" }
+        ]
+      },
+      {
+        "label": "<what this series measures — an external survey>",
+        "sourceLabel": "<who reported it — e.g. an independent survey organization>",
+        "unit": "% share",
+        "axisMax": 100,
+        "sources": ["example-survey"],
+        "points": [
+          { "year": 2006, "value": 50, "display": "≈ half of the population, by survey estimate" }
+        ]
+      }
+    ]
+  },
   "disambiguation": {
     "note": "<why this subject is contested terrain>",
     "items": [
@@ -84,6 +113,7 @@
     ]
   },
   "references": [
-    { "id": "example-ref", "title": "<title>", "url": "https://example.org", "publisher": "<publisher (perspective label if not obvious)>", "type": "encyclopedia" }
+    { "id": "example-ref", "title": "<title>", "url": "https://example.org", "publisher": "<publisher (perspective label if not obvious)>", "type": "encyclopedia" },
+    { "id": "example-survey", "title": "<survey title — the external estimate>", "url": "https://example.org/survey", "publisher": "<independent survey organization>", "type": "survey" }
   ]
 }

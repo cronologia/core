@@ -6,7 +6,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
-  layoutBranchTimeline, renderBranchTimeline, BT_GEOM, renderPage,
+  layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
+  layoutNumbersChart, renderNumbersChart, renderPage,
 } = require('../build.js');
 
 const refs = new Map([['ref-a', 1], ['ref-b', 2]]);
@@ -177,6 +178,96 @@ test('renderBranchTimeline escapes labels and headings', () => {
   assert.ok(!html.includes('<Split>'));
 });
 
+// ---- contested-numbers chart -----------------------------------------------
+
+const nc = {
+  heading: 'How big is it?',
+  navLabel: 'Numbers',
+  note: 'Two different questions, two different methods.',
+  unitNote: 'Different units and methods — not directly comparable.',
+  series: [
+    {
+      label: 'Movement self-report',
+      sourceLabel: 'The movement — self-report',
+      unit: 'million participants',
+      axisMax: 4,
+      sources: ['ref-a'],
+      points: [{ year: 1994, value: 3.8, display: '≈ 3.8 million (self-reported)' }],
+    },
+    {
+      label: 'External survey',
+      sourceLabel: 'A survey — external',
+      unit: '% share',
+      axisMax: 100,
+      sources: ['ref-b'],
+      points: [
+        { year: 2006, value: 50, display: '≈ half the population' },
+        { year: 2010, value: 60, display: '≈ 60% by a later wave' },
+      ],
+    },
+  ],
+};
+
+test('layoutNumbersChart keeps each series on its OWN axis and clamps bars', () => {
+  const l = layoutNumbersChart(nc);
+  assert.equal(l.series.length, 2);
+  const [a, b] = l.series;
+  assert.equal(a.axisMax, 4, 'series A keeps its own axis max');
+  assert.equal(b.axisMax, 100, 'series B keeps its own, different axis max');
+  assert.equal(a.points[0].pct, 95, '3.8 of 4 => 95%');
+  assert.equal(b.points[0].pct, 50, '50 of 100 => 50%');
+  assert.equal(b.points[1].pct, 60);
+  assert.deepEqual(a.ticks, [0, 2, 4]);
+  assert.notEqual(a.axisMax, b.axisMax, 'series are never merged onto one scale');
+});
+
+test('layoutNumbersChart clamps out-of-range values and defaults axisMax to the max point', () => {
+  const l = layoutNumbersChart({
+    unitNote: 'n',
+    series: [{ label: 'L', sourceLabel: 'S', unit: 'u', sources: ['ref-a'], points: [{ value: 10, display: 'ten' }, { value: 20, display: 'twenty' }] }],
+  });
+  assert.equal(l.series[0].axisMax, 20, 'axisMax defaults to the largest point');
+  assert.equal(l.series[0].points[0].pct, 50);
+  assert.equal(l.series[0].points[1].pct, 100);
+});
+
+test('layoutNumbersChart returns null for absent/degenerate data', () => {
+  assert.equal(layoutNumbersChart(undefined), null);
+  assert.equal(layoutNumbersChart({ unitNote: 'n', series: [] }), null);
+  assert.equal(layoutNumbersChart({ unitNote: 'n', series: [{ label: 'x', points: [] }] }), null);
+});
+
+test('renderNumbersChart renders per-series panels, source badges, the banner, and a cited caption', () => {
+  const html = renderNumbersChart(nc, refs);
+  assert.match(html, /<section id="numbers-chart">/);
+  assert.match(html, /<h2>How big is it\?<\/h2>/);
+  assert.match(html, /class="viz-scroll"/, 'mobile scroll containment');
+  assert.match(html, /class="notice notice-attribution">Different units and methods — not directly comparable\./, 'the not-comparable banner');
+  assert.match(html, /nc-source-badge">The movement — self-report</, 'per-series source label');
+  assert.match(html, /nc-source-badge">A survey — external</);
+  assert.match(html, /axis: 0–4 million participants/, 'series A axis');
+  assert.match(html, /axis: 0–100 % share/, 'series B axis — its own unit');
+  assert.match(html, /style="width:95%"/);
+  assert.match(html, /style="width:50%"/);
+  assert.match(html, /<figcaption>/);
+  assert.match(html, /<strong>Movement self-report<\/strong> — reported by The movement — self-report, in million participants<sup class="cite"><a href="#ref-1"/);
+  assert.match(html, /reported by A survey — external, in % share<sup class="cite"><a href="#ref-2"/);
+  assert.equal(renderNumbersChart(undefined, refs), '');
+});
+
+test('renderNumbersChart escapes labels, units, and the banner', () => {
+  const html = renderNumbersChart({
+    heading: '<Numbers> & counts',
+    unitNote: 'A & B <not> comparable',
+    series: [{ label: '<L>', sourceLabel: 'S & co', unit: '% <share>', axisMax: 10, sources: ['ref-a'], points: [{ value: 5, display: '<five>' }] }],
+  }, refs);
+  assert.match(html, /&lt;Numbers&gt; &amp; counts/);
+  assert.match(html, /A &amp; B &lt;not&gt; comparable/);
+  assert.match(html, /S &amp; co/);
+  assert.match(html, /&lt;five&gt;/);
+  assert.ok(!html.includes('<five>'));
+});
+
 // ---- page integration ------------------------------------------------------
 
 const baseData = {
@@ -185,11 +276,19 @@ const baseData = {
   references: [{ id: 'ref-a', title: 'A', url: 'https://example.org/a', publisher: 'p', type: 'web' }],
 };
 
-test('renderPage without viz keys emits no lineage/branch-timeline markup', () => {
+test('renderPage without viz keys emits no lineage/branch-timeline/numbers markup', () => {
   const html = renderPage(baseData, {});
   assert.ok(!html.includes('id="lineage"'));
   assert.ok(!html.includes('branch-timeline'));
+  assert.ok(!html.includes('numbers-chart'));
   assert.match(html, /<a href="#chronology">Chronology<\/a>\n {6}<a href="#figures">/, 'nav unchanged');
+});
+
+test('an absent numbersChart key leaves renderPage output byte-identical', () => {
+  // The additive numbers renderer must not touch the page when the key is
+  // absent — exactly the renderBranchTimeline contract.
+  const withKeys = { ...baseData, lineage: { navLabel: 'Genealogy', note: 'n', trees: [plainTree] }, branchTimeline: bt };
+  assert.equal(renderPage(withKeys, {}), renderPage({ ...withKeys, numbersChart: undefined }, {}));
 });
 
 test('renderPage with viz keys renders both sections and their nav links', () => {
@@ -205,6 +304,15 @@ test('renderPage with viz keys renders both sections and their nav links', () =>
   assert.match(html, /<section id="branch-timeline">/);
   // Section order: chronology, lineage, branch timeline, figures.
   const order = ['id="chronology"', 'id="lineage"', 'id="branch-timeline"', 'id="figures"'].map((s) => html.indexOf(s));
+  assert.deepEqual([...order].sort((x, y) => x - y), order);
+});
+
+test('renderPage renders the numbers chart section, its nav link, and section order', () => {
+  const html = renderPage({ ...baseData, lineage: { navLabel: 'Genealogy', note: 'n', trees: [plainTree] }, branchTimeline: bt, numbersChart: nc }, {});
+  assert.match(html, /<a href="#numbers-chart">Numbers<\/a>/);
+  assert.match(html, /<section id="numbers-chart">/);
+  // Section order: chronology, lineage, branch timeline, numbers chart, figures.
+  const order = ['id="chronology"', 'id="lineage"', 'id="branch-timeline"', 'id="numbers-chart"', 'id="figures"'].map((s) => html.indexOf(s));
   assert.deepEqual([...order].sort((x, y) => x - y), order);
 });
 

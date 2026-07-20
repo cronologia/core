@@ -400,6 +400,124 @@ ${captionItems}
 `;
 }
 
+/* ---------------------------------------------------------------------------
+ * Contested-numbers chart — NEW (follows the same template copy-pattern as the
+ * branch-timeline: a pure layout function, a data-driven optional top-level
+ * key, a cited <figcaption>, a .viz-scroll container, and print/mobile rules).
+ *
+ * The point of this figure is HONESTY about incomparable numbers. Each series
+ * is drawn on its OWN axis with its OWN unit and its OWN source label — the
+ * series are never merged onto a single scale, because e.g. a movement's
+ * self-reported participant counts and a survey's population percentages
+ * measure different things by different methods. The <figcaption> carries the
+ * per-series citations, so the bars never assert an uncited number on their
+ * own. An explicit `unitNote` banner states, in the page's own words, that the
+ * series are NOT directly comparable — contested numbers are never silently
+ * unified (sourcing rules).
+ *
+ * Driven by the optional top-level `numbersChart` key:
+ *
+ *   numbersChart: {
+ *     heading?:  string      // default "Numbers"
+ *     navLabel?: string      // default "Numbers" (nav bar link text)
+ *     note?:     string      // section intro
+ *     unitNote:  string      // the "not directly comparable" banner (required)
+ *     series: [{
+ *       label:       string  // what this series measures
+ *       sourceLabel: string  // WHO reported it (movement vs external survey)
+ *       unit:        string  // axis unit ("million participants", "% share")
+ *       axisMax?:    number  // top of THIS series' own axis (default: max point)
+ *       sources:     [refId]
+ *       points: [{ year?: number|string, value: number, display: string }]
+ *     }]
+ *   }
+ *
+ * Absent key = '' = byte-identical page.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Pure geometry for the numbers chart: for every series, clamp each point to
+ * that series' own axis and compute a bar percentage. Returns null when the
+ * data is absent or declares no series (renderNumbersChart then renders '').
+ */
+function layoutNumbersChart(nc) {
+  if (!nc || !Array.isArray(nc.series) || nc.series.length === 0) return null;
+  const series = nc.series
+    .filter((s) => s && Array.isArray(s.points) && s.points.length > 0)
+    .map((s, i) => {
+      const axisMax = Number.isFinite(s.axisMax) && s.axisMax > 0
+        ? s.axisMax
+        : Math.max(...s.points.map((p) => (Number.isFinite(p.value) ? p.value : 0)), 1);
+      const points = s.points.map((p) => {
+        const value = Number.isFinite(p.value) ? p.value : 0;
+        const pct = Math.max(0, Math.min(100, (value / axisMax) * 100));
+        return { year: p.year, value, display: p.display, pct: Math.round(pct * 10) / 10 };
+      });
+      return {
+        label: s.label, sourceLabel: s.sourceLabel, unit: s.unit,
+        sources: s.sources, axisMax, colorIndex: i % 6,
+        ticks: [0, axisMax / 2, axisMax], points,
+      };
+    });
+  if (series.length === 0) return null;
+  return { series };
+}
+
+/** Render the contested-numbers chart (per-series axes + cited caption), or ''. */
+function renderNumbersChart(nc, refNumById) {
+  const layout = layoutNumbersChart(nc);
+  if (!layout) return '';
+
+  const fmtTick = (t) => (Number.isInteger(t) ? String(t) : String(Math.round(t * 10) / 10));
+
+  const panels = layout.series
+    .map((s) => {
+      const rows = s.points
+        .map((p) => `            <div class="nc-row">
+              <span class="nc-year">${esc(p.year !== undefined ? p.year : '')}</span>
+              <span class="nc-track"><span class="nc-bar nc-c${s.colorIndex}" style="width:${p.pct}%"></span></span>
+              <span class="nc-value">${esc(p.display)}</span>
+            </div>`)
+        .join('\n');
+      const ticks = s.ticks
+        .map((t) => `<span class="nc-tick">${esc(fmtTick(t))}</span>`)
+        .join('');
+      return `          <div class="nc-series">
+            <div class="nc-series-head">
+              <span class="nc-series-label">${esc(s.label)}</span>
+              <span class="nc-source-badge">${esc(s.sourceLabel)}</span>
+            </div>
+            <div class="nc-axis-note">axis: 0–${esc(fmtTick(s.axisMax))} ${esc(s.unit)}</div>
+${rows}
+            <div class="nc-axis"><span class="nc-year"></span><span class="nc-ticks">${ticks}</span><span class="nc-value"></span></div>
+          </div>`;
+    })
+    .join('\n');
+
+  const captionItems = layout.series
+    .map((s) => `            <li><strong>${esc(s.label)}</strong> — reported by ${esc(s.sourceLabel)}, in ${esc(s.unit)}${renderCites(s.sources, refNumById)}</li>`)
+    .join('\n');
+
+  const heading = nc.heading || 'Numbers';
+  return `    <section id="numbers-chart">
+      <h2>${esc(heading)}</h2>
+      ${nc.note ? `<p class="section-intro">${esc(nc.note)}</p>` : ''}
+      ${nc.unitNote ? `<p class="notice notice-attribution">${esc(nc.unitNote)}</p>` : ''}
+      <figure class="numbers-chart">
+        <div class="viz-scroll">
+${panels}
+        </div>
+        <figcaption>
+          <ol class="branch-notes">
+${captionItems}
+          </ol>
+        </figcaption>
+      </figure>
+    </section>
+
+`;
+}
+
 function renderEventRow(ev, refNumById) {
   const flag = ev.dateVerified === false
     ? ' <span class="flag" title="Date not yet verified against a primary source">?</span>'
@@ -450,6 +568,7 @@ function renderPage(data, archives) {
   // `episcopalLineage` is the original fsspx key, kept as an alias.
   const lineage = data.lineage || data.episcopalLineage;
   const branchTimeline = data.branchTimeline;
+  const numbersChart = data.numbersChart;
 
   // Stable citation numbering: references keep their file order.
   const refNumById = new Map(references.map((r, i) => [r.id, i + 1]));
@@ -458,6 +577,7 @@ function renderPage(data, archives) {
   // then byte-identical to a build without these features).
   const lineageHtml = renderLineageSection(lineage, refNumById);
   const branchTimelineHtml = renderBranchTimeline(branchTimeline, refNumById);
+  const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
 
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
 
@@ -513,7 +633,7 @@ ${ANALYTICS}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">About</a>
-      <a href="#chronology">Chronology</a>${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}
+      <a href="#chronology">Chronology</a>${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">Key figures</a>
       <a href="#organizations">Organizations</a>
       ${disambigCards ? '<a href="#disambiguation">Disambiguation</a>' : ''}
@@ -546,7 +666,7 @@ ${eventRows}
       </div>
     </section>
 
-${lineageHtml}${branchTimelineHtml}    <section id="figures">
+${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>Key figures</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
@@ -615,5 +735,6 @@ module.exports = {
   GLOSSARY_BASE, GLOSSARY_MARKER, glossaryMarkerIds, renderGlossaryLinks, renderText,
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
+  layoutNumbersChart, renderNumbersChart,
   renderPage,
 };
