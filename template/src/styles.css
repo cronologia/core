@@ -100,6 +100,10 @@ td.year { font-weight: 700; white-space: nowrap; }
 .cp-card p { margin: .4rem 0; font-size: .9rem; }
 
 /* Citations */
+/* Inline glossary cross-links (from [[term-id]] markers in prose fields). */
+.glossary-link { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+.glossary-link:hover { border-bottom-style: solid; }
+
 sup.cite { font-size: .68rem; line-height: 0; margin-left: .12rem; }
 sup.cite a { color: var(--accent); text-decoration: none; font-weight: 700; }
 sup.cite a:hover { text-decoration: underline; }

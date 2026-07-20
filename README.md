@@ -11,8 +11,11 @@ template/   Skeleton for a new chronology project: zero-dependency compiler,
             (main-gated + manual dispatch), Wayback preservation pipeline
             (scripts/archive-refs.js + weekly wayback.yml workflow that
             snapshots every reference URL and commits data/archives.json),
-            base stylesheet with accent tokens, AGENTS.md skeleton,
-            example data.
+            glossary cross-links ([[term-id]] markers in prose fields ->
+            links to cronologia.github.io/glossary/<id>/, validated offline
+            against a pinned data/glossary-terms.json synced by
+            scripts/sync-glossary-terms.js), base stylesheet with accent
+            tokens, AGENTS.md skeleton, example data.
 tools/      new-project.sh     instantiate the template with a project accent
             yt-transcript.sh   YouTube captions -> clean transcript (the
                                incantation that works from sandboxes)
@@ -49,7 +52,9 @@ capped per run via `ARCHIVE_MAX_SAVES`, 429/403 treated as retry-later), and
 writes `data/archives.json`, which `build.js` renders as "archived" fallback
 links. `template/.github/workflows/wayback.yml` runs it weekly on GitHub
 runners (per fsp ADR-0006: when a sandbox blocks archive.org, run in CI —
-never route around egress policy) and commits the result.
+never route around egress policy) and commits the result. For the networking
+and geoblocked-source policy (which hosts 403/geoblock, and the sanctioned
+workarounds), see `cronologia/archive` ADR-0002.
 
 Still to port from `cronologia/fsp`: the document vault and CI harvesting —
 tracked in the issues. The *why* of this architecture lives in fsp's ADRs

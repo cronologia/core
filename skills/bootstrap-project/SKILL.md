@@ -18,6 +18,12 @@ Load `sourcing-rules` first. The proven sequence (used for fsspx and tl):
    `figures[]`, `organizations[]`, `disambiguation.items[]`, `references[]`.
    Every entry cited; uncertain dates flagged. Then `README.md`, `AGENTS.md`,
    `context.md` (domain background, disambiguations, glossary pointers).
+   Instead of re-explaining a shared term inline, cross-link the glossary with
+   an inline `[[term-id]]` (or `[[term-id|visible text]]`) marker in any prose
+   field — it renders as a link to `https://cronologia.github.io/glossary/<term-id>/`.
+   The validator fails on unknown ids, checked against the vendored, pinned
+   `data/glossary-terms.json`; run `node scripts/sync-glossary-terms.js` to
+   refresh that list when the glossary adds terms (see `template/AGENTS.md`).
 4. **Verify.** `node scripts/validate-data.js && node --test && node build.js`
    — commit `docs/` with the data. Screenshot the built page (headless
    chromium) and eyeball it.
