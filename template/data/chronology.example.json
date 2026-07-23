@@ -4,6 +4,7 @@
     "subtitle": "Chronology of <subject> (<years>)",
     "description": "An open, source-referenced chronology of <subject>.",
     "language": "en",
+    "siteUrl": "https://cronologia.github.io/PROJECT/",
     "lastUpdated": "2026-01-01",
     "dataQualityNote": "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome.",
     "vizChips": [

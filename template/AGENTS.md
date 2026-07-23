@@ -14,7 +14,8 @@ compiles it into static HTML served by GitHub Pages.
 ## Repository map
 
 ```
-data/chronology.json     SOURCE OF TRUTH — facts, events, figures, organizations, references (hand-edited)
+data/chronology.json     SOURCE OF TRUTH — facts, events, figures, organizations, references (hand-edited, English)
+data/i18n/{es,pt}.json   MACHINE-GENERATED translation caches (written by scripts/translate.js; committed) — do NOT hand-edit
 data/archives.json       MACHINE-GENERATED Wayback snapshot cache (written by scripts/archive-refs.js; committed)
 data/glossary-terms.json VENDORED, PINNED list of cronologia/glossary term ids (written by scripts/sync-glossary-terms.js; committed) — validates [[term-id]] cross-links offline
 src/styles.css           Stylesheet (copied into the build)
@@ -22,13 +23,35 @@ scripts/validate-data.js Schema check (runs in CI before the build) — also fai
 scripts/archive-refs.js  Wayback preservation: snapshot lookup + Save Page Now for references[] -> data/archives.json
 scripts/check-links.js   Link-health checker (out-of-band/CI): HEAD/ranged-GET status + soft-404 heuristic + Wayback lookup for references[]; JSON + Markdown report. Never edits data.
 scripts/sync-glossary-terms.js  Refresh data/glossary-terms.json from cronologia/glossary (out-of-band; needs network)
-build.js                 Compiler: data/chronology.json (+ data/archives.json fallback links) -> docs/
-test/                    node:test suites (helpers + data invariants + drift check)
+scripts/translate.js     Fills data/i18n/*.json from a translation backend (env-configured; no-op offline)
+build.js                 Compiler: data/chronology.json (+ i18n + archives) -> docs/{en,es,pt}/ + sitemap + robots
+test/                    node:test suites (helpers + data invariants + per-locale drift check)
 .github/workflows/deploy.yml  CI: validate, test, build, drift check, Pages deploy (main + manual dispatch)
 .github/workflows/wayback.yml CI: weekly archive-refs run; commits data/archives.json + rebuilt docs/
 .github/workflows/link-health.yml CI: weekly check-links run; opens/updates a single "link health" issue with the failures (never edits data)
 docs/                    COMPILED OUTPUT, served by GitHub Pages (committed)
+  index.html               root redirect stub -> preferred locale
+  en/ es/ pt/              one localized site per locale
+  sitemap.xml robots.txt   per-locale SEO
 ```
+
+## Multi-language (i18n) & SEO
+
+The site ships in **English (default, authoritative), Spanish and Portuguese**.
+`es`/`pt` are **machine-translated** from the committed caches in `data/i18n/`
+and carry a visible "machine-translated" disclaimer. The language is a path
+segment **after** the project (`/<repo>/{en|pt|es}/…`) because GitHub Pages
+serves each repo under `https://<org>.github.io/<repo>/`; `/<repo>/` redirects
+to the visitor's locale. See `adrs/0001-multilingual.md` and `cronologia/core#9`.
+
+- **Never hand-edit `data/i18n/*.json`** — regenerate with `node scripts/translate.js`
+  (set `TRANSLATE_ENDPOINT`/`TRANSLATE_API_KEY`; safe no-op offline).
+- Localization is **data-level** (a key-based walk in `build.js`), so every
+  renderer — chronology, genealogy, charts, glossary links — is covered.
+- **Never translated:** reference titles/publishers, proper names, URLs, dates, ids.
+- Each page emits localized `<title>`/description/OG/Twitter, a self canonical,
+  `hreflang` (en/es/pt + x-default) and JSON-LD; the build also writes
+  `sitemap.xml` (with hreflang alternates) and `robots.txt`.
 
 ## Optional visualizations (data-driven, off by default)
 

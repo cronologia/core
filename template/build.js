@@ -20,8 +20,222 @@ const path = require('path');
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'chronology.json');
 const ARCHIVES_FILE = path.join(ROOT, 'data', 'archives.json');
+const I18N_DIR = path.join(ROOT, 'data', 'i18n');
 const SRC_DIR = path.join(ROOT, 'src');
 const OUT_DIR = path.join(ROOT, 'docs');
+
+/* ---------------------------------------------------------------------------
+ * Multi-language (i18n) + SEO. English is authoritative and hand-written; es/pt
+ * are machine-translated from committed caches (data/i18n/<lang>.json, generated
+ * by scripts/translate.js — never hand-edit) and carry a visible disclaimer.
+ *
+ * The language is a path segment AFTER the project (/<repo>/{en,es,pt}/…) because
+ * GitHub Pages serves each repo under https://<org>.github.io/<repo>/. Content is
+ * localized at the DATA level (a key-based walk, so every renderer — chronology,
+ * genealogy, charts, glossary links — is covered automatically); the compiler's
+ * own chrome is localized from the UI table below. English (empty dict) is
+ * byte-identical to a pre-i18n render except for the new /en/ path + SEO head.
+ * See adrs/0001-multilingual.md and cronologia/core#9.
+ * ------------------------------------------------------------------------- */
+
+const LOCALES = ['en', 'es', 'pt'];
+const OG_LOCALE = { en: 'en_US', es: 'es_ES', pt: 'pt_BR' };
+// Page paths (relative to a locale root) the site emits. The base template ships
+// a single page; sites with detail pages push their routes here so the sitemap
+// and hreflang stay complete.
+const ROUTES = [''];
+
+// Data fields whose string values are prose to translate. Reference titles/
+// publishers, proper names, URLs, ids, dates and numbers are NOT here, and the
+// whole `references` array is skipped, so bibliographic data is passed verbatim.
+const TRANSLATABLE_KEYS = new Set([
+  'title', 'subtitle', 'description', 'dataQualityNote', 'label', 'value', 'text',
+  'place', 'role', 'country', 'notes', 'note', 'heading', 'navLabel', 'summary',
+  'detail', 'status', 'relation', 'unitNote', 'sourceLabel', 'display', 'unit', 'edgeLabel',
+]);
+
+// Interface strings the compiler emits itself (everything not sourced from data).
+const UI = {
+  en: {
+    about: 'About', chronology: 'Chronology', figures: 'Key figures',
+    organizations: 'Organizations', disambiguation: 'Disambiguation', references: 'References',
+    figuresHeading: 'Key figures', organizationsHeading: 'Related organizations',
+    disambiguationHeading: 'Disambiguation &amp; nuance', referencesHeading: 'References',
+    aboutHeading: 'About', chronologyHeading: 'Chronology',
+    lastUpdated: 'Last updated:', language: 'Language',
+    chronologyIntro: 'Key events in chronological order. A <span class="flag">?</span> flag marks\n      dates not yet verified against a primary source.',
+    thYear: 'Year', thDate: 'Date', thPlace: 'Place', thEvent: 'Event',
+    flagTitle: 'Date not yet verified against a primary source',
+    factFlagTitle: 'Not yet verified against a primary source',
+    footer: 'Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.\n      Part of the Cronologia project family.',
+    refsIntro: (n, a) => `${n} sources${a ? ` · ${a} with an Internet Archive fallback` : ''}. Sources span the\n      spectrum of perspectives by design; contested claims are attributed to their authors.`,
+    disclaimer: null,
+  },
+  es: {
+    about: 'Acerca de', chronology: 'Cronología', figures: 'Figuras clave',
+    organizations: 'Organizaciones', disambiguation: 'Desambiguación', references: 'Referencias',
+    figuresHeading: 'Figuras clave', organizationsHeading: 'Organizaciones relacionadas',
+    disambiguationHeading: 'Desambiguación y matices', referencesHeading: 'Referencias',
+    aboutHeading: 'Acerca de', chronologyHeading: 'Cronología',
+    lastUpdated: 'Última actualización:', language: 'Idioma',
+    chronologyIntro: 'Acontecimientos clave en orden cronológico. Una marca <span class="flag">?</span> indica\n      fechas aún no verificadas con una fuente primaria.',
+    thYear: 'Año', thDate: 'Fecha', thPlace: 'Lugar', thEvent: 'Acontecimiento',
+    flagTitle: 'Fecha aún no verificada con una fuente primaria',
+    factFlagTitle: 'Aún no verificado con una fuente primaria',
+    footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
+    refsIntro: (n, a) => `${n} fuentes${a ? ` · ${a} con copia en Internet Archive` : ''}. Las fuentes abarcan el\n      espectro de perspectivas de forma deliberada; las afirmaciones controvertidas se atribuyen a sus autores.`,
+    disclaimer: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
+  },
+  pt: {
+    about: 'Sobre', chronology: 'Cronologia', figures: 'Figuras-chave',
+    organizations: 'Organizações', disambiguation: 'Desambiguação', references: 'Referências',
+    figuresHeading: 'Figuras-chave', organizationsHeading: 'Organizações relacionadas',
+    disambiguationHeading: 'Desambiguação e nuances', referencesHeading: 'Referências',
+    aboutHeading: 'Sobre', chronologyHeading: 'Cronologia',
+    lastUpdated: 'Última atualização:', language: 'Idioma',
+    chronologyIntro: 'Principais acontecimentos em ordem cronológica. Uma marca <span class="flag">?</span> indica\n      datas ainda não verificadas com uma fonte primária.',
+    thYear: 'Ano', thDate: 'Data', thPlace: 'Local', thEvent: 'Acontecimento',
+    flagTitle: 'Data ainda não verificada com uma fonte primária',
+    factFlagTitle: 'Ainda não verificado com uma fonte primária',
+    footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
+    refsIntro: (n, a) => `${n} fontes${a ? ` · ${a} com cópia no Internet Archive` : ''}. As fontes abrangem o\n      espectro de perspectivas de forma deliberada; afirmações controversas são atribuídas aos seus autores.`,
+    disclaimer: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
+  },
+};
+
+/** Load a locale's committed translation cache ({ english: translated }). */
+function loadDict(lang) {
+  if (lang === 'en') return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${lang}.json`), 'utf8'));
+    return (parsed && parsed.strings) || {};
+  } catch {
+    return {};
+  }
+}
+
+/** Normalize a public base URL to exactly one trailing slash. */
+function siteBase(meta) {
+  const raw = (meta && meta.siteUrl) || 'https://cronologia.github.io/PROJECT/';
+  return raw.replace(/\/+$/, '') + '/';
+}
+
+/** dict hit, else the English source string. */
+function translator(dict) {
+  return (s) => (s !== null && s !== undefined && Object.prototype.hasOwnProperty.call(dict, s) ? dict[s] : s);
+}
+
+/**
+ * Deep-copy `data` with every translatable prose field replaced by its
+ * translation (fallback: English), and meta.language set to `lang`. The whole
+ * `references` array is passed through verbatim (bibliographic data). With an
+ * empty dictionary (English) the values are unchanged, so the render stays
+ * byte-identical to a pre-i18n build.
+ */
+function localizeData(data, dict, lang) {
+  const t = translator(dict);
+  const walk = (val, key) => {
+    if (key === 'references') return val; // never translate bibliographic entries
+    if (Array.isArray(val)) return val.map((v) => walk(v, key));
+    if (val && typeof val === 'object') {
+      const out = {};
+      for (const k of Object.keys(val)) out[k] = walk(val[k], k);
+      return out;
+    }
+    if (typeof val === 'string' && TRANSLATABLE_KEYS.has(key)) return t(val);
+    return val;
+  };
+  const copy = walk(data, null);
+  copy.meta = Object.assign({}, copy.meta, { language: lang });
+  return copy;
+}
+
+/** hreflang + canonical alternates for one route across every locale. */
+function alternates(base, route, lang) {
+  const url = (l) => `${base}${l}/${route}`;
+  const links = LOCALES.map((l) => `  <link rel="alternate" hreflang="${l}" href="${esc(url(l))}">`).join('\n');
+  return `  <link rel="canonical" href="${esc(url(lang))}">\n${links}\n  <link rel="alternate" hreflang="x-default" href="${esc(base)}">`;
+}
+
+/** Localized <head> SEO block (canonical/hreflang/OG/Twitter/JSON-LD). */
+function seoHead(meta, base, route, lang) {
+  const title = meta.title;
+  const description = meta.description;
+  const pageUrl = `${base}${lang}/${route}`;
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: title, description, url: pageUrl, inLanguage: lang };
+  return `${alternates(base, route, lang)}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${esc(title)}">
+  <meta property="og:locale" content="${OG_LOCALE[lang] || 'en_US'}">
+  <meta property="og:title" content="${esc(title)}">
+  <meta property="og:description" content="${esc(description)}">
+  <meta property="og:url" content="${esc(pageUrl)}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${esc(title)}">
+  <meta name="twitter:description" content="${esc(description)}">
+  <script type="application/ld+json">
+${JSON.stringify(jsonLd, null, 2).split('\n').map((l) => '  ' + l).join('\n')}
+  </script>`;
+}
+
+/** Path-preserving language switcher (swap only the locale segment). */
+function langSwitcher(route, lang, ui) {
+  const links = LOCALES.map((l) => (l === lang
+    ? `<span class="lang-current" aria-current="true">${l.toUpperCase()}</span>`
+    : `<a href="../${l}/${route}" hreflang="${l}">${l.toUpperCase()}</a>`)).join('');
+  return `<nav class="lang-switch" aria-label="${esc(ui.language)}">${links}</nav>`;
+}
+
+/** The root redirect stub: send visitors to their preferred locale. */
+function renderRootStub(base) {
+  const alt = LOCALES.map((l) => `  <link rel="alternate" hreflang="${l}" href="${esc(base + l + '/')}">`).join('\n');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="canonical" href="${esc(base + 'en/')}">
+${alt}
+  <link rel="alternate" hreflang="x-default" href="${esc(base + 'en/')}">
+  <script>
+    (function () {
+      var supported = ${JSON.stringify(LOCALES)};
+      var stored = null; try { stored = localStorage.getItem('lang'); } catch (e) {}
+      var nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
+      var pick = supported.indexOf(stored) >= 0 ? stored : (supported.indexOf(nav) >= 0 ? nav : 'en');
+      location.replace('./' + pick + '/');
+    })();
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=./en/"></noscript>
+  <title>Cronologia</title>
+</head>
+<body><p>Redirecting… <a href="./en/">English</a> · <a href="./es/">Español</a> · <a href="./pt/">Português</a></p></body>
+</html>
+`;
+}
+
+/** sitemap.xml enumerating every route × locale with hreflang alternates. */
+function renderSitemap(base, routes) {
+  const urls = [];
+  for (const route of routes) {
+    for (const lang of LOCALES) {
+      const alts = LOCALES.map((l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${esc(base + l + '/' + route)}"/>`).join('\n');
+      urls.push(`  <url>
+    <loc>${esc(base + lang + '/' + route)}</loc>
+${alts}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${esc(base + 'en/' + route)}"/>
+  </url>`);
+    }
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${urls.join('\n')}
+</urlset>
+`;
+}
+
+function renderRobots(base) {
+  return `User-agent: *\nAllow: /\nSitemap: ${base}sitemap.xml\n`;
+}
 
 // Google Analytics (gtag.js). Injected into the <head> of every generated page.
 // The measurement ID is shared across the Cronologia projects and is a public
@@ -518,9 +732,9 @@ ${captionItems}
 `;
 }
 
-function renderEventRow(ev, refNumById) {
+function renderEventRow(ev, refNumById, ui) {
   const flag = ev.dateVerified === false
-    ? ' <span class="flag" title="Date not yet verified against a primary source">?</span>'
+    ? ` <span class="flag" title="${esc((ui || UI.en).flagTitle)}">?</span>`
     : '';
   const text = ev.text ? ` <span class="muted">— ${renderText(ev.text)}</span>` : '';
   return `        <tr>
@@ -563,8 +777,12 @@ function renderReference(r, n, archives) {
         </li>`;
 }
 
-function renderPage(data, archives) {
+function renderPage(data, archives, opts = {}) {
   const { meta, facts, events, figures, organizations, disambiguation, references } = data;
+  const lang = opts.lang || (meta && meta.language) || 'en';
+  const ui = UI[lang] || UI.en;
+  const base = opts.base || siteBase(meta);
+  const route = opts.route || '';
   // `episcopalLineage` is the original fsspx key, kept as an alias.
   const lineage = data.lineage || data.episcopalLineage;
   const branchTimeline = data.branchTimeline;
@@ -590,13 +808,13 @@ function renderPage(data, archives) {
         ? `        <tr class="decade-row"><th colspan="4">${esc(d)}</th></tr>\n`
         : '';
       lastDecade = d;
-      return header + renderEventRow(ev, refNumById);
+      return header + renderEventRow(ev, refNumById, ui);
     })
     .join('\n');
 
   const factRows = (facts || [])
     .map((f) => {
-      const flag = f.verified === false ? ' <span class="flag" title="Not yet verified against a primary source">?</span>' : '';
+      const flag = f.verified === false ? ` <span class="flag" title="${esc(ui.factFlagTitle)}">?</span>` : '';
       return `        <dt>${esc(f.label)}</dt>\n        <dd>${renderText(f.value)}${flag}${renderCites(f.sources, refNumById)}</dd>`;
     })
     .join('\n');
@@ -618,32 +836,34 @@ function renderPage(data, archives) {
   <title>${esc(meta.title)}</title>
   <meta name="description" content="${esc(meta.description)}">
 ${ANALYTICS}
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../styles.css">
+${seoHead(meta, base, route, lang)}
 </head>
 <body>
   <header class="site-header">
     <div class="wrap">
+      ${langSwitcher(route, lang, ui)}
       <h1>${esc(meta.title)}</h1>
       <p class="subtitle">${esc(meta.subtitle)}</p>
       <p class="lead">${esc(meta.description)}</p>
-      <p class="updated">Last updated: ${esc(meta.lastUpdated)}</p>${renderVizChips(meta.vizChips)}
+      <p class="updated">${esc(ui.lastUpdated)} ${esc(meta.lastUpdated)}</p>${renderVizChips(meta.vizChips)}
     </div>
-  </header>
+  </header>${ui.disclaimer ? `\n  <div class="i18n-disclaimer" role="note">🌐 ${esc(ui.disclaimer)}</div>` : ''}
 
   <nav class="site-nav">
     <div class="wrap">
-      <a href="#about">About</a>
-      <a href="#chronology">Chronology</a>${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
-      <a href="#figures">Key figures</a>
-      <a href="#organizations">Organizations</a>
-      ${disambigCards ? '<a href="#disambiguation">Disambiguation</a>' : ''}
-      <a href="#references">References</a>
+      <a href="#about">${esc(ui.about)}</a>
+      <a href="#chronology">${esc(ui.chronology)}</a>${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#figures">${esc(ui.figures)}</a>
+      <a href="#organizations">${esc(ui.organizations)}</a>
+      ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
+      <a href="#references">${esc(ui.references)}</a>
     </div>
   </nav>
 
   <main class="wrap">
     <section id="about">
-      <h2>About</h2>
+      <h2>${esc(ui.aboutHeading)}</h2>
       <p class="notice">${esc(meta.dataQualityNote)}</p>
       <dl class="facts">
 ${factRows}
@@ -651,13 +871,12 @@ ${factRows}
     </section>
 
     <section id="chronology">
-      <h2>Chronology</h2>
-      <p class="section-intro">Key events in chronological order. A <span class="flag">?</span> flag marks
-      dates not yet verified against a primary source.</p>
+      <h2>${esc(ui.chronologyHeading)}</h2>
+      <p class="section-intro">${ui.chronologyIntro}</p>
       <div class="table-scroll">
       <table class="meetings">
         <thead>
-          <tr><th>Year</th><th>Date</th><th>Place</th><th>Event</th></tr>
+          <tr><th>${esc(ui.thYear)}</th><th>${esc(ui.thDate)}</th><th>${esc(ui.thPlace)}</th><th>${esc(ui.thEvent)}</th></tr>
         </thead>
         <tbody>
 ${eventRows}
@@ -667,21 +886,21 @@ ${eventRows}
     </section>
 
 ${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
-      <h2>Key figures</h2>
+      <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
       </div>
     </section>
 
     <section id="organizations">
-      <h2>Related organizations</h2>
+      <h2>${esc(ui.organizationsHeading)}</h2>
       <div class="party-grid">
 ${(organizations || []).map((o) => renderOrgCard(o, refNumById)).join('\n')}
       </div>
     </section>
 
 ${disambigCards ? `    <section id="disambiguation">
-      <h2>Disambiguation &amp; nuance</h2>
+      <h2>${ui.disambiguationHeading}</h2>
       ${disambiguation.note ? `<p class="notice notice-attribution">${esc(disambiguation.note)}</p>` : ''}
       <div class="party-grid">
 ${disambigCards}
@@ -689,9 +908,8 @@ ${disambigCards}
     </section>
 ` : ''}
     <section id="references">
-      <h2>References</h2>
-      <p class="section-intro">${references.length} sources${archivedRefs ? ` · ${archivedRefs} with an Internet Archive fallback` : ''}. Sources span the
-      spectrum of perspectives by design; contested claims are attributed to their authors.</p>
+      <h2>${esc(ui.referencesHeading)}</h2>
+      <p class="section-intro">${ui.refsIntro(references.length, archivedRefs)}</p>
       <ol class="references">
 ${references.map((r, i) => renderReference(r, i + 1, archives)).join('\n')}
       </ol>
@@ -700,8 +918,7 @@ ${references.map((r, i) => renderReference(r, i + 1, archives)).join('\n')}
 
   <footer class="site-footer">
     <div class="wrap">
-      <p>Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.
-      Part of the Cronologia project family.</p>
+      <p>${ui.footer}</p>
     </div>
   </footer>
 </body>
@@ -712,17 +929,27 @@ ${references.map((r, i) => renderReference(r, i + 1, archives)).join('\n')}
 function main() {
   const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
   const archives = loadArchives();
+  const base = siteBase(data.meta);
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  fs.writeFileSync(path.join(OUT_DIR, 'index.html'), renderPage(data, archives));
+  for (const lang of LOCALES) {
+    const localized = localizeData(data, loadDict(lang), lang);
+    const dir = path.join(OUT_DIR, lang);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), renderPage(localized, archives, { lang, base, route: '' }));
+  }
+  fs.writeFileSync(path.join(OUT_DIR, 'index.html'), renderRootStub(base));
+  fs.writeFileSync(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(base, ROUTES));
+  fs.writeFileSync(path.join(OUT_DIR, 'robots.txt'), renderRobots(base));
   fs.copyFileSync(path.join(SRC_DIR, 'styles.css'), path.join(OUT_DIR, 'styles.css'));
   // Disable Jekyll processing on GitHub Pages.
   fs.writeFileSync(path.join(OUT_DIR, '.nojekyll'), '');
 
   const archivedRefs = data.references.filter((r) => archives[r.url] && archives[r.url].archiveUrl).length;
   console.log(
-    `Built docs/index.html (${data.events.length} events, ${data.figures.length} figures, ` +
-    `${data.references.length} references, ${archivedRefs} with archive fallback).`
+    `Built ${LOCALES.length} locales (${LOCALES.join(', ')}) × ${ROUTES.length} route(s) + root redirect, sitemap, robots — ` +
+    `${data.events.length} events, ${data.figures.length} figures, ` +
+    `${data.references.length} references, ${archivedRefs} with archive fallback.`
   );
 }
 
@@ -737,4 +964,6 @@ module.exports = {
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   layoutNumbersChart, renderNumbersChart,
   renderPage,
+  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
+  alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
 };

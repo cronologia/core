@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "generatedBy": "scripts/translate.js",
+    "note": "GENERATED machine-translation cache — do not hand-edit. English is authoritative. (Example seed for the template; real projects regenerate this.)",
+    "targetLang": "pt",
+    "coverage": "example"
+  },
+  "strings": {
+    "An open, source-referenced chronology of <subject>.": "Uma cronologia aberta e referenciada a fontes de <subject>.",
+    "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome.": "Conjunto de dados em andamento, compilado a partir de fontes públicas (ver referências). Afirmações controversas são atribuídas aos seus autores; datas ainda não verificadas com uma fonte primária são marcadas com um sinal ?. Correções com fontes primárias são bem-vindas.",
+    "What it is": "O que é",
+    "Founded": "Fundação",
+    "📜 Chronology": "📜 Cronologia",
+    "🌳 Genealogy": "🌳 Genealogia",
+    "📊 Numbers": "📊 Números"
+  }
+}

@@ -222,3 +222,15 @@ figure.numbers-chart figcaption { margin-top: .25rem; }
   .viz-scroll { overflow: visible; }
   .branch-timeline-svg { width: 100% !important; height: auto !important; }
 }
+
+/* Language switcher (i18n) */
+.lang-switch { float: right; display: flex; gap: .35rem; align-items: center; font-size: .8rem; font-weight: 700; }
+.lang-switch a { color: var(--muted); text-decoration: none; padding: .1rem .3rem; border-radius: 3px; }
+.lang-switch a:hover { color: var(--accent); background: var(--accent-soft); }
+.lang-switch .lang-current { color: var(--accent); background: var(--accent-soft); padding: .1rem .3rem; border-radius: 3px; }
+
+/* Machine-translation disclaimer (non-English pages) */
+.i18n-disclaimer {
+  background: #fff8e6; border-bottom: 1px solid #f0e2b8; color: #6b5a17;
+  font-size: .82rem; text-align: center; padding: .45rem 1rem;
+}
