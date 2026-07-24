@@ -43,6 +43,7 @@ mp = load("mine-prep.py", "mine_prep")
 dq = load("dataset-query.py", "dataset_query")
 ur = load("unverified-report.py", "unverified_report")
 xr = load("xref.py", "xref")
+ss = load("sync-skills.py", "sync_skills")
 
 
 TRANSCRIPT = """Título do vídeo | Canal
@@ -509,12 +510,133 @@ class TestXref(DatasetFixture):
         self.assertEqual(json.loads(out.getvalue())["contradictions"], 1)
 
 
+class TestSyncSkills(unittest.TestCase):
+    """Vendoring core/skills into a project's .claude/skills."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="cron-skills-")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.src = os.path.join(self.tmp, "skills")
+        for name, body in (("alpha-skill", "---\nname: alpha-skill\n---\nA\n"),
+                           ("beta-skill", "---\nname: beta-skill\n---\nB\n")):
+            os.makedirs(os.path.join(self.src, name))
+            with open(os.path.join(self.src, name, "SKILL.md"), "w",
+                      encoding="utf-8") as fh:
+                fh.write(body)
+        os.makedirs(os.path.join(self.src, "not-a-skill"))
+        self.repo = os.path.join(self.tmp, "project")
+        os.makedirs(os.path.join(self.repo, "data"))
+        self.skills = ss.discover_skills(self.src)
+        self.vendor = os.path.join(self.repo, ss.VENDOR_REL)
+
+    def test_discover_skips_dirs_without_skill_md(self):
+        self.assertEqual([name for name, _p, _t in self.skills],
+                         ["alpha-skill", "beta-skill"])
+
+    def test_discover_subset(self):
+        subset = ss.discover_skills(self.src, only=["beta-skill"])
+        self.assertEqual([name for name, _p, _t in subset], ["beta-skill"])
+
+    def test_digest_ignores_line_endings(self):
+        self.assertEqual(ss.digest("a\r\nb\r\n"), ss.digest("a\nb\n"))
+
+    def test_plan_add_then_ok(self):
+        self.assertEqual(ss.plan(self.skills, self.vendor),
+                         [("add", "alpha-skill"), ("add", "beta-skill")])
+        ss.apply_plan(self.skills, self.vendor,
+                      ss.plan(self.skills, self.vendor), "2026-07-24")
+        self.assertEqual(ss.plan(self.skills, self.vendor),
+                         [("ok", "alpha-skill"), ("ok", "beta-skill")])
+
+    def test_plan_detects_hand_edit_and_orphan(self):
+        ss.apply_plan(self.skills, self.vendor,
+                      ss.plan(self.skills, self.vendor), "2026-07-24")
+        with open(os.path.join(self.vendor, "alpha-skill", "SKILL.md"), "a",
+                  encoding="utf-8") as fh:
+            fh.write("hand edit\n")
+        os.makedirs(os.path.join(self.vendor, "ghost-skill"))
+        with open(os.path.join(self.vendor, "ghost-skill", "SKILL.md"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("gone upstream\n")
+        actions = dict((name, status)
+                       for status, name in ss.plan(self.skills, self.vendor))
+        self.assertEqual(actions["alpha-skill"], "update")
+        self.assertEqual(actions["beta-skill"], "ok")
+        self.assertEqual(actions["ghost-skill"], "stale")
+
+    def test_apply_removes_orphan_and_writes_manifest(self):
+        os.makedirs(os.path.join(self.vendor, "ghost-skill"))
+        with open(os.path.join(self.vendor, "ghost-skill", "SKILL.md"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("gone\n")
+        ss.apply_plan(self.skills, self.vendor,
+                      ss.plan(self.skills, self.vendor), "2026-07-24")
+        self.assertFalse(os.path.exists(os.path.join(self.vendor,
+                                                     "ghost-skill")))
+        manifest = ss.read_manifest(self.vendor)
+        self.assertEqual(manifest["source"], "cronologia/core")
+        self.assertEqual(manifest["syncedAt"], "2026-07-24")
+        self.assertEqual([s["name"] for s in manifest["skills"]],
+                         ["alpha-skill", "beta-skill"])
+        self.assertIn("GENERATED", manifest["_comment"])
+
+    def test_manifest_current_tracks_content(self):
+        actions = ss.plan(self.skills, self.vendor)
+        ss.apply_plan(self.skills, self.vendor, actions, "2026-07-24")
+        actions = ss.plan(self.skills, self.vendor)
+        manifest = ss.read_manifest(self.vendor)
+        self.assertTrue(ss.manifest_current(manifest, self.skills, actions))
+        self.assertFalse(ss.manifest_current(None, self.skills, actions))
+        changed = [(n, p, t + "x") for n, p, t in self.skills]
+        self.assertFalse(ss.manifest_current(manifest, changed, actions))
+
+    def test_process_check_reports_stale_without_writing(self):
+        result = ss.process(self.repo, self.skills, True, "2026-07-24")
+        self.assertTrue(result["stale"])
+        self.assertEqual(result["manifest"], "missing")
+        self.assertFalse(os.path.exists(self.vendor))
+        result = ss.process(self.repo, self.skills, False, "2026-07-24")
+        self.assertFalse(result["stale"])
+        self.assertEqual(result["written"], 2)
+        self.assertFalse(ss.process(self.repo, self.skills, True,
+                                    "2026-07-24")["stale"])
+
+    def test_render_names_the_generated_rule(self):
+        results = [ss.process(self.repo, self.skills, True, "2026-07-24")]
+        text = ss.render(results, self.skills, True)
+        self.assertIn("GENERATED", text)
+        self.assertIn("mode=check", text)
+        self.assertIn("add | alpha-skill", text)
+
+    def test_main_requires_a_target(self):
+        with silent():
+            self.assertEqual(ss.main([]), 2)
+
+    def test_main_rejects_unknown_skill_name(self):
+        with silent():
+            self.assertEqual(ss.main([self.repo, "--skills", "nope"]), 2)
+
+    def test_main_list_is_json_serializable(self):
+        with silent() as out:
+            self.assertEqual(ss.main(["--list", "--json"]), 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload["source"], "cronologia/core")
+        self.assertTrue(any(s["name"] == "sourcing-rules"
+                            for s in payload["skills"]))
+
+    def test_real_repo_check_is_stale_before_sync(self):
+        with silent():
+            self.assertEqual(ss.main([self.repo, "--check"]), 1)
+            self.assertEqual(ss.main([self.repo]), 0)
+            self.assertEqual(ss.main([self.repo, "--check"]), 0)
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
     def test_no_dataset_writes_in_sources(self):
         for filename in ("mine-prep.py", "dataset-query.py",
-                         "unverified-report.py", "xref.py"):
+                         "unverified-report.py", "xref.py", "sync-skills.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)

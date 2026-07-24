@@ -7,21 +7,24 @@ architectural — keep it.
 |---|---|---|
 | language | **zero-dependency Node** | **Python 3, stdlib only** |
 | lives in | `template/scripts/` and each project's `scripts/` | `core/tools/` |
-| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py` |
+| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py` |
 | runs | in `build.js`, `node --test`, GitHub Actions — the build is **network-free** | on an agent's machine, on demand |
-| writes | `docs/`, `data/archives.json`, link-health reports | **nothing** |
+| writes | `docs/`, `data/archives.json`, link-health reports | **nothing in `data/`** |
+
+The full rationale is `../adr/0004-python-agent-tooling-vs-node-build.md`.
 
 The Python tools **never run in CI and never edit a dataset.** They read and
-report, so an agent spends its tokens on judgement instead of scrolling. Every
-one takes `--help`, prints dense fixed-field output meant to be read by a model,
-and exits non-zero only on a real error (unreadable dataset, bad argument) —
-never because it found something.
+report, so an agent spends its tokens on judgement instead of scrolling (the one
+exception writes no data either: `sync-skills.py` writes vendored
+`.claude/skills/` copies). Every one takes `--help`, prints dense fixed-field
+output meant to be read by a model, and exits non-zero only on a real error
+(unreadable dataset = 1, bad argument = 2) — never because it found something.
 
 No pip installs: Python 3 standard library only, same discipline as the
 zero-dependency Node side.
 
 ```
-python3 -m unittest discover -s tools -p 'test_*.py' -v     # 48 tests, no network
+python3 -m unittest discover -s tools -p 'test_*.py' -v     # 61 tests, no network
 ```
 
 Repo arguments accept a bare name (`fsspx`, `tariqa`, `perennialism`, `rcc`,
@@ -170,6 +173,43 @@ Both flags are **review candidates, not errors**: divergence is often legitimate
 (different period, different scope — `sourcing-rules` #4). Nothing is
 auto-resolved; resolving an attribution is a human/agent judgement backed by
 sources.
+
+## `sync-skills.py` — vendor the skills into a project
+
+```
+python3 tools/sync-skills.py <repo> [<repo> ...]        # sync
+python3 tools/sync-skills.py <repo> --check             # drift check, exit 1
+python3 tools/sync-skills.py <repo> --skills a,b        # subset
+python3 tools/sync-skills.py --list                     # what's canonical
+```
+
+`core/skills/` is canonical, but an agent working inside `cronologia/fsspx` only
+discovers skills that live in *that* checkout. So the skills are **vendored**:
+`core/skills/<name>/SKILL.md` is copied to
+`<repo>/.claude/skills/<name>/SKILL.md` as a committed, pinned copy that is
+never hand-edited — the same pattern as `data/glossary-terms.json`, for the same
+reasons (deterministic, offline, visible in the diff). See
+`../adr/0002-vendored-glossary-and-skills.md`.
+
+Alongside the copies it writes `<repo>/.claude/skills/_synced.json`:
+
+```json
+{ "_comment": "GENERATED — … edit in cronologia/core and re-run …",
+  "source": "cronologia/core", "sourcePath": "skills/",
+  "syncedAt": "2026-07-24", "tool": "core/tools/sync-skills.py",
+  "skills": [ { "name": "data-edit", "sha256": "…", "bytes": 2132 } ] }
+```
+
+Per-skill status is `add` (missing downstream), `update` (present but its
+content differs — typically a hand-edit), `stale` (present downstream but gone
+upstream; a sync removes it), or `ok`. **`--check` writes nothing** and exits
+`1` when any target is stale, so CI or an agent can detect drift; a bad argument
+or unknown skill name exits `2`. Hashes are newline-normalized, so a CRLF
+checkout doesn't produce phantom drift.
+
+Core never pushes into another repo: each project's own agent runs the sync in
+its own repo and commits the result (one repo, one committer — see
+`../DEPENDENCIES.md`).
 
 ## Older tools
 
