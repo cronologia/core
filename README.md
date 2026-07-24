@@ -5,6 +5,23 @@ family: a **project template**, **tools**, and **Claude skills**. No content
 lives here — if a file mentions a bishop, a party or a theologian, it belongs
 in a project repo.
 
+Start with [`AGENTS.md`](AGENTS.md) (how to work in this repo, the Node-vs-Python
+line, the backward-compatibility rules for template changes),
+[`DEPENDENCIES.md`](DEPENDENCIES.md) (the interdependency map for the whole
+family — who consumes what, and the standing project boundaries), and
+[`adr/`](adr/) for why core is built this way:
+
+- [`adr/0001-shared-renderer-contract.md`](adr/0001-shared-renderer-contract.md)
+  — optional data key, byte-identical output when absent, validator + tests ship
+  with the renderer.
+- [`adr/0002-vendored-glossary-and-skills.md`](adr/0002-vendored-glossary-and-skills.md)
+  — pinned vendored copies (glossary ids, skills) instead of live fetches.
+- [`adr/0003-preservation-and-link-health-split.md`](adr/0003-preservation-and-link-health-split.md)
+  — network-free build; archiving and link-checking are CI/out-of-band;
+  inconclusive ≠ dead.
+- [`adr/0004-python-agent-tooling-vs-node-build.md`](adr/0004-python-agent-tooling-vs-node-build.md)
+  — agent-side Python in `tools/` vs zero-dependency Node in the build.
+
 ```
 template/   Skeleton for a new chronology project: zero-dependency compiler,
             schema validator, node:test suite, corrected deploy workflow
@@ -24,11 +41,45 @@ tools/      new-project.sh     instantiate the template with a project accent
             yt-transcript.sh   YouTube captions -> clean transcript (the
                                incantation that works from sandboxes)
             vtt2txt.py         VTT -> deduplicated plain text
-skills/     Claude skills encoding the working method:
+            mine-prep.py       transcript -> compact candidate sheet
+                               (dated claims, ASR-unreliable proper nouns,
+                               numbers, attributed passages) with line/char
+                               offsets -- ~8-16x smaller than the transcript
+            dataset-query.py   one question about a chronology/glossary
+                               dataset (find/event/figure/refs/unverified/
+                               stats) without reading the whole file
+            unverified-report.py  the standing verification worklist across
+                               all project datasets (--markdown for tickets)
+            xref.py            cross-repo consistency: entities in 2+ repos,
+                               each repo's description side by side, with
+                               affiliation contradictions flagged
+            sync-skills.py     vendor skills/ into a project's .claude/skills/
+                               as a pinned, GENERATED copy + _synced.json
+                               manifest; --check exits non-zero on drift
+            test_tools.py      stdlib unittest for the Python tools:
+                               python3 -m unittest discover -s tools \
+                                   -p 'test_*.py' -v
+            See tools/README.md. The line that matters: anything the BUILD or
+            CI runs is zero-dependency Node in template/scripts/ or a
+            project's scripts/ (the build is network-free); agent-side
+            ANALYSIS tooling is Python 3 stdlib-only in core/tools/, never
+            runs in CI, and never mutates a dataset -- it reads and reports.
+skills/     Claude skills encoding the working method (canonical copies;
+            vendored into projects by tools/sync-skills.py):
             sourcing-rules     the discipline every repo follows (load first)
             bootstrap-project  research -> data -> build -> publish -> tickets
             mine-video         video -> transcript -> ticket -> verified data
             dossier-research   the person-dossier checklist
+            net-access         the ladder for blocked/geoblocked sources
+            data-edit          query -> edit -> validate/test/build -> commit
+            ingest-report      research reports -> dataset entries
+            adopt-template     pulling shared machinery into a project
+            preserve-sources   snapshots, link health, what goes in the vault
+            release-work       branch, fast-forward, commit, push, report
+            See skills/README.md.
+adr/        Core's own decisions (0001 renderer contract, 0002 vendored
+            pinned copies, 0003 preservation/link-health split, 0004
+            Python tooling vs the Node build).
 ```
 
 ## Starting a new project
@@ -48,6 +99,19 @@ at the moment Pages is enabled.
 The template is the canonical copy of the shared files. When it changes,
 propagate deliberately (a PR per project) — projects may carry per-subject
 extensions (fsspx's genealogy renderer, tl's map) on top of the shared base.
+The procedure is the `adopt-template` skill; the compatibility contract is
+`adr/0001` (optional data key, byte-identical output when the key is absent).
+
+The **skills** propagate the same way, as pinned vendored copies (`adr/0002`):
+
+```bash
+python3 tools/sync-skills.py fsspx            # -> fsspx/.claude/skills/*/SKILL.md
+python3 tools/sync-skills.py fsspx --check    # exit 1 if that copy has drifted
+```
+
+Each project's own agent runs the sync in its own repo and commits the result;
+core never pushes into another repo. The vendored files are GENERATED — edit a
+skill here, then re-sync.
 
 The Wayback pipeline is ported: `template/scripts/archive-refs.js` looks up
 an existing Internet Archive snapshot for every `references[].url`, triggers
