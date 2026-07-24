@@ -5,7 +5,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  deriveUserAgent, extractTitle, decodeEntities, titleTokens, titleSimilarity,
+  deriveUserAgent, headerSafe, extractTitle, decodeEntities, titleTokens, titleSimilarity,
   looksLikeNotFound, isSoftRedirect, classifyStatus, parseWaybackAvailable,
   isPriorityArchive, summarize, toMarkdown,
 } = require('../scripts/check-links.js');
@@ -16,6 +16,19 @@ test('deriveUserAgent names the project and has a contact URL', () => {
   assert.match(deriveUserAgent('RCC Brasil'), /^cronologia-check-links\/1\.0 \(RCC Brasil; \+https:\/\/github\.com\/cronologia\)$/);
   assert.match(deriveUserAgent(''), /Cronologia project/);
   assert.match(deriveUserAgent(undefined), /Cronologia project/);
+});
+
+test('deriveUserAgent is always a valid HTTP header value (no em dash / accents)', () => {
+  // Regression: a title with U+2014 or accents made fetch throw a ByteString
+  // error, silently reporting every reference as inconclusive.
+  for (const title of ['São Pio X — Cronologia', 'RCC — Cronologia', 'Perennialism — Cronologia']) {
+    const ua = deriveUserAgent(title);
+    assert.ok(/^[\x20-\x7e]*$/.test(ua), `UA must be printable ASCII: ${ua}`);
+    assert.doesNotThrow(() => new Headers({ 'User-Agent': ua }));
+  }
+  // headerSafe folds diacritics and normalizes dashes; ASCII passes through.
+  assert.equal(headerSafe('São Pio X — Cronologia'), 'Sao Pio X - Cronologia');
+  assert.equal(headerSafe('RCC Brasil'), 'RCC Brasil');
 });
 
 // ---- title parsing ---------------------------------------------------------
