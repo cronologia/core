@@ -1,30 +1,33 @@
 #!/usr/bin/env node
 /**
- * Machine-translation cache generator.
+ * Translation-cache manager (no runtime/hosting dependency).
  *
- * Reads data/chronology.json, collects every translatable content string, and
- * maintains one committed cache per target locale at data/i18n/<lang>.json:
+ * The sites are static HTML on GitHub Pages; NOTHING translates at runtime. The
+ * es/pt content is committed, pre-authored data at data/i18n/<lang>.json:
  *
  *   { "_meta": { … }, "strings": { "<english source>": "<translation>" } }
  *
- * build.js consumes these caches (keyed by the English source string) and falls
- * back to English for anything missing. The caches are GENERATED — never
- * hand-edit them; re-run this tool. This mirrors the Wayback archives.json
- * discipline (a committed, generated cache) and keeps build.js zero-dependency.
+ * build.js bakes these caches (keyed by the English source string) into the
+ * static /es/ and /pt/ pages, falling back to English for anything missing.
  *
- * Machine translation itself needs a backend, configured by env so the repo
- * stays dependency- and secret-free:
+ * Filling the caches — TWO ways, NO backend required for either the build or
+ * the published site:
+ *   1. AUTHORED (primary). A human or the assistant writes the translations
+ *      straight into data/i18n/<lang>.json. Run this tool with `--stats` to see
+ *      which strings still need one. This is how the cronologia sites are
+ *      translated — pre-authored, committed, served as plain HTML.
+ *   2. AUTOMATED (optional). If you happen to have a translation service, set
+ *      TRANSLATE_ENDPOINT (+ optional TRANSLATE_API_KEY) and this tool will call
+ *      it to fill the missing strings. Purely a convenience; not needed.
  *
- *   TRANSLATE_ENDPOINT   POST {q,source,target} translate endpoint (e.g. a
- *                        LibreTranslate instance). TRANSLATE_API_KEY optional.
- *
- * Without a backend the tool runs offline: it reports coverage and normalizes
- * the cache (prunes stale keys, refreshes _meta) without inventing translations,
- * so `node scripts/translate.js` is always safe to run.
+ * With no backend the tool is a safe no-op: it reports coverage and normalizes
+ * the cache (prunes stale keys, refreshes _meta) without inventing translations.
+ * Treat the caches as generated data — regenerate/re-author when content changes;
+ * don't leave them stale.
  *
  * Usage:
- *   node scripts/translate.js              # es + pt, fill missing (needs backend)
- *   node scripts/translate.js --stats      # coverage report only, no writes
+ *   node scripts/translate.js --stats      # coverage: which strings still need a translation
+ *   node scripts/translate.js              # es + pt (fills via backend only if one is set)
  *   node scripts/translate.js es           # a single locale
  *
  * NOT translated: proper names, reference titles/publishers, URLs, dates, ids.

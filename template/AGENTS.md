@@ -44,8 +44,12 @@ segment **after** the project (`/<repo>/{en|pt|es}/…`) because GitHub Pages
 serves each repo under `https://<org>.github.io/<repo>/`; `/<repo>/` redirects
 to the visitor's locale. See `adrs/0001-multilingual.md` and `cronologia/core#9`.
 
-- **Never hand-edit `data/i18n/*.json`** — regenerate with `node scripts/translate.js`
-  (set `TRANSLATE_ENDPOINT`/`TRANSLATE_API_KEY`; safe no-op offline).
+- **No backend, ever.** The site is static HTML on GitHub Pages; nothing
+  translates at runtime. `es`/`pt` are **pre-authored, committed** caches in
+  `data/i18n/` baked into the static pages at build time. Fill them by authoring
+  the translations and committing them; `node scripts/translate.js --stats`
+  reports which strings still need one. (An env-configured MT service is an
+  optional convenience — not required.) Keep them fresh when English changes.
 - Localization is **data-level** (a key-based walk in `build.js`), so every
   renderer — chronology, genealogy, charts, glossary links — is covered.
 - **Never translated:** reference titles/publishers, proper names, URLs, dates, ids.
