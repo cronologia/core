@@ -24,6 +24,26 @@ tools/      new-project.sh     instantiate the template with a project accent
             yt-transcript.sh   YouTube captions -> clean transcript (the
                                incantation that works from sandboxes)
             vtt2txt.py         VTT -> deduplicated plain text
+            mine-prep.py       transcript -> compact candidate sheet
+                               (dated claims, ASR-unreliable proper nouns,
+                               numbers, attributed passages) with line/char
+                               offsets -- ~8-16x smaller than the transcript
+            dataset-query.py   one question about a chronology/glossary
+                               dataset (find/event/figure/refs/unverified/
+                               stats) without reading the whole file
+            unverified-report.py  the standing verification worklist across
+                               all project datasets (--markdown for tickets)
+            xref.py            cross-repo consistency: entities in 2+ repos,
+                               each repo's description side by side, with
+                               affiliation contradictions flagged
+            test_tools.py      stdlib unittest for the four Python tools:
+                               python3 -m unittest discover -s tools \
+                                   -p 'test_*.py' -v
+            See tools/README.md. The line that matters: anything the BUILD or
+            CI runs is zero-dependency Node in template/scripts/ or a
+            project's scripts/ (the build is network-free); agent-side
+            ANALYSIS tooling is Python 3 stdlib-only in core/tools/, never
+            runs in CI, and never mutates a dataset -- it reads and reports.
 skills/     Claude skills encoding the working method:
             sourcing-rules     the discipline every repo follows (load first)
             bootstrap-project  research -> data -> build -> publish -> tickets
