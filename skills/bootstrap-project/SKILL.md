@@ -5,7 +5,20 @@ description: Bootstrap a new Cronologia chronology project from research to publ
 
 # Bootstrap a Cronologia project
 
-Load `sourcing-rules` first. The proven sequence (used for fsspx and tl):
+Load `sourcing-rules` first.
+
+**If this project is a split out of an existing repo** — a subject that grew
+inside another project rather than a new subject — do not bootstrap yet. Apply
+the test in core `adr/0005-when-a-subject-becomes-its-own-repo.md` first: all
+five dimensions must hold, the cheaper alternatives (disambiguation card,
+`figures[]`/`organizations[]` entry, `branchTimeline` branch, cross-link) must
+have been tried and found insufficient, and **the owner must have accepted the
+split** — an agent suggests it in a ticket in the parent repo, with citations,
+and never creates the repo on its own judgement. Reference that ADR (and the
+accepted suggestion ticket) before step 1, and cite it in the new repo's first
+ADR.
+
+The proven sequence (used for fsspx and tl):
 
 1. **Research.** Run parallel research on the subject: founding facts, a
    chronology of 25–40 key events with dates and places, key figures, related
