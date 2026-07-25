@@ -1,0 +1,86 @@
+{
+  "_comment": "COMMITTED alias map for normalise-entities.py. Every entry is a HUMAN decision, carries a reason and names the source it was taken from. NOTHING HERE IS DERIVED and no tool ever writes to this file: an agent that wants a new merge edits this file, states why, and commits it. Fuzzy similarity is NEVER a reason - two different people with similar names (Titus vs Jacob Burckhardt, Seyyed Hossein Nasr vs David Nasser) stay separate, and the pairs a similarity check would propose are listed under doNotMerge so they are not re-litigated every run. Merges that need no entry here: forms differing only by diacritics, punctuation, case or whitespace are folded mechanically by the tool ('Rene Guenon' == 'Rene Guenon' == 'Rene Guenon'), so listing them here is redundant and the tool says so.",
+  "_scope": "The COF manifest's `entities` field, which ranks runs of CAPITALISED TOKENS - i.e. multiword proper nouns. Single-token manglings recorded in the projects' KEYWORDS.md (`Genon`, `Ganon`, `Chuon`, `Comarassoume`, `Lefebre`) can never appear in that field and are deliberately absent here; they are full-text search traps and live in the projects' KEYWORDS.md. Variants listed here but never seen in the manifest are reported as `unused` on every run rather than silently kept.",
+  "_evidence": "An `evidence` entry is (aula, quote). The quote is checked as a LITERAL substring of that aula's file on every run; a quote that no longer verifies is reported as an error. Quotation is sparing and attributed to a specific aula, per archive/NOTICE.md and adr/0005-corpus-admission.md.",
+  "version": 1,
+  "aliases": [
+    {
+      "canonical": "John Duns Scotus",
+      "canonicalInCorpus": false,
+      "variants": ["John Don Scott", "John Duns Scot", "Duns Scot", "Duns Scott"],
+      "reason": "ASR of the scholastic's name. The corpus never writes 'Scotus'; the transcriptions render it as an English surname. The five aulas carrying 'John Don Scott' put it in scholastic company - COF389 attributes to him the doctrine of individuating difference ('exceidade' = haecceitas) in an explicit dispute with Aquinas. 'Dan Scott' (COF327) is deliberately NOT included: it sits in the same aula as 'John Don Scott' and could be a second mangling or a different name, and that is a human call, not this tool's.",
+      "source": "hand-checked against the corpus while building this map (2026-07-25); the ASR-mangling discipline is perennialism/KEYWORDS.md, 'ASR manglings observed in the vaulted transcripts'",
+      "evidence": [
+        {"aula": "COF389", "quote": "John Don Scott chamado a sua exceidade"}
+      ]
+    },
+    {
+      "canonical": "Ortega y Gasset",
+      "canonicalInCorpus": true,
+      "variants": ["Ortega C"],
+      "reason": "Truncation of an ASR form: the transcriptions render 'Ortega y Gasset' as 'Ortega Cela' and, more often, cut it to 'Ortega C'. COF528 names the book in the same sentence ('a Rebellao de Las Massas' = La rebelion de las masas, Ortega y Gasset 1929). The unmangled 'Ortega Y Gasset' occurs in exactly one aula, the truncation in five - merging is the difference between finding one lecture and finding six.",
+      "source": "hand-checked against the corpus while building this map (2026-07-25)",
+      "evidence": [
+        {"aula": "COF528", "quote": "José Ortega Cela, a Rebellão de Las Massas"},
+        {"aula": "COF452", "quote": "A presença do Ortega C ali já era estranha"}
+      ]
+    },
+    {
+      "canonical": "Martin Lings",
+      "canonicalInCorpus": true,
+      "variants": ["Martin Ling", "Martin Lynch"],
+      "reason": "Recorded ASR manglings of Lings: the final -s is dropped, and 'Martin Lynch' was observed in COF. 'Martin Lins' is NOT merged - see doNotMerge; it may well be the same name but no hand measurement records it, and a guess is not a merge.",
+      "source": "perennialism/KEYWORDS.md - 'Lings -> Martin Ling (singular), Martin Lynch (COF)'; tariqa/KEYWORDS.md ASR table - 'Martin Lings | Martin links, Martins'"
+    },
+    {
+      "canonical": "René Guénon",
+      "canonicalInCorpus": true,
+      "variants": ["Rune Genon", "Renê Guon", "Rene Ganon"],
+      "reason": "Multiword ASR forms of the name recorded in the traps tables. The unaccented and mixed-accent forms the corpus actually uses ('Rene Guenon', 'Rene Guenon', 'Rene Guenon') need no entry: they fold together mechanically.",
+      "source": "perennialism/KEYWORDS.md - 'Guénon -> ... rune genon (transcript-48) ... Renê guon (transcript-43) ... Rene ganon, Rene Ganon (transcript-56), Renê ganon (transcript-51)'"
+    },
+    {
+      "canonical": "Seyyed Hossein Nasr",
+      "canonicalInCorpus": true,
+      "variants": ["Said Hussain Nasser", "Seed Jossei Nasser", "Seed Hosi Nasser"],
+      "reason": "Every element of the name is mangled by ASR and the surname collides with Gamal Abdel Nasser; the traps tables record these three multiword forms. The collision is why the map is explicit: see doNotMerge for 'David Nasser', a different person present in this same index.",
+      "source": "tariqa/KEYWORDS.md ASR table - 'Seyyed Hossein Nasr | NASA, said Hussain nasser'; perennialism/KEYWORDS.md - 'transcript-66 renders him seed jossei Nasser and seed hosi Nasser in consecutive lines'"
+    },
+    {
+      "canonical": "Titus Burckhardt",
+      "canonicalInCorpus": true,
+      "variants": ["Titus Burkhard", "Tito Zumbur", "Tito Bucke"],
+      "reason": "Recorded ASR forms, including the Portuguese-first-name re-cuts seen in COF. Merging on the SURNAME alone would be wrong here in both directions: Jacob Burckhardt (COF, correctly spelled) is the Swiss historian, and 'Burke' in the fsspx transcripts is Cardinal Raymond Burke.",
+      "source": "perennialism/KEYWORDS.md - 'Burckhardt -> Burkart, Burkhart, Burkhan, Burkard, Burkle, Burkher, Tito Zumbur, Tito Bucke (COF)'; tariqa/KEYWORDS.md ASR table - 'Titus Burckhardt | Titus burkhard, Burkhart'"
+    },
+    {
+      "canonical": "Ananda Coomaraswamy",
+      "canonicalInCorpus": true,
+      "variants": ["Anandakumara Swami", "Com Marazvam"],
+      "reason": "Multiword ASR forms of Coomaraswamy recorded in the vault. The single-token COF forms ('Comarassoume', 'Comarassame', 'Comarassome', 'Comarassuame', 'Comarassao') are out of scope for an index of multiword runs - see _scope. Rama P. Coomaraswamy (his son, a figure in fsspx and tariqa) is a different person and is not merged.",
+      "source": "tariqa/KEYWORDS.md ASR section - 'Coomaraswamy - Kumarazuami (9), Comaram (5) ... anandakumara Swami (transcript-121, transcript-57) ... com Marazvam'"
+    }
+  ],
+  "doNotMerge": [
+    {
+      "names": ["Titus Burckhardt", "Jacob Burckhardt"],
+      "reason": "Two different men who share a surname: the perennialist author (d. 1984) and the Swiss cultural historian (d. 1897). Both are in the corpus, correctly spelled, in different aulas.",
+      "source": "perennialism/KEYWORDS.md figures[6] vs the corpus's own 'Jacob Burckhardt'"
+    },
+    {
+      "names": ["Seyyed Hossein Nasr", "David Nasser"],
+      "reason": "David Nasser is a Brazilian journalist; the surname collision with Nasr/Nasser is exactly the trap the traps table warns about.",
+      "source": "perennialism/KEYWORDS.md - 'the surname collides with Gamal Abdel Nasser ... never by Nasr alone'"
+    },
+    {
+      "names": ["Martin Lings", "Martin Lins"],
+      "reason": "Left open on purpose. 'Martin Lins' may be a further mangling of Lings, but no hand measurement records it, and Álvaro Lins is a Brazilian critic the corpus discusses - so the surname is live in this corpus on its own account. A human decides; the tool reports it as a suggestion every run.",
+      "source": "this map's own review (2026-07-25); Álvaro Lins is in the corpus's entity index"
+    },
+    {
+      "names": ["Marcel Lefebvre", "Henri Lefebvre"],
+      "reason": "The corpus discusses both the SSPX archbishop and the Marxist philosopher; an ASR-driven merge on the surname would fuse a Catholic traditionalist with a French Marxist.",
+      "source": "perennialism/KEYWORDS.md - 'Lefebvre conflates Marcel (SSPX) with Henri (the Marxist philosopher) in COF; recorded on archive#13 §2'"
+    }
+  ]
+}

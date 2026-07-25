@@ -45,6 +45,9 @@ ur = load("unverified-report.py", "unverified_report")
 xr = load("xref.py", "xref")
 ss = load("sync-skills.py", "sync_skills")
 bk = load("build-keywords.py", "build_keywords")
+ne = load("normalise-entities.py", "normalise_entities")
+cx = load("cof-xref.py", "cof_xref")
+cg = load("cof-graph.py", "cof_graph")
 
 
 TRANSCRIPT = """Título do vídeo | Canal
@@ -877,13 +880,405 @@ class TestSyncSkills(unittest.TestCase):
             self.assertEqual(ss.main([self.repo, "--check"]), 0)
 
 
+# --------------------------------------------------------------------------
+# the COF corpus tools
+# --------------------------------------------------------------------------
+
+
+COF_INDEX = {
+    "note": "test manifest",
+    "docs": [
+        {"id": "COF001", "aula": 1, "date": "2009-01-01", "series": "cof",
+         "file": "revisadas/COF001.md", "words": 10,
+         "entities": ["René Guénon", "Jean Borella", "Martin Lings"]},
+        {"id": "COF002", "aula": 2, "date": None, "series": "cof",
+         "file": "revisadas/COF002.md", "words": 10,
+         "entities": ["Rene Guenon", "Martin Ling", "John Don Scott"]},
+        {"id": "COF003", "aula": 3, "date": "2009-02-01", "series": "cof",
+         "file": "revisadas/COF003.md", "words": 10,
+         "entities": ["Réne Guénon", "Duns Scot", "Martin Lins",
+                      "Guénon e Schuon"]},
+        {"id": "COF004", "aula": 4, "date": "2009-03-01", "series": "cof",
+         "file": "revisadas/COF004.md", "words": 10,
+         "entities": ["Ananda Coomaraswamy"]},
+        {"id": "COF005", "aula": 5, "date": "2009-04-01", "series": "cof",
+         "file": "revisadas/COF005.md", "words": 10,
+         "entities": ["René Guénon"]},
+    ],
+}
+
+COF_ALIASES = {
+    "version": 1,
+    "aliases": [
+        {"canonical": "John Duns Scotus", "canonicalInCorpus": False,
+         "variants": ["John Don Scott", "Duns Scot"],
+         "reason": "ASR of the scholastic's name.",
+         "source": "hand-checked",
+         "evidence": [{"aula": "COF002", "quote": "John Don Scott"}]},
+        {"canonical": "Martin Lings", "canonicalInCorpus": True,
+         "variants": ["Martin Ling", "Martin Lynch"],
+         "reason": "ASR drops the final -s.", "source": "KEYWORDS.md"},
+    ],
+    "doNotMerge": [
+        {"names": ["Martin Lings", "Martin Lins"],
+         "reason": "Left open on purpose.", "source": "review"},
+    ],
+}
+
+
+class CorpusFixture(DatasetFixture):
+    """A repo-shaped temp dir plus a miniature COF corpus. Nothing real."""
+
+    @classmethod
+    def setUpClass(cls):
+        DatasetFixture.setUpClass()
+        cls.corpus_dir = os.path.join(cls.root, "archive", "cof")
+        os.makedirs(os.path.join(cls.corpus_dir, "revisadas"))
+        cls.corpus = os.path.join(cls.corpus_dir, "index.json")
+        with open(cls.corpus, "w", encoding="utf-8") as fh:
+            json.dump(COF_INDEX, fh, ensure_ascii=False)
+        for doc in COF_INDEX["docs"]:
+            path = os.path.join(cls.corpus_dir, doc["file"])
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("aula %s. %s\n" % (doc["id"],
+                                            " ".join(doc["entities"])))
+        cls.alias_path = os.path.join(cls.root, "aliases.json")
+        with open(cls.alias_path, "w", encoding="utf-8") as fh:
+            json.dump(COF_ALIASES, fh, ensure_ascii=False)
+
+    @classmethod
+    def aliases(cls):
+        return ne.load_aliases(cls.alias_path)
+
+
+class TestEntityKeys(unittest.TestCase):
+    def test_fold_key_ignores_accents_case_and_punctuation(self):
+        for surface in ("René Guénon", "Rene Guenon", "Réne Guenón",
+                        "  rene   guenon. ", "RENÉ-GUÉNON"):
+            self.assertEqual(ne.fold_key(surface), "rene guenon", surface)
+
+    def test_fold_key_is_not_a_display_string(self):
+        self.assertNotEqual(ne.fold_key("René Guénon"), "René Guénon")
+
+    def test_initials_key_drops_single_letters_only(self):
+        self.assertEqual(ne.initials_key("Ananda K. Coomaraswamy"),
+                         "ananda coomaraswamy")
+        self.assertEqual(ne.initials_key("Rama P. Coomaraswamy"),
+                         "rama coomaraswamy")
+        self.assertEqual(ne.initials_key("Jean Borella"), "jean borella")
+
+    def test_levenshtein(self):
+        self.assertEqual(ne.levenshtein("martin lings", "martin lings"), 0)
+        self.assertEqual(ne.levenshtein("martin lings", "martin lins"), 1)
+        self.assertEqual(ne.levenshtein("mark sedgwick", "mark sedwick"), 1)
+        self.assertEqual(ne.levenshtein("", "abc"), 3)
+
+    def test_levenshtein_limit_short_circuits(self):
+        self.assertGreater(ne.levenshtein("rene guenon", "totally other", 2), 2)
+        self.assertGreater(ne.levenshtein("abc", "abcdefghij", 2), 2)
+
+    def test_conjunction_parts(self):
+        self.assertEqual(ne.conjunction_parts("Guénon e Schuon"),
+                         ("Guénon", "Schuon"))
+        self.assertEqual(ne.conjunction_parts("Lutero e Calvino"),
+                         ("Lutero", "Calvino"))
+        self.assertIsNone(ne.conjunction_parts("René Guénon"))
+        self.assertIsNone(ne.conjunction_parts("Machado de Assis"))
+
+
+class TestAliasMap(unittest.TestCase):
+    def test_entry_without_a_reason_is_rejected(self):
+        with self.assertRaises(ValueError):
+            ne.AliasMap({"aliases": [{"canonical": "X", "variants": ["Y"]}]},
+                        "t")
+
+    def test_variant_claimed_twice_is_rejected(self):
+        payload = {"aliases": [
+            {"canonical": "A", "variants": ["Z"], "reason": "r",
+             "source": "s"},
+            {"canonical": "B", "variants": ["Z"], "reason": "r",
+             "source": "s"}]}
+        with self.assertRaises(ValueError):
+            ne.AliasMap(payload, "t")
+
+    def test_do_not_merge_needs_two_names_and_a_reason(self):
+        with self.assertRaises(ValueError):
+            ne.AliasMap({"doNotMerge": [{"names": ["A"], "reason": "r"}]}, "t")
+
+    def test_blocked_pairs_are_symmetric_keys(self):
+        aliases = ne.AliasMap(COF_ALIASES, "t")
+        self.assertIn(tuple(sorted(("martin lings", "martin lins"))),
+                      aliases.blocked)
+        self.assertEqual(aliases.target(ne.fold_key("Duns Scot")),
+                         ne.fold_key("John Duns Scotus"))
+        self.assertIsNone(aliases.target("martin lins"))
+
+
+class TestNormaliseEntities(CorpusFixture):
+    def test_folding_collapses_diacritic_variants(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        by_key = dict((g["key"], g) for g in report["groups"])
+        guenon = by_key["rene guenon"]
+        self.assertEqual(guenon["docs"], 4)
+        self.assertEqual(guenon["variants"], 3)
+        # display = the surface carrying the most aulas, always a string the
+        # corpus writes — never the fold key
+        self.assertEqual(guenon["display"], "René Guénon")
+        self.assertEqual(guenon["aulas"],
+                         ["COF001", "COF002", "COF003", "COF005"])
+
+    def test_alias_map_merges_and_labels_without_inventing_a_surface(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        by_key = dict((g["key"], g) for g in report["groups"])
+        scotus = by_key["john duns scotus"]
+        self.assertEqual(sorted(s["surface"] for s in scotus["surfaces"]),
+                         ["Duns Scot", "John Don Scott"])
+        self.assertFalse(scotus["labelInCorpus"])
+        self.assertEqual(scotus["label"], "John Duns Scotus")
+        self.assertIn(scotus["display"], ("Duns Scot", "John Don Scott"))
+
+    def test_similar_names_are_suggested_never_merged(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        keys = set(g["key"] for g in report["groups"])
+        self.assertIn("martin lins", keys)
+        self.assertIn("martin lings", keys)
+        pairs = set()
+        for row in report["suggestions"]:
+            if row["b"]:
+                pairs.add(tuple(sorted((row["a"]["key"], row["b"]["key"]))))
+        # blocked by doNotMerge, so it is not even re-suggested
+        self.assertNotIn(("martin lings", "martin lins"), pairs)
+
+    def test_conjunction_surface_is_only_a_suggestion(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        kinds = dict((r["a"]["display"], r["kind"])
+                     for r in report["suggestions"] if r["b"] is None)
+        self.assertEqual(kinds.get("Guénon e Schuon"), "conjunction")
+        keys = set(g["key"] for g in report["groups"])
+        self.assertIn("guenon e schuon", keys)
+
+    def test_evidence_quotes_are_verified_against_the_files(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        statuses = [e["status"] for e in report["audit"]["evidence"]]
+        self.assertEqual(statuses, ["verified"])
+
+    def test_unused_alias_entries_are_reported_not_hidden(self):
+        report = ne.build_report(self.corpus, self.aliases())
+        unused = [r["variant"] for r in report["audit"]["unused"]]
+        self.assertIn("Martin Lynch", unused)
+
+    def test_no_aliases_leaves_the_manglings_apart(self):
+        report = ne.build_report(self.corpus, ne.empty_aliases())
+        keys = set(g["key"] for g in report["groups"])
+        self.assertIn("john don scott", keys)
+        self.assertIn("duns scot", keys)
+        self.assertNotIn("john duns scotus", keys)
+
+    def test_min_aulas_filters_the_table_only(self):
+        report = ne.build_report(self.corpus, self.aliases(), min_aulas=3)
+        self.assertEqual([g["key"] for g in report["groups"]],
+                         ["rene guenon"])
+        self.assertEqual(report["entities"], len(
+            ne.build_report(self.corpus, self.aliases())["groups"]))
+
+    def test_cli_runs_and_is_deterministic(self):
+        with silent() as first:
+            self.assertEqual(ne.main(["--corpus", self.corpus,
+                                      "--aliases", self.alias_path]), 0)
+        with silent() as second:
+            self.assertEqual(ne.main(["--corpus", self.corpus,
+                                      "--aliases", self.alias_path]), 0)
+        self.assertEqual(first.getvalue(), second.getvalue())
+        self.assertIn("René Guénon", first.getvalue())
+
+    def test_bad_alias_map_exits_two(self):
+        broken = os.path.join(self.root, "broken.json")
+        with open(broken, "w", encoding="utf-8") as fh:
+            json.dump({"aliases": [{"canonical": "X", "variants": ["Y"]}]}, fh)
+        with silent():
+            self.assertEqual(ne.main(["--corpus", self.corpus,
+                                      "--aliases", broken]), 2)
+
+    def test_missing_corpus_exits_one(self):
+        with silent():
+            self.assertEqual(ne.main(["--corpus",
+                                      os.path.join(self.root, "nope.json")]), 1)
+
+
+class TestCofXref(CorpusFixture):
+    def test_skip_reason_rejects_descriptors_and_generic_names(self):
+        self.assertIsNone(cx.skip_reason("Jean Borella", "jean borella"))
+        self.assertIn("descriptor", cx.skip_reason("as author", "as author"))
+        self.assertIn("descriptor", cx.skip_reason("publisher", "publisher"))
+        self.assertIn("generic", cx.skip_reason("Francis", "francis"))
+        self.assertIn("generic", cx.skip_reason("FSSP", "fssp"))
+
+    def test_dataset_variants_splits_records_naming_several_people(self):
+        variants = cx.dataset_variants("Mark Sedgwick & Wouter Hanegraaff")
+        self.assertIn("Mark Sedgwick", variants)
+        self.assertIn("Wouter Hanegraaff", variants)
+        self.assertIn("Mark Sedgwick & Wouter Hanegraaff", variants)
+
+    def test_dataset_variants_keeps_parentheticals_and_dash_sides(self):
+        variants = cx.dataset_variants("René Guénon (Abd al-Wahid Yahya)")
+        self.assertIn("René Guénon", variants)
+        self.assertIn("Abd al-Wahid Yahya", variants)
+
+    def test_match_confidence_high_then_initials(self):
+        groups = ne.build_table(ne.load_corpus(self.corpus), self.aliases())
+        lookup = ne.group_index(groups)
+        group, confidence, _how = cx.match(lookup, "Rene Guenon")
+        self.assertEqual(group["display"], "René Guénon")
+        self.assertEqual(confidence, "high")
+        group, confidence, _how = cx.match(lookup, "Ananda K. Coomaraswamy")
+        self.assertEqual(group["display"], "Ananda Coomaraswamy")
+        self.assertEqual(confidence, "medium")
+        self.assertIsNone(cx.match(lookup, "Someone Absent"))
+
+    def test_near_miss_needs_a_shared_surname_not_a_given_name(self):
+        groups = ne.build_table(ne.load_corpus(self.corpus), self.aliases())
+        tokens = cx.index_tokens(groups)
+        near = cx.near_misses(groups, tokens, "Rama P. Coomaraswamy")
+        self.assertEqual([n["entity"] for n in near], ["Ananda Coomaraswamy"])
+        self.assertEqual(cx.near_misses(groups, tokens, "Jean Piaget"), [])
+
+    def test_near_miss_catches_an_asr_mangling_by_edit_distance(self):
+        groups = ne.build_table(ne.load_corpus(self.corpus), self.aliases())
+        tokens = cx.index_tokens(groups)
+        near = cx.near_misses(groups, tokens, "Martin Linds")
+        self.assertTrue(any(n["entity"] == "Martin Lings" for n in near))
+
+    def test_report_counts_aulas_through_the_alias_map(self):
+        report = cx.build_report(["alpha"], self.corpus, self.aliases())
+        self.assertEqual(report["repos"], ["alpha"])
+        self.assertEqual([h["entity"] for h in report["hits"]], [])
+        marcel = [z for z in report["zero"]
+                  if z["variant"] == "Marcel Lefebvre"]
+        self.assertEqual(len(marcel), 1)
+
+    def test_markdown_carries_the_caveat(self):
+        report = cx.build_report(["alpha"], self.corpus, self.aliases())
+        text = cx.render_markdown(report)
+        self.assertIn("LEAD, not a citation", text)
+        self.assertIn("not a mention index", text)
+
+    def test_markdown_and_json_together_exit_two(self):
+        with silent():
+            self.assertEqual(cx.main(["--repos", "alpha", "--corpus",
+                                      self.corpus, "--markdown", "--json"]), 2)
+
+    def test_cli_runs_over_a_fixture_repo(self):
+        with silent() as out:
+            self.assertEqual(cx.main(["--repos", "alpha", "--corpus",
+                                      self.corpus, "--aliases",
+                                      self.alias_path]), 0)
+        self.assertIn("cof-xref", out.getvalue())
+
+
+class TestCofGraph(CorpusFixture):
+    def graph(self, min_cooccurrence=1):
+        groups = ne.build_table(ne.load_corpus(self.corpus), self.aliases())
+        return cg.build_graph(groups, min_cooccurrence)
+
+    def test_edges_are_weighted_by_shared_aulas(self):
+        nodes, edges = self.graph()
+        weights = dict(((e["source"], e["target"]), e["weight"])
+                       for e in edges)
+        self.assertEqual(weights[("jean borella", "rene guenon")], 1)
+        self.assertEqual(weights[("martin lings", "rene guenon")], 2)
+        self.assertNotIn(("rene guenon", "rene guenon"), weights)
+        self.assertIn("rene guenon", nodes)
+
+    def test_min_cooccurrence_cuts_the_long_tail(self):
+        _nodes, edges = self.graph(2)
+        self.assertEqual([(e["source"], e["target"]) for e in edges],
+                         [("john duns scotus", "rene guenon"),
+                          ("martin lings", "rene guenon")])
+
+    def test_isolated_node_has_degree_zero(self):
+        nodes, edges = self.graph()
+        degree = cg.degrees(nodes, edges)
+        self.assertEqual(degree["ananda coomaraswamy"][0], 0)
+        self.assertEqual(degree["rene guenon"][0], 5)
+
+    def test_components_are_sorted_largest_first(self):
+        nodes, edges = self.graph()
+        parts = cg.components(nodes, edges)
+        self.assertEqual(len(parts[0]), len(nodes) - 1)
+        self.assertEqual(parts[-1], ["ananda coomaraswamy"])
+
+    def test_graphml_is_well_formed_and_declares_its_keys(self):
+        import xml.etree.ElementTree as ET
+        nodes, edges = self.graph()
+        text = cg.to_graphml(nodes, edges, sorted(nodes))
+        root = ET.fromstring(text)
+        namespace = "{http://graphml.graphdrawing.org/xmlns}"
+        self.assertEqual(root.tag, namespace + "graphml")
+        graph = root.find(namespace + "graph")
+        self.assertEqual(len(graph.findall(namespace + "node")), len(nodes))
+        self.assertEqual(len(graph.findall(namespace + "edge")), len(edges))
+        self.assertIn("NOT a relationship", text)
+
+    def test_graphml_escapes_markup(self):
+        nodes = {"a & b": {"key": "a & b", "label": "A <b> & \"c\"",
+                           "label2": "", "docs": 1, "variants": 1,
+                           "aulas": ["COF001"], "mergedBy": "fold"}}
+        text = cg.to_graphml(nodes, [], ["a & b"])
+        self.assertIn("&amp;", text)
+        self.assertNotIn("<b>", text)
+        import xml.etree.ElementTree as ET
+        ET.fromstring(text)
+
+    def test_dot_quotes_and_escapes(self):
+        nodes, edges = self.graph(2)
+        text = cg.to_dot(nodes, edges, sorted(nodes))
+        self.assertIn("graph cof_entities {", text)
+        self.assertIn('"martin lings" -- "rene guenon"', text)
+        self.assertTrue(text.rstrip().endswith("}"))
+        self.assertIn("// Co-occurrence", text)
+
+    def test_dot_escape_handles_quotes_and_newlines(self):
+        self.assertEqual(cg.dot_escape('a"b\nc'), 'a\\"b c')
+
+    def test_refuse_write_target_protects_data_and_corpus(self):
+        self.assertIsNone(cg.refuse_write_target(
+            os.path.join(self.root, "g.dot"), self.corpus))
+        self.assertIsNone(cg.refuse_write_target("-", self.corpus))
+        self.assertIn("corpus", cg.refuse_write_target(
+            os.path.join(self.corpus_dir, "g.dot"), self.corpus))
+        self.assertIn("data/", cg.refuse_write_target(
+            os.path.join(self.root, "alpha", "data", "g.dot"), self.corpus))
+        self.assertIn("dataset", cg.refuse_write_target(
+            os.path.join(self.root, "chronology.json"), self.corpus))
+
+    def test_cli_writes_only_where_told(self):
+        target = os.path.join(self.root, "out.graphml")
+        with silent() as out:
+            self.assertEqual(cg.main(["--corpus", self.corpus, "--aliases",
+                                      self.alias_path, "--graphml", target]), 0)
+        self.assertTrue(os.path.exists(target))
+        self.assertIn("wrote graphml", out.getvalue())
+        with silent():
+            self.assertEqual(cg.main(["--corpus", self.corpus, "--graphml",
+                                      os.path.join(self.corpus_dir, "x.graphml")
+                                      ]), 2)
+        self.assertFalse(os.path.exists(os.path.join(self.corpus_dir,
+                                                     "x.graphml")))
+
+    def test_bad_min_cooccurrence_exits_two(self):
+        with silent():
+            self.assertEqual(cg.main(["--corpus", self.corpus,
+                                      "--min-cooccurrence", "0"]), 2)
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
     def test_no_dataset_writes_in_sources(self):
         for filename in ("mine-prep.py", "dataset-query.py",
                          "unverified-report.py", "xref.py", "sync-skills.py",
-                         "build-keywords.py"):
+                         "build-keywords.py", "normalise-entities.py",
+                         "cof-xref.py", "cof-graph.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)

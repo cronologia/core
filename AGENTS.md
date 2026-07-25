@@ -10,8 +10,12 @@ template, the working method as Claude skills, and agent-side analysis tooling.
 
 **No content lives here.** If a file mentions a bishop, a party, an order or a
 theologian, it belongs in a project repo. Core carries structure, not subject
-matter — the one exception is example data (`template/data/chronology.example.json`),
-which exists to specify shapes and to fixture the template's own tests.
+matter — with two narrow exceptions, both of which assert nothing about the
+world: example data (`template/data/chronology.example.json`), which specifies
+shapes and fixtures the template's own tests, and
+`tools/cof-entity-aliases.json`, a spelling-equivalence table for the COF
+corpus (which transcription of a name is which) kept as data so every merge is
+auditable in a diff. Neither is a claim; both are machinery.
 
 Core is consumed by copy, not by dependency: nothing here is published to a
 registry, and no project's build fetches it. Deleting `core/tools/` must not
@@ -39,7 +43,20 @@ tools/       Agent-side analysis tooling + the project instantiator.
              mine-prep / dataset-query / unverified-report / xref /
              sync-skills / build-keywords (generates the mechanical half of a
              project's KEYWORDS.md — the search vocabulary an agent needs
-             before grepping a corpus). See tools/README.md.
+             before grepping a corpus).
+             COF corpus tools, chained in that order:
+             normalise-entities  collapse the manifest's entity spellings into
+                                 one node per entity (folding + a committed
+                                 alias map; never on similarity)
+             cof-xref            which aulas discuss the figures our datasets
+                                 track, with dates — research leads, not
+                                 citations
+             cof-graph           entity co-occurrence graph in GraphML and DOT
+                                 (co-occurrence is navigation, NOT a claimed
+                                 relationship)
+             cof-entity-aliases.json — committed data, not code: the human
+             merge decisions (reason + source + verifiable evidence quote) the
+             three tools share. See tools/README.md.
 adr/         Why core is built this way (ADR-0001..0005).
 ```
 
