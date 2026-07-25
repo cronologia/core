@@ -72,19 +72,41 @@ function loadCache(lang) {
   } catch { return {}; }
 }
 
-function writeCache(lang, strings, sourceCount) {
+/** Read an existing cache's _meta so a normalize-only run does not rewrite provenance. */
+function loadMeta(lang) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${lang}.json`), 'utf8'));
+    return (parsed && parsed._meta) || {};
+  } catch { return {}; }
+}
+
+/**
+ * Write the cache.
+ *
+ * `authored` MUST be true only when THIS run actually produced translations via
+ * TRANSLATE_ENDPOINT. A normalize-only run (pruning stale keys, refreshing
+ * coverage) preserves whatever provenance the cache already carries — these
+ * caches may have been authored by something other than this script (e.g. an
+ * LLM, when no backend is configured), and silently reattributing them to
+ * scripts/translate.js would be a false provenance claim in a dataset whose
+ * value depends on knowing where every string came from.
+ */
+function writeCache(lang, strings, sourceCount, authored) {
   fs.mkdirSync(I18N_DIR, { recursive: true });
   const ordered = {};
   Object.keys(strings).sort().forEach((k) => { ordered[k] = strings[k]; });
-  const payload = {
-    _meta: {
-      generatedBy: 'scripts/translate.js',
-      note: 'GENERATED machine-translation cache — do not hand-edit. English is authoritative.',
-      targetLang: lang,
-      coverage: `${Object.keys(ordered).length}/${sourceCount}`,
-    },
-    strings: ordered,
-  };
+  const prev = loadMeta(lang);
+  const meta = Object.assign({}, prev, {
+    targetLang: lang,
+    coverage: `${Object.keys(ordered).length}/${sourceCount}`,
+  });
+  if (authored) {
+    meta.generatedBy = 'scripts/translate.js via TRANSLATE_ENDPOINT';
+    meta.note = 'GENERATED machine-translation cache — do not hand-edit. English is authoritative.';
+  } else if (!meta.generatedBy) {
+    meta.generatedBy = 'unknown — this cache was not authored by scripts/translate.js; record its real origin here';
+  }
+  const payload = { _meta: meta, strings: ordered };
   fs.writeFileSync(path.join(I18N_DIR, `${lang}.json`), JSON.stringify(payload, null, 2) + '\n');
 }
 
@@ -125,7 +147,7 @@ async function run() {
     const missing = sources.filter((s) => !(s in cache));
     console.log(`[${lang}] coverage ${sources.length - missing.length}/${sources.length}` + (missing.length ? `, ${missing.length} missing` : ' (complete)'));
     if (statsOnly) continue;
-    if (missing.length === 0) { writeCache(lang, cache, sources.length); continue; }
+    if (missing.length === 0) { writeCache(lang, cache, sources.length, false); continue; }
     try {
       const BATCH = 20;
       for (let i = 0; i < missing.length; i += BATCH) {
@@ -133,13 +155,13 @@ async function run() {
         const translated = await machineTranslate(chunk, lang);
         chunk.forEach((src, j) => { if (translated[j]) cache[src] = translated[j]; });
       }
-      writeCache(lang, cache, sources.length);
+      writeCache(lang, cache, sources.length, true);
       console.log(`[${lang}] wrote cache (${Object.keys(cache).length}/${sources.length}).`);
     } catch (e) {
       if (e.code === 'NO_BACKEND') {
         console.log(`[${lang}] no translation backend configured — cache left as-is (${Object.keys(cache).length}/${sources.length}). ` +
           `Set TRANSLATE_ENDPOINT (+ TRANSLATE_API_KEY) to fill ${missing.length} missing string(s).`);
-        writeCache(lang, cache, sources.length);
+        writeCache(lang, cache, sources.length, false);
       } else {
         console.error(`[${lang}] translation failed:`, e.message);
         process.exitCode = 1;
