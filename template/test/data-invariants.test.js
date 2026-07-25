@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   renderPage, renderRootStub, renderSitemap, renderRobots,
-  siteBase, localizeData, loadDict, LOCALES, ROUTES,
+  siteBase, localizeData, loadDict, LOCALES, ROUTES, esc,
 } = require('../build.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -83,7 +83,11 @@ test('translation cache is applied where present', () => {
   if (keys.length === 0) return;
   const html = renderPage(localizeData(data, es, 'es'), {}, { lang: 'es', base: siteBase(data.meta), route: '' });
   const hit = keys.find((k) => JSON.stringify(data).includes(k));
-  if (hit) assert.ok(html.includes(es[hit]), 'expected a Spanish translation to appear in the es page');
+  // Compare against the ESCAPED translation: renderPage HTML-escapes text, so a
+  // translation containing an apostrophe or ampersand ("Iglesia's", "A & B")
+  // never appears verbatim in the markup. Comparing the raw value made this test
+  // fail for any project whose first matching string had such a character.
+  if (hit) assert.ok(html.includes(esc(es[hit])), 'expected a Spanish translation to appear in the es page');
 });
 
 test('sitemap lists every route × locale with alternates; robots points to it', () => {
