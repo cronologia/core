@@ -37,7 +37,7 @@ skills/      The working method, as Claude skills (canonical copies):
              release-work       branch, fast-forward, commit, push, report
 tools/       Agent-side analysis tooling + the project instantiator.
              See tools/README.md.
-adr/         Why core is built this way (ADR-0001..0004).
+adr/         Why core is built this way (ADR-0001..0005).
 ```
 
 ## The line that matters: Node vs Python

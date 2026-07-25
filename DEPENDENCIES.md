@@ -77,6 +77,27 @@ Standing boundaries, as currently agreed:
 | any project vs `glossary` | A term that more than one project needs is defined in the glossary and linked with `[[term-id]]`. |
 | any project vs `archive` | A source cited by 2+ projects is vaulted centrally (archive ADR-0001), not copied into each repo. |
 
+## Growing a new project
+
+A subject growing inside a repo does **not** become a repo because it got big.
+`adr/0005-when-a-subject-becomes-its-own-repo.md` is the test: five dimensions
+(own institutional identity · explanatory burden on the parent · own search
+identity · standalone sourced mass, symmetric · genealogy rather than theme),
+**all** of which must hold, applied with citations.
+
+Before proposing a split, the cheaper options are tried in order — a
+disambiguation card, a `figures[]`/`organizations[]` entry, a `branchTimeline`
+branch, a cross-link between existing repos. A new repo is the most expensive
+option in the family (template adoption debt, preservation pipeline, i18n,
+vendored glossary and skills, a boundary row here, and one more dataset owned
+per wave), and it is **the owner's decision**: an agent suggests with evidence,
+in a ticket in the parent repo, and never creates a repo unilaterally.
+
+Note the trap the ADR names: `tariqa` vs `perennialism` are two repos because
+they document **different objects**, not because one outgrew the other. That is
+a scoping decision made at bootstrap and maintained by cross-linking — it is
+not a precedent for splitting a theme out of its parent.
+
 ## Two rules that hold the family together
 
 1. **One repo, one committer, per wave.** Exactly one agent owns a repo's
