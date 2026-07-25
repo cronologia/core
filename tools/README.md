@@ -7,7 +7,7 @@ architectural — keep it.
 |---|---|---|
 | language | **zero-dependency Node** | **Python 3, stdlib only** |
 | lives in | `template/scripts/` and each project's `scripts/` | `core/tools/` |
-| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py` |
+| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py`, `normalise-entities.py`, `cof-xref.py`, `cof-graph.py` |
 | runs | in `build.js`, `node --test`, GitHub Actions — the build is **network-free** | on an agent's machine, on demand |
 | writes | `docs/`, `data/archives.json`, link-health reports | **nothing in `data/`** |
 
@@ -25,7 +25,7 @@ No pip installs: Python 3 standard library only, same discipline as the
 zero-dependency Node side.
 
 ```
-python3 -m unittest discover -s tools -p 'test_*.py' -v     # 84 tests, no network
+python3 -m unittest discover -s tools -p 'test_*.py' -v     # 126 tests, no network
 ```
 
 Repo arguments accept a bare name (`fsspx`, `tariqa`, `perennialism`, `rcc`,
@@ -250,6 +250,184 @@ endorsement (`sourcing-rules` #2).
 
 Output is deterministic for a given dataset (it stamps `meta.lastUpdated`, not
 today's date), so regenerating with no data change produces no diff.
+
+## Analysing the COF corpus — the three tools, chained
+
+`cronologia/archive/cof/` holds the *Curso Online de Filosofia*: **589
+community transcriptions, ~7.16M words**, admitted as a corpus under
+[`archive/adr/0005`](https://github.com/cronologia/archive/blob/main/adr/0005-corpus-admission.md).
+That ADR governs everything below: the corpus is a **search and identification
+base**, admission does **not** make it citable in bulk, quotation is sparing and
+always attributed to a specific aula and date, and no lecture is reproduced
+wholesale into a public build. These three tools help you *find* the aula; the
+citation is still a human act performed on the file.
+
+Its manifest, `cof/index.json`, gives each aula a mechanical `entities` list —
+the runs of capitalised tokens that aula dwells on, ranked by distinctiveness.
+Read straight, that list is unusable as a join key: the corpus spells one man
+six ways, and ASR invents new people. So:
+
+```
+# 1. what entities are actually there, once the spellings are collapsed
+python3 tools/normalise-entities.py --min-aulas 3
+
+# 2. which of them are people our datasets track — the research leads
+python3 tools/cof-xref.py --markdown > /tmp/leads.md
+
+# 3. what he discusses together, as a graph any tool can open
+python3 tools/cof-graph.py --min-cooccurrence 2 --drop-isolated \
+        --graphml /tmp/cof.graphml --dot /tmp/cof.dot
+```
+
+Measured on the corpus as committed (2026-07-25): step 1 turns **1,457 surface
+strings into 1,415 entities**; step 2 finds **14 dataset figures across 31
+aulas**; step 3 emits **1,415 nodes and 4,638 edges**, of which 45 edges survive
+`--min-cooccurrence 2`.
+
+## `normalise-entities.py` — one node per entity
+
+```
+python3 tools/normalise-entities.py [--corpus PATH] [--aliases PATH|--no-aliases]
+                                    [--min-aulas N] [--dates]
+                                    [--no-suggestions] [--max-suggestions N]
+                                    [--json]
+```
+
+The entity index carries `René Guénon`, `René Guenon`, `René Guenón`,
+`Rene Guénon`, `Réne Guénon` and `Rene Guenon` — **six strings, one man, 15
+aulas.** Anything built on the raw index splits him six ways. Two merge rules,
+and no third:
+
+1. **Folding** — de-accent, lowercase, flatten punctuation and whitespace to a
+   *match key*. Purely mechanical and reproducible from the manifest. The match
+   key is never displayed: the name shown is always a surface the corpus
+   writes.
+2. **The alias map** — `cof-entity-aliases.json`, committed beside the tool.
+   ASR manglings cannot be folded (`John Don Scott` → John Duns Scotus,
+   `Ortega C` → Ortega y Gasset) and must not be guessed, so each entry carries
+   a **reason**, a **source** and, where useful, an **evidence** quote that the
+   tool re-verifies as a literal substring of the aula it names. Entries that
+   match nothing are printed as `unused` on every run, and entries the folding
+   already handles are printed as `redundant`; the tool never writes to the map.
+
+**No merge on similarity, ever.** `Martin Lings` and `Martin Lins` are one
+character apart and may or may not be one man; `Titus Burckhardt` and `Jacob
+Burckhardt` are certainly two. Near-misses are printed as **SUGGESTIONS** for a
+human — edit distance ≤ 1–2, token-subset, a shared rare token, and compound
+surfaces like `Guénon e Schuon` that name two entities — and pairs settled
+under the map's `doNotMerge` are suppressed with their reason, so a decided
+question is not re-asked every run. Merging two people is invisible downstream;
+the tool errs the other way and leaves the work visible.
+
+On the corpus as committed: **1,457 surfaces → 1,415 entities**, 33 groups
+absorbing 42 extra surfaces (30 by folding alone), 6 alias variants applied,
+12 recorded but unused, 3/3 evidence quotes verified, and **576 suggestions**
+nobody has ruled on — among them `Otto Maria Carpo` / `Otto Maria Carpou`,
+`Max Orkheimer` / `Max Horkheimer`, `Herbert Marcuse` / `Marcusa` / `Marcusi`.
+
+Seed vocabulary comes from the projects' hand-measured traps tables
+(`fsspx`, `tariqa`, `perennialism`, `rcc`, `glossary` each keep a `KEYWORDS.md`
+with an ASR-mangling section) — the map cites which table each entry came from
+rather than re-inventing the variants. Note its scope: the manifest's entity
+index holds *multiword* proper nouns, so single-token manglings (`Genon`,
+`Chuon`, `Comarassoume`) can never appear in it and stay where they belong, in
+the projects' full-text search traps.
+
+**Why a file naming people sits in core.** `../AGENTS.md` says no content lives
+here, and the alias map does name theologians. It is not content in that sense:
+it asserts nothing about the world, it is a **spelling-equivalence table for one
+corpus** — the same category as a project's `KEYWORDS.md` search vocabulary or
+the corpus's own `cof/tag-lexicon.json`, and it is data precisely so the merges
+are auditable in a diff instead of buried in code. It lives beside the tool that
+reads it because there is exactly one of it and three tools share it;
+`--aliases PATH` overrides it, and if the vault ever carries its own map these
+tools take it unchanged.
+
+## `cof-xref.py` — which aulas discuss what we track
+
+```
+python3 tools/cof-xref.py [--repos a,b,c] [--corpus PATH] [--aliases PATH]
+                          [--min-aulas N] [--markdown] [--json]
+```
+
+The standing question on half the mining tickets is "does Olavo discuss this
+figure, and in which lecture?". This joins each repo's `figures[]` and
+`organizations[]` — with parenthetical aliases, both sides of an `A — B` name,
+and the members of a record naming several people — against the normalised
+entity table, and prints the aulas **with their dates**, so a lead is one file
+away from a dated reference.
+
+- **confidence** — `high` when the match keys are identical after folding;
+  `medium` when they match only after dropping single-letter initials
+  (`Ananda K. Coomaraswamy` ~ `Ananda Coomaraswamy`).
+- **zero hits are printed, not swallowed.** A name that matched nothing is
+  listed by repo: that is a *finding* about the corpus, in the family's usual
+  sense.
+- **near misses** — a zero whose surname is shared with something the corpus
+  *does* write, or which sits within edit distance 2 of it. This is where the
+  leads are: `Marcel Lefebvre` → `Monsenhor Lefebvre` (COF138); `Mark Sedgwick`
+  → `Mark Sedwick` (COF465); `Olavo de Carvalho` → `Olav de Carvalho` (COF278).
+  Near misses are **never counted as hits** — `Rama P. Coomaraswamy` near
+  `Ananda Coomaraswamy` is father and son.
+- **not searched** — names too generic to join on (`Francis`, `FSSP`, `Campos`)
+  or parenthetical descriptors (`publisher`, `as author`), each with its reason,
+  so nobody reads them as a measured zero.
+
+`--markdown` emits a paste-ready ticket comment: a table of leads, the aulas to
+open, the corpus's own spellings, and the caveats attached rather than assumed.
+
+Measured over `fsspx,tariqa,perennialism,rcc`: **14 entities hit, 31 aulas**
+— René Guénon 15 aulas, Martin Lings 4 (three as `Martin Lings`, one as the
+mangled `Martin Ling`), Aldous Huxley 3, Charles Upton 3 (COF342/343/497),
+Jean Borella 3 (COF043/075/081), Seyyed Hossein Nasr 3, Julius Evola 2, Michel
+Vâlsan 2, and Schuon / Pallis / Eliade / Burckhardt / Wolfgang Smith /
+Coomaraswamy 1 each — against 103 zeroes (16 with a near miss) and 21 names
+not searched.
+
+**A hit is a lead, never a citation.** It says a name is among an aula's
+distinctive vocabulary; it says nothing about what the lecture claims. And the
+index ranks distinctiveness, not mentions: COF081 names *Monsenhor Lefebvre*
+exactly once in 18,479 words and no frequency method will surface him there. A
+zero means "not distinctive anywhere", not "absent from the corpus" — grep
+before concluding absence.
+
+## `cof-graph.py` — the co-occurrence graph
+
+```
+python3 tools/cof-graph.py [--corpus PATH] [--aliases PATH]
+                           [--min-cooccurrence N] [--drop-isolated] [--top N]
+                           [--graphml PATH] [--dot PATH] [--json]
+```
+
+Nodes are normalised entities; an edge joins two entities appearing in the same
+aula, weighted by how many aulas they share. Output is **GraphML and DOT** —
+standard formats read by Gephi, Cytoscape, yEd, networkx and Graphviz. No
+bespoke format, and no visualisation dependency: this emits files and prints a
+summary, something else draws them. `-` writes to stdout.
+
+**The caveat, which belongs in anything built on this:** co-occurrence in a
+lecture is **not** a relationship between the people. It means Olavo names both
+in the same aula — a navigational signal about what he discusses together, not
+evidence about the world. A lecture attacking A for misreading B puts A and B on
+the same edge, and so does a list of names read out in passing. Every graph of
+this shape reads as a social network at a glance and is not one. The caveat is
+in `--help`, in the printed summary, and as a comment inside both emitted files
+so it travels with the data.
+
+The text summary prints node/edge counts, the highest-degree entities, the
+heaviest edges and the largest connected components. `--min-cooccurrence`
+cuts the long tail — most pairs are seen exactly once.
+
+Measured on the corpus as committed: **1,415 nodes, 4,638 edges, 42 isolated
+nodes, 71 components**, the largest holding 1,289 entities. At
+`--min-cooccurrence 2` only **45 edges over 63 nodes** survive, and the largest
+component is the perennialist cluster — René Guénon · Nova Era · Igreja
+Católica · Charles Upton · Jean Borella · `Guénon e Schuon` — which is exactly
+the navigational use the tool is for.
+
+The tool writes only the output paths you name, and **refuses** a path inside
+the corpus directory, inside any repo's `data/`, or bearing a dataset filename
+(exit 2, nothing written).
 
 ## `sync-skills.py` — vendor the skills into a project
 
