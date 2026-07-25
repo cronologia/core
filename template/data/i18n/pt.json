@@ -1,9 +1,10 @@
 {
   "_meta": {
-    "generatedBy": "scripts/translate.js",
-    "note": "GENERATED machine-translation cache — do not hand-edit. English is authoritative. (Example seed for the template; real projects regenerate this.)",
     "targetLang": "pt",
-    "coverage": "example"
+    "coverage": "7/7",
+    "generatedBy": "seed example shipped with the template — hand-authored, NOT produced by scripts/translate.js",
+    "note": "Example cache for the bundled chronology.example.json so a fresh bootstrap renders all three locales. A real project replaces it. Record the true origin of your strings here: 'scripts/translate.js via TRANSLATE_ENDPOINT' only when a backend actually produced them.",
+    "humanReviewed": false
   },
   "strings": {
     "An open, source-referenced chronology of <subject>.": "Uma cronologia aberta e referenciada a fontes de <subject>.",
