@@ -30,6 +30,10 @@ and neutrality matter more than completeness. Five rules govern everything:
    corroboration; otherwise they are cited as attributed perspectives. Verify
    proper names against audio before quoting auto-captions.
 
+Before searching a corpus or a source for a name, read the project's
+`KEYWORDS.md`: the naming variants and the terms known to return nothing live
+there, and it is a finding aid — listing a term is not asserting it.
+
 Operationally: after any data edit run `node scripts/validate-data.js`,
 `node --test`, `node build.js`, and commit the regenerated `docs/` in the same
 change. Never hand-edit generated files.

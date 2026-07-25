@@ -7,24 +7,25 @@ architectural — keep it.
 |---|---|---|
 | language | **zero-dependency Node** | **Python 3, stdlib only** |
 | lives in | `template/scripts/` and each project's `scripts/` | `core/tools/` |
-| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py` |
+| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py` |
 | runs | in `build.js`, `node --test`, GitHub Actions — the build is **network-free** | on an agent's machine, on demand |
 | writes | `docs/`, `data/archives.json`, link-health reports | **nothing in `data/`** |
 
 The full rationale is `../adr/0004-python-agent-tooling-vs-node-build.md`.
 
 The Python tools **never run in CI and never edit a dataset.** They read and
-report, so an agent spends its tokens on judgement instead of scrolling (the one
-exception writes no data either: `sync-skills.py` writes vendored
-`.claude/skills/` copies). Every one takes `--help`, prints dense fixed-field
-output meant to be read by a model, and exits non-zero only on a real error
-(unreadable dataset = 1, bad argument = 2) — never because it found something.
+report, so an agent spends its tokens on judgement instead of scrolling (the two
+exceptions write no data either: `sync-skills.py` writes vendored
+`.claude/skills/` copies, `build-keywords.py` writes a `KEYWORDS.md`). Every
+one takes `--help`, prints dense fixed-field output meant to be read by a
+model, and exits non-zero only on a real error (unreadable dataset = 1, bad
+argument = 2) — never because it found something.
 
 No pip installs: Python 3 standard library only, same discipline as the
 zero-dependency Node side.
 
 ```
-python3 -m unittest discover -s tools -p 'test_*.py' -v     # 61 tests, no network
+python3 -m unittest discover -s tools -p 'test_*.py' -v     # 84 tests, no network
 ```
 
 Repo arguments accept a bare name (`fsspx`, `tariqa`, `perennialism`, `rcc`,
@@ -173,6 +174,82 @@ Both flags are **review candidates, not errors**: divergence is often legitimate
 (different period, different scope — `sourcing-rules` #4). Nothing is
 auto-resolved; resolving an attribution is a human/agent judgement backed by
 sources.
+
+## `build-keywords.py` — the generated half of a project's KEYWORDS.md
+
+```
+python3 tools/build-keywords.py <repo> [--out KEYWORDS.md]
+                                       [--glossary REPO] [--json]
+```
+
+Searching the COF corpus (592 files, ~7.0M words, counted 2026-07) for
+**`FSSPX` returns zero files. So does `SSPX`.** The corpus writes
+"Sociedade de São Pio X" (3 files), "São Pio X" (6) and "Monsenhor Lefebvre"
+(3), and misspells the name — `Lefebre` in 2 files, `Lefevre` in 1, `Econe`
+unaccented in 1. An agent that greps the obvious acronym concludes there is no
+SSPX content in the corpus. The obvious spelling also *misranks*: `Lefebvre`
+appears in 7 files, but COF081 says it exactly once in ~18k words while COF138
+— the densest — says it four times.
+
+So each project keeps a **`KEYWORDS.md`** at its root, with two halves:
+
+| | |
+|---|---|
+| **hand-written** | dead terms, ASR manglings, corpus traps, which file is dense on what — judgement, and the valuable part |
+| **generated** | subject names, people, organizations, terms of art, places, date coverage — all already in `data/` |
+
+This tool writes the generated half **between markers** and preserves
+everything outside them, so both halves live in one regenerable file:
+
+```
+<!-- BEGIN GENERATED build-keywords.py -->
+…
+<!-- END GENERATED build-keywords.py -->
+```
+
+- `--out PATH` — file exists with the markers → the block is replaced, all
+  other text kept byte-for-byte; file exists without them → the block is
+  appended and the previous content is untouched; file absent → a scaffold is
+  written (H1, the hand-written "naming traps and dead terms" section, then
+  the block). Unbalanced or out-of-order markers exit `2` and write nothing,
+  rather than risk mangling a hand-written file.
+- no `--out` — the block goes to stdout. `--json` prints the collected
+  vocabulary instead (and refuses `--out`).
+
+Sections generated, from either dataset shape (`chronology.json` or
+`glossary.json`, detected as `dataset-query.py` detects them):
+
+- **Subject names** — `meta.title` and any alternate/short-name key, plus the
+  names `meta.subtitle`/`meta.description` put in parentheses. This is what
+  yields `SSPX` and `FSSPX` for fsspx and `Renovação Carismática Católica` for
+  rcc.
+- **People** — every `figures[]` name with its locator, its parenthetical
+  aliases and both sides of an `A — B` or `A / B` name; a figure's `id` is
+  printed with its page URL (`<siteUrl>figures/<id>.html`, ADR-0003), a
+  permanent handle to search on.
+- **Organizations** — every `organizations[]` name and alias; acronym and full
+  name listed separately, because sources use one or the other.
+- **Terms of art** — every `[[term-id]]` marker used anywhere in the dataset,
+  resolved to a display name (sibling glossary dataset via `--glossary`, else
+  the pinned `data/glossary-terms.json`), with the glossary's own `variants`
+  field, the visible text authors actually typed in `[[id|visible text]]`, and
+  a flag on any id missing from the vendored list (the build validator rejects
+  those markers).
+- **Places** — every place/country/location string verbatim, with counts.
+- **Dates coverage** — the year span of `events`, of `figures[].dates` and of
+  `organizations[].founded`, plus the union: the window a searcher is inside.
+
+Two disciplines are baked in. **Nothing is invented**: every string emitted is
+a substring of the dataset as written — no transliteration, no expansion, no
+remembered spelling. A variant seen in a corpus but absent from `data/` belongs
+in the hand-written half, with a note on where it was seen. And the block opens
+by saying what the file is: **a finding aid makes no claims about the world.**
+Listing `schism` as a search term does not assert anyone is schismatic, and
+listing a hostile source's vocabulary is how its pages get found, not an
+endorsement (`sourcing-rules` #2).
+
+Output is deterministic for a given dataset (it stamps `meta.lastUpdated`, not
+today's date), so regenerating with no data change produces no diff.
 
 ## `sync-skills.py` — vendor the skills into a project
 

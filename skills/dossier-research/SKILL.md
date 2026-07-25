@@ -5,8 +5,14 @@ description: Research a person dossier (bishop, theologian, political figure) fo
 
 # Research a person dossier
 
-Load `sourcing-rules` first. Dossier tickets (e.g. fsspx#7–#17, tl#6–#20)
-share a standard checklist; the work:
+Load `sourcing-rules` first, and read the project's `KEYWORDS.md` before
+searching for the subject: their aliases, honorifics, transliterations and the
+spellings sources actually use are listed there, along with terms that return
+nothing — the obvious name both misses files and misranks them. Add what this
+dossier teaches you to its hand-written half.
+
+Dossier tickets (e.g. fsspx#7–#17, tl#6–#20) share a standard checklist; the
+work:
 
 1. **Verified biography.** Birth, formation, ordination/appointments (with
    who/when/where for episcopal consecrations — lineage matters), offices,

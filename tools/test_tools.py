@@ -44,6 +44,7 @@ dq = load("dataset-query.py", "dataset_query")
 ur = load("unverified-report.py", "unverified_report")
 xr = load("xref.py", "xref")
 ss = load("sync-skills.py", "sync_skills")
+bk = load("build-keywords.py", "build_keywords")
 
 
 TRANSCRIPT = """Título do vídeo | Canal
@@ -510,6 +511,251 @@ class TestXref(DatasetFixture):
         self.assertEqual(json.loads(out.getvalue())["contradictions"], 1)
 
 
+# --------------------------------------------------------------------------
+# build-keywords — the generated half of a KEYWORDS.md
+# --------------------------------------------------------------------------
+
+KEYWORDS_CHRONOLOGY = {
+    "meta": {
+        "title": "Alpha Society — Cronologia",
+        "subtitle": "Chronology of the Alpha Society (1970–present)",
+        "description": "A chronology of the Alpha Society "
+                       "(Sociedade Alfa, AS/ALS), founded in 1970.",
+        "siteUrl": "https://example.invalid/alpha/",
+        "lastUpdated": "2026-07-25",
+    },
+    "facts": [{"label": "What it is", "value": "A [[pia-unio|pious union]] "
+                                               "erected in 1970."}],
+    "events": [
+        {"year": 1970, "date": "1970-11-01", "dateVerified": True,
+         "place": "Fribourg", "title": "Founding", "text": "Erected."},
+        {"year": 1988, "date": "1988", "dateVerified": False,
+         "place": "Fribourg", "title": "Break", "text":
+         "Described as a [[schism|schismatic]] act; also [[not-pinned]]."},
+    ],
+    "figures": [
+        {"id": "jean-doe", "name": "Jean Doe (Yahya Doe)", "dates": "1905–1991",
+         "country": "France", "role": "Founder."},
+        {"name": "Ana Silva, Bruno Costa, Carla Dias", "role": "Signatories."},
+    ],
+    "organizations": [
+        {"name": "XYZ — Example Society of Things", "founded": "1988",
+         "place": "Fribourg", "relation": "A later foundation."},
+        {"name": "Casa Alfa (regional house)", "relation": "A house."},
+    ],
+    "references": [],
+}
+
+
+class TestKeywordHelpers(unittest.TestCase):
+    """Pure helpers: every variant must be a form present in the input."""
+
+    def test_search_variants_alias_and_dash(self):
+        got = bk.search_variants("René Guénon (Abd al-Wahid Yahya)")
+        self.assertEqual(got, ["René Guénon (Abd al-Wahid Yahya)",
+                               "René Guénon", "Abd al-Wahid Yahya"])
+        self.assertIn("Priestly Fraternity of Saint Peter",
+                      bk.search_variants("FSSP — Priestly Fraternity of "
+                                         "Saint Peter"))
+        self.assertIn("FSSP", bk.search_variants("FSSP — Priestly Fraternity "
+                                                 "of Saint Peter"))
+
+    def test_search_variants_drops_lowercase_descriptor_parenthetical(self):
+        got = bk.search_variants("Tariqa Alawiyya (parent order)")
+        self.assertEqual(got, ["Tariqa Alawiyya (parent order)",
+                               "Tariqa Alawiyya"])
+        self.assertNotIn("parent order", got)
+
+    def test_search_variants_slash_only_between_names(self):
+        self.assertIn("Benedict XVI",
+                      bk.search_variants("Joseph Ratzinger / Benedict XVI"))
+        got = bk.search_variants("Foundation for Studies / journal Sophia")
+        self.assertEqual(got, ["Foundation for Studies / journal Sophia"])
+
+    def test_search_variants_splits_a_field_holding_several_people(self):
+        got = bk.search_variants("Ana Silva, Bruno Costa, Carla Dias")
+        self.assertIn("Bruno Costa", got)
+        self.assertEqual(bk.search_variants("Doe, Jean"), ["Doe, Jean"])
+
+    def test_search_variants_dedupes_and_handles_empty(self):
+        self.assertEqual(bk.search_variants("  "), [])
+        self.assertEqual(bk.search_variants("Alfa (Alfa)"),
+                         ["Alfa (Alfa)", "Alfa"])
+        self.assertEqual(bk.dedupe(["Écône", "Ecône", "écone", "Rome"]),
+                         ["Écône", "Rome"])
+
+    def test_paren_terms_pulls_acronyms_not_date_ranges(self):
+        got = bk.paren_terms("The Society of Saint Pius X "
+                             "(Sociedade de São Pio X, SSPX/FSSPX) since "
+                             "(1970–present)")
+        self.assertEqual(got, ["Sociedade de São Pio X", "SSPX", "FSSPX"])
+        self.assertEqual(bk.paren_terms("a status (to verify)"), [])
+
+    def test_find_markers_reads_grammar_and_visible_text(self):
+        self.assertEqual(bk.find_markers("a [[schism]] and "
+                                         "[[pia-unio|pious union]]"),
+                         [("schism", ""), ("pia-unio", "pious union")])
+        self.assertEqual(bk.find_markers("no markers here"), [])
+        self.assertEqual(bk.find_markers("[[Not A Slug]]"), [])
+        self.assertEqual(bk.find_markers(None), [])
+
+    def test_walk_strings_paths(self):
+        found = dict(bk.walk_strings({"a": [{"b": "x"}], "c": "y"}))
+        self.assertEqual(found["a[0].b"], "x")
+        self.assertEqual(found["c"], "y")
+
+
+class TestKeywordMerge(unittest.TestCase):
+    """The whole design: regenerate the block, keep the hand-written half."""
+
+    BLOCK = bk.BEGIN_MARKER + "\ngenerated v2\n" + bk.END_MARKER
+
+    def test_replace_preserves_text_before_and_after(self):
+        existing = ("# KEYWORDS\n\nhand-written trap: FSSPX is a dead term\n\n"
+                    + bk.BEGIN_MARKER + "\ngenerated v1\n" + bk.END_MARKER
+                    + "\n\n## Appendix\n\nkeep me\n")
+        text, status = bk.merge_generated(existing, self.BLOCK)
+        self.assertEqual(status, "replaced")
+        self.assertIn("hand-written trap: FSSPX is a dead term", text)
+        self.assertIn("keep me", text)
+        self.assertIn("generated v2", text)
+        self.assertNotIn("generated v1", text)
+        self.assertEqual(text.count(bk.BEGIN_MARKER), 1)
+
+    def test_replace_is_idempotent(self):
+        first, _s = bk.merge_generated("# K\n\nnotes\n", self.BLOCK)
+        second, status = bk.merge_generated(first, self.BLOCK)
+        self.assertEqual(second, first)
+        self.assertEqual(status, "replaced")
+
+    def test_append_when_file_has_no_markers(self):
+        text, status = bk.merge_generated("# K\n\nnotes\n", self.BLOCK)
+        self.assertEqual(status, "appended")
+        self.assertTrue(text.startswith("# K\n\nnotes\n\n"))
+        self.assertTrue(text.endswith(bk.END_MARKER))
+
+    def test_unbalanced_or_reversed_markers_refuse_to_write(self):
+        self.assertRaises(ValueError, bk.merge_generated,
+                          "x\n" + bk.BEGIN_MARKER + "\n", self.BLOCK)
+        self.assertRaises(ValueError, bk.merge_generated,
+                          "x\n" + bk.END_MARKER + "\n", self.BLOCK)
+        self.assertRaises(ValueError, bk.merge_generated,
+                          bk.END_MARKER + "\n" + bk.BEGIN_MARKER, self.BLOCK)
+
+
+class TestBuildKeywords(DatasetFixture):
+    @classmethod
+    def setUpClass(cls):
+        super(TestBuildKeywords, cls).setUpClass()
+        cls.write("kw", "chronology.json", KEYWORDS_CHRONOLOGY)
+        cls.write("kw", "glossary-terms.json",
+                  {"baseUrl": "https://glossary.invalid/",
+                   "terms": ["schism", "pia-unio"]})
+
+    def bundle(self):
+        return bk.collect(dq.resolve_repo("kw"), "words")
+
+    def test_subject_names_from_title_and_description(self):
+        terms = [row["term"] for row in self.bundle()["subject_names"]]
+        self.assertIn("Alpha Society", terms)
+        self.assertIn("Sociedade Alfa", terms)
+        self.assertIn("AS", terms)
+        self.assertIn("ALS", terms)
+        self.assertNotIn("Cronologia", terms)
+
+    def test_people_carry_locator_id_and_page_url(self):
+        rows = self.bundle()["people"]
+        self.assertEqual(rows[0]["locator"], "figures[0]")
+        self.assertEqual(rows[0]["id"], "jean-doe")
+        self.assertEqual(rows[0]["url"],
+                         "https://example.invalid/alpha/figures/jean-doe.html")
+        self.assertIn("Yahya Doe", rows[0]["variants"])
+        self.assertEqual(rows[1]["url"], "")
+        self.assertIn("Carla Dias", rows[1]["variants"])
+
+    def test_organizations_split_acronym_from_full_name(self):
+        rows = self.bundle()["organizations"]
+        self.assertEqual(rows[0]["locator"], "organizations[0]")
+        self.assertIn("XYZ", rows[0]["variants"])
+        self.assertIn("Example Society of Things", rows[0]["variants"])
+        self.assertEqual(rows[1]["variants"], ["Casa Alfa"])
+
+    def test_terms_resolve_display_name_and_flag_unpinned_ids(self):
+        rows = dict((row["id"], row) for row in self.bundle()["terms"])
+        self.assertEqual(rows["schism"]["display"], "Schism")
+        self.assertEqual(rows["schism"]["displays"], ["schismatic"])
+        self.assertTrue(rows["schism"]["pinned"])
+        self.assertEqual(rows["pia-unio"]["displays"], ["pious union"])
+        self.assertEqual(rows["pia-unio"]["locators"], ["facts[0].value"])
+        self.assertFalse(rows["not-pinned"]["pinned"])
+
+    def test_glossary_dataset_lists_its_own_terms_with_variants(self):
+        bundle = bk.collect(dq.resolve_repo("words"), "words")
+        self.assertEqual(bundle["kind"], "glossary")
+        row = bundle["terms"][0]
+        self.assertEqual(row["id"], "schism")
+        self.assertTrue(row["defined_here"])
+
+    def test_places_are_counted_verbatim(self):
+        rows = self.bundle()["places"]
+        self.assertEqual(rows[0]["place"], "Fribourg")
+        self.assertEqual(rows[0]["count"], 3)
+        self.assertIn("events.place", rows[0]["fields"])
+
+    def test_dates_span_the_whole_dataset(self):
+        rows = dict((row["scope"], row) for row in self.bundle()["dates"])
+        self.assertEqual(rows["events"]["span"], "1970–1988")
+        self.assertEqual(rows["events"]["note"], "1 with dateVerified:false")
+        self.assertEqual(rows["figures.dates"]["span"], "1905–1991")
+        self.assertEqual(rows["dataset (all of the above)"]["span"],
+                         "1905–1991")
+
+    def test_render_block_is_deterministic_and_self_describing(self):
+        block = bk.render_block(self.bundle())
+        self.assertTrue(block.startswith(bk.BEGIN_MARKER))
+        self.assertTrue(block.endswith(bk.END_MARKER))
+        self.assertIn("finding aid, not a dataset", block)
+        self.assertEqual(block, bk.render_block(self.bundle()))
+
+    def test_main_creates_scaffold_then_preserves_hand_written_half(self):
+        out = os.path.join(self.root, "KEYWORDS.md")
+        with silent():
+            self.assertEqual(bk.main(["kw", "--out", out]), 0)
+        with open(out, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertIn("# KEYWORDS — Alpha Society — Cronologia", text)
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(text.replace("- (nothing recorded yet — add the first "
+                                  "trap you hit)",
+                                  "- `ALFA` — zero hits; use `Sociedade Alfa`")
+                     + "\n## Appendix\n\nkeep me\n")
+        with silent() as buffer:
+            self.assertEqual(bk.main(["kw", "--out", out]), 0)
+        self.assertIn("replaced", buffer.getvalue())
+        with open(out, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertIn("- `ALFA` — zero hits; use `Sociedade Alfa`", text)
+        self.assertIn("keep me", text)
+        self.assertEqual(text.count(bk.BEGIN_MARKER), 1)
+
+    def test_main_stdout_json_and_argument_errors(self):
+        with silent() as buffer:
+            self.assertEqual(bk.main(["kw", "--json"]), 0)
+        self.assertEqual(json.loads(buffer.getvalue())["repo"], "kw")
+        with silent():
+            self.assertEqual(bk.main(["kw", "--json", "--out", "x.md"]), 2)
+            self.assertEqual(bk.main(["definitely-not-a-repo"]), 1)
+
+    def test_main_refuses_a_file_with_broken_markers(self):
+        out = os.path.join(self.root, "BROKEN.md")
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write("# K\n" + bk.BEGIN_MARKER + "\nhalf a block\n")
+        with silent():
+            self.assertEqual(bk.main(["kw", "--out", out]), 2)
+        with open(out, encoding="utf-8") as fh:
+            self.assertIn("half a block", fh.read())
+
+
 class TestSyncSkills(unittest.TestCase):
     """Vendoring core/skills into a project's .claude/skills."""
 
@@ -636,7 +882,8 @@ class TestReadOnly(unittest.TestCase):
 
     def test_no_dataset_writes_in_sources(self):
         for filename in ("mine-prep.py", "dataset-query.py",
-                         "unverified-report.py", "xref.py", "sync-skills.py"):
+                         "unverified-report.py", "xref.py", "sync-skills.py",
+                         "build-keywords.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)
