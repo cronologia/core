@@ -36,7 +36,10 @@ skills/      The working method, as Claude skills (canonical copies):
              preserve-sources   snapshots, link health, what goes in the vault
              release-work       branch, fast-forward, commit, push, report
 tools/       Agent-side analysis tooling + the project instantiator.
-             See tools/README.md.
+             mine-prep / dataset-query / unverified-report / xref /
+             sync-skills / build-keywords (generates the mechanical half of a
+             project's KEYWORDS.md — the search vocabulary an agent needs
+             before grepping a corpus). See tools/README.md.
 adr/         Why core is built this way (ADR-0001..0005).
 ```
 

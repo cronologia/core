@@ -5,7 +5,13 @@ description: Turn a YouTube video into a transcript, a mining ticket, and (after
 
 # Mine a video source
 
-Load `sourcing-rules` first.
+Load `sourcing-rules` first. Before searching a corpus or a transcript for a
+name, read the project's `KEYWORDS.md`: the naming variants and the known dead
+terms are there (in the COF corpus, "FSSPX" and "SSPX" return **zero** files —
+it writes "Sociedade de São Pio X" and "Monsenhor Lefebvre"). Regenerate its
+mechanical half with `python3 core/tools/build-keywords.py <repo> --out
+KEYWORDS.md`, and put the spellings this video taught you — auto-caption
+manglings included — in the hand-written half.
 
 1. **Identify.** Get title/channel via the oembed endpoint (no auth):
    `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=ID&format=json`
