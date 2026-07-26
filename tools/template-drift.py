@@ -191,16 +191,25 @@ def compare(template_text, repo_text):
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", action="append", help="limit to one repo (repeatable)")
+    ap.add_argument("--scripts", help="check this scripts/ directory directly (for CI, where "
+                                      "the adopting repo is the workspace and core is a "
+                                      "side checkout)")
+    ap.add_argument("--label", default="repo", help="name to show for --scripts")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--root", default=ROOT)
     args = ap.parse_args(argv)
 
-    repos = args.repo or list(REPOS)
+    if args.scripts:
+        pairs = [(args.label, args.scripts)]
+    else:
+        pairs = [(r, os.path.join(args.root, r, "scripts")) for r in (args.repo or list(REPOS))]
+
+    repos = [p[0] for p in pairs]
     findings = []
-    for repo in repos:
+    for repo, scripts_dir in pairs:
         for name in SHARED:
             tpl = os.path.join(TEMPLATE, name)
-            own = os.path.join(args.root, repo, "scripts", name)
+            own = os.path.join(scripts_dir, name)
             if not os.path.exists(tpl) or not os.path.exists(own):
                 continue
             with open(tpl, encoding="utf-8") as fh:
