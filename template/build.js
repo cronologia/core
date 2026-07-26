@@ -65,6 +65,11 @@ const UI = {
     lastUpdated: 'Last updated:', language: 'Language',
     chronologyIntro: 'Key events in chronological order. A <span class="flag">?</span> flag marks\n      dates not yet verified against a primary source.',
     thYear: 'Year', thDate: 'Date', thPlace: 'Place', thEvent: 'Event',
+    spineHeading: 'Events over time', spineNav: 'Over time',
+    spineIntro: 'How the record is distributed across time. Bar height is the number of recorded events in that decade; the hatched part of a bar is events whose date is not yet verified against a primary source. Select a decade to jump to it in the chronology below.',
+    spineBreakLabel: (n, from_, to) => `${n} decades with no recorded events (${from_}–${to})`,
+    spineColLabel: (dec, n, u) => `${dec}: ${n} event${n === 1 ? '' : 's'}${u ? `, ${u} with an unverified date` : ''}`,
+    spineCaption: (n, span, u) => `${n} events, ${span}${u ? ` · ${u} with a date not yet verified against a primary source` : ''}. Gaps are shown as explicit breaks, never compressed away.`,
     flagTitle: 'Date not yet verified against a primary source',
     factFlagTitle: 'Not yet verified against a primary source',
     footer: 'Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.\n      Part of the Cronologia project family.',
@@ -80,6 +85,11 @@ const UI = {
     lastUpdated: 'Última actualización:', language: 'Idioma',
     chronologyIntro: 'Acontecimientos clave en orden cronológico. Una marca <span class="flag">?</span> indica\n      fechas aún no verificadas con una fuente primaria.',
     thYear: 'Año', thDate: 'Fecha', thPlace: 'Lugar', thEvent: 'Acontecimiento',
+    spineHeading: 'Acontecimientos a lo largo del tiempo', spineNav: 'En el tiempo',
+    spineIntro: 'Cómo se distribuye el registro en el tiempo. La altura de cada barra es el número de acontecimientos registrados en esa década; la parte rayada corresponde a acontecimientos cuya fecha aún no se ha verificado con una fuente primaria. Seleccione una década para ir a ella en la cronología.',
+    spineBreakLabel: (n, from_, to) => `${n} décadas sin acontecimientos registrados (${from_}–${to})`,
+    spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimiento${n === 1 ? '' : 's'}${u ? `, ${u} con fecha no verificada` : ''}`,
+    spineCaption: (n, span, u) => `${n} acontecimientos, ${span}${u ? ` · ${u} con fecha aún no verificada con una fuente primaria` : ''}. Los vacíos se muestran como cortes explícitos, nunca comprimidos.`,
     flagTitle: 'Fecha aún no verificada con una fuente primaria',
     factFlagTitle: 'Aún no verificado con una fuente primaria',
     footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
@@ -95,6 +105,11 @@ const UI = {
     lastUpdated: 'Última atualização:', language: 'Idioma',
     chronologyIntro: 'Principais acontecimentos em ordem cronológica. Uma marca <span class="flag">?</span> indica\n      datas ainda não verificadas com uma fonte primária.',
     thYear: 'Ano', thDate: 'Data', thPlace: 'Local', thEvent: 'Acontecimento',
+    spineHeading: 'Acontecimentos ao longo do tempo', spineNav: 'No tempo',
+    spineIntro: 'Como o registo se distribui no tempo. A altura de cada barra é o número de acontecimentos registados nessa década; a parte tracejada corresponde a acontecimentos cuja data ainda não foi verificada com uma fonte primária. Selecione uma década para saltar para ela na cronologia.',
+    spineBreakLabel: (n, from_, to) => `${n} décadas sem acontecimentos registados (${from_}–${to})`,
+    spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimento${n === 1 ? '' : 's'}${u ? `, ${u} com data não verificada` : ''}`,
+    spineCaption: (n, span, u) => `${n} acontecimentos, ${span}${u ? ` · ${u} com data ainda não verificada com uma fonte primária` : ''}. As lacunas são mostradas como cortes explícitos, nunca comprimidas.`,
     flagTitle: 'Data ainda não verificada com uma fonte primária',
     factFlagTitle: 'Ainda não verificado com uma fonte primária',
     footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
@@ -732,6 +747,145 @@ ${captionItems}
 `;
 }
 
+/* ---------------------------------------------------------------------------
+ * Chronology spine — a density chart placed at the TOP of the page.
+ *
+ * The chronology table answers "what happened, and when". It cannot answer
+ * "where is this record dense, and where is it thin" — that shape is only
+ * visible as a picture. This renders one bar per decade, bar height = number
+ * of events, so a founding burst or a quiet stretch is legible at a glance.
+ *
+ * Three properties are deliberate and must survive any redesign:
+ *
+ * 1. GAPS ARE EXPLICIT. Runs of empty decades collapse into a labelled break
+ *    that states how many decades and which years were skipped. A silent
+ *    rescale would present perennialism's 380-year gap as ordinary spacing —
+ *    that is a factual distortion, not a cosmetic one.
+ * 2. UNVERIFIED DATES STAY VISIBLY UNVERIFIED. Placing a mark on a time axis
+ *    is an implicit precision claim, so events with `dateVerified: false` are
+ *    drawn as a separate hatched segment and named in the label and caption.
+ * 3. NO COLOUR-ONLY ENCODING. Every quantity is also text (the count is
+ *    printed above the bar) and every column is a focusable link, so the
+ *    figure is usable without colour, without a pointer, and — since it is
+ *    plain markup — without JavaScript.
+ *
+ * Driven by the optional top-level `chronologySpine` key:
+ *
+ *   chronologySpine: {
+ *     heading?:      string   // default: locale's spineHeading
+ *     navLabel?:     string   // default: locale's spineNav
+ *     note?:         string   // replaces the default intro
+ *     collapseAfter?: number  // consecutive empty decades before a break (default 2)
+ *   }
+ *
+ * Absent key = '' = byte-identical page. Same contract as the other renderers.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Pure layout: bucket events by decade, collapse empty runs into breaks.
+ * Returns null when there is nothing to draw (renderChronologySpine then '').
+ */
+function layoutChronologySpine(spine, events) {
+  if (!spine) return null;
+  const withYear = (events || []).filter((e) => Number.isFinite(e.year));
+  if (withYear.length === 0) return null;
+
+  const collapseAfter = Number.isFinite(spine.collapseAfter) && spine.collapseAfter > 0
+    ? Math.floor(spine.collapseAfter)
+    : 2;
+
+  const dec = (y) => Math.floor(y / 10) * 10;
+  const counts = new Map();
+  for (const e of withYear) {
+    const d = dec(e.year);
+    const c = counts.get(d) || { total: 0, unverified: 0 };
+    c.total += 1;
+    if (e.dateVerified === false) c.unverified += 1;
+    counts.set(d, c);
+  }
+
+  const first = Math.min(...withYear.map((e) => dec(e.year)));
+  const last = Math.max(...withYear.map((e) => dec(e.year)));
+  const max = Math.max(...[...counts.values()].map((c) => c.total));
+
+  const cells = [];
+  let run = [];
+  const flushRun = () => {
+    if (run.length === 0) return;
+    // A run shorter than the threshold is drawn as real empty columns, so
+    // small gaps keep their true width; only long runs collapse.
+    if (run.length < collapseAfter) {
+      for (const d of run) cells.push({ type: 'decade', decade: d, total: 0, unverified: 0, pct: 0, uPct: 0 });
+    } else {
+      cells.push({ type: 'break', count: run.length, from: run[0], to: run[run.length - 1] + 9 });
+    }
+    run = [];
+  };
+
+  for (let d = first; d <= last; d += 10) {
+    const c = counts.get(d);
+    if (!c) { run.push(d); continue; }
+    flushRun();
+    cells.push({
+      type: 'decade', decade: d, total: c.total, unverified: c.unverified,
+      pct: Math.round((c.total / max) * 1000) / 10,
+      uPct: Math.round((c.unverified / max) * 1000) / 10,
+    });
+  }
+  flushRun();
+
+  const years = withYear.map((e) => e.year);
+  return {
+    cells, max,
+    totalEvents: withYear.length,
+    unverified: withYear.filter((e) => e.dateVerified === false).length,
+    span: `${Math.min(...years)}–${Math.max(...years)}`,
+    breaks: cells.filter((c) => c.type === 'break').length,
+  };
+}
+
+/** Render the chronology spine, or '' when the data declares none. */
+function renderChronologySpine(spine, events, ui) {
+  const layout = layoutChronologySpine(spine, events);
+  if (!layout) return '';
+  const t = ui || UI.en;
+
+  const cells = layout.cells
+    .map((c) => {
+      if (c.type === 'break') {
+        const label = t.spineBreakLabel(c.count, c.from, c.to);
+        return `          <li class="cs-break"><span class="cs-break-mark" aria-hidden="true">⸺</span><span class="cs-break-label">${esc(label)}</span></li>`;
+      }
+      const dLabel = `${c.decade}s`;
+      const label = t.spineColLabel(dLabel, c.total, c.unverified);
+      if (c.total === 0) {
+        return `          <li class="cs-col cs-empty"><span class="cs-count"></span><span class="cs-track"></span><span class="cs-label">${esc(dLabel)}</span></li>`;
+      }
+      const uSeg = c.unverified > 0
+        ? `<span class="cs-unverified" style="height:${(c.uPct / c.pct) * 100}%"></span>`
+        : '';
+      return `          <li class="cs-col"><a href="#decade-${c.decade}" title="${esc(label)}"><span class="cs-count">${c.total}</span><span class="cs-track"><span class="cs-bar" style="height:${c.pct}%">${uSeg}</span></span><span class="cs-label">${esc(dLabel)}</span><span class="visually-hidden">${esc(label)}</span></a></li>`;
+    })
+    .join('\n');
+
+  const heading = spine.heading || t.spineHeading;
+  const intro = spine.note || t.spineIntro;
+  return `    <section id="chronology-spine" class="viz">
+      <h2>${esc(heading)}</h2>
+      <p class="section-intro">${esc(intro)}</p>
+      <figure class="chrono-spine">
+        <div class="viz-scroll">
+        <ol class="cs-track-list">
+${cells}
+        </ol>
+        </div>
+        <figcaption>${esc(t.spineCaption(layout.totalEvents, layout.span, layout.unverified))}</figcaption>
+      </figure>
+    </section>
+
+`;
+}
+
 function renderEventRow(ev, refNumById, ui) {
   const flag = ev.dateVerified === false
     ? ` <span class="flag" title="${esc((ui || UI.en).flagTitle)}">?</span>`
@@ -787,6 +941,7 @@ function renderPage(data, archives, opts = {}) {
   const lineage = data.lineage || data.episcopalLineage;
   const branchTimeline = data.branchTimeline;
   const numbersChart = data.numbersChart;
+  const chronologySpine = data.chronologySpine;
 
   // Stable citation numbering: references keep their file order.
   const refNumById = new Map(references.map((r, i) => [r.id, i + 1]));
@@ -796,6 +951,7 @@ function renderPage(data, archives, opts = {}) {
   const lineageHtml = renderLineageSection(lineage, refNumById);
   const branchTimelineHtml = renderBranchTimeline(branchTimeline, refNumById);
   const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
+  const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
 
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
 
@@ -805,7 +961,7 @@ function renderPage(data, archives, opts = {}) {
     .map((ev) => {
       const d = decadeOf(ev.year);
       const header = d !== lastDecade
-        ? `        <tr class="decade-row"><th colspan="4">${esc(d)}</th></tr>\n`
+        ? `        <tr class="decade-row" id="decade-${Math.floor(ev.year / 10) * 10}"><th colspan="4">${esc(d)}</th></tr>\n`
         : '';
       lastDecade = d;
       return header + renderEventRow(ev, refNumById, ui);
@@ -853,7 +1009,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -862,7 +1018,7 @@ ${seoHead(meta, base, route, lang)}
   </nav>
 
   <main class="wrap">
-    <section id="about">
+${chronologySpineHtml}    <section id="about">
       <h2>${esc(ui.aboutHeading)}</h2>
       <p class="notice">${esc(meta.dataQualityNote)}</p>
       <dl class="facts">
@@ -963,6 +1119,7 @@ module.exports = {
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   layoutNumbersChart, renderNumbersChart,
+  layoutChronologySpine, renderChronologySpine,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
