@@ -429,6 +429,70 @@ The tool writes only the output paths you name, and **refuses** a path inside
 the corpus directory, inside any repo's `data/`, or bearing a dataset filename
 (exit 2, nothing written).
 
+## `places.py` — the place gazetteer, and why it is not a geocoder
+
+Every chronology event carries a free-text `place`. Maps need coordinates, and
+the site build is **network-free** by policy (ADR-0004), so coordinates cannot
+be looked up at build time. They are committed instead, in
+[`data/places.json`](../data/places.json).
+
+Three defects in the raw data motivate this:
+
+1. **No coordinates anywhere** — `place` is free text.
+2. **The same place is written more than one way.** fsspx uses both
+   `Écône, Valais, Switzerland` and `Écône`; both `Fribourg, Switzerland` and
+   `Fribourg`. Grouping by string treats these as different locations.
+3. **Compound places — one event, two locations.** `Topeka / Los Angeles, USA`,
+   `Lucca, Italy / Rome`, `Lausanne / United States`. A parser that pins the
+   first token silently loses the second; for `rcc` that would **misplace the
+   origin of the whole movement**.
+
+So a place string resolves to a **list** of ids, never a single one. A comma is
+address structure, not a separator — only ` / ` separates locations.
+
+```sh
+python3 tools/places.py --list          # distinct strings + usage counts
+python3 tools/places.py --check         # unmapped names; exit 1 if any
+python3 tools/places.py --propose 25    # Nominatim candidates for unmapped names
+```
+
+`--check` is the drift gate: add an event with a new place and it fails until
+the gazetteer covers it.
+
+### `--propose` proposes; it never writes
+
+Geocoders return a confident top hit regardless of correctness. Accepting them
+blindly would have put wrong pins across the family — measured, not
+hypothetical:
+
+| query | top hit | correct |
+|---|---|---|
+| `Astana` | a **castle in Malaysia** | Kazakhstan (3rd hit) |
+| `Cairo` | **Cairo, Illinois** | Egypt (3rd hit) |
+| `Bloomington (Monroe County), Indiana, USA` | a **Murphy USA filling station** | the city |
+| `Fribourg` | the **canton** | the city, where the SSPX was founded |
+| `Lucca, Italy` | the **province** | the city |
+
+Every proposal prints the full OSM `display_name` for exactly this reason, and
+every accepted entry records the `display_name` it was confirmed against — so a
+wrong match is auditable later rather than invisible. Nothing is auto-accepted.
+
+### Things that are not points
+
+- **Countries and regions** (`Italy`, `Poland`) carry `precision:
+  "country-centroid"`. The point is *not* where anything happened; a renderer
+  must show it differently from a settlement, or omit it.
+- **Scopes are not places.** `Worldwide`, `international`, `online
+  (traditionalist-Catholic media)` and survey populations are
+  `kind: "non-geographic"` with **no coordinates at all**. Dropping a pin for
+  them would invent a location the source never claimed.
+- **Jurisdictions.** `Diocese of Arlington, Virginia, USA` names an
+  ecclesiastical territory, not a settlement. It is pinned at the see city with
+  a note saying the pin marks the see, never the extent of the diocese.
+
+Coordinates are OpenStreetMap data under ODbL 1.0 — attribution belongs on any
+published map.
+
 ## `sync-skills.py` — vendor the skills into a project
 
 ```

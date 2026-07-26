@@ -1271,6 +1271,117 @@ class TestCofGraph(CorpusFixture):
                                       "--min-cooccurrence", "0"]), 2)
 
 
+
+class TestPlaces(unittest.TestCase):
+    """Gazetteer resolution — the three defects it exists to fix."""
+
+    def setUp(self):
+        self.places = load("places.py", "places_tool")
+        self.entries, self.index = self.places.load_gazetteer()
+
+    def ids(self, string):
+        got, _ = self.places.resolve(string, self.index)
+        return got
+
+    # 1. compound places: ONE event in TWO locations
+    def test_compound_resolves_to_every_location(self):
+        self.assertEqual(self.ids("Topeka / Los Angeles, USA"),
+                         ["topeka", "los-angeles"])
+        self.assertEqual(self.ids("Lucca, Italy / Rome"), ["lucca", "rome"])
+
+    def test_compound_never_silently_drops_the_second_location(self):
+        for string in ("Topeka / Los Angeles, USA", "Lucca, Italy / Rome",
+                       "Lausanne / United States", "Astana / Rome",
+                       "Amsterdam / Cambridge"):
+            self.assertEqual(len(self.ids(string)), 2, string)
+
+    def test_a_comma_is_address_structure_not_a_separator(self):
+        # "Ann Arbor, Michigan, USA" is ONE place, not three.
+        self.assertEqual(self.ids("Ann Arbor, Michigan, USA"), ["ann-arbor"])
+
+    # 2. the same place written more than one way
+    def test_variant_spellings_unify(self):
+        for a, b in (("\u00c9c\u00f4ne", "\u00c9c\u00f4ne, Valais, Switzerland"),
+                     ("Fribourg", "Fribourg, Switzerland"),
+                     ("Bloomington", "Bloomington (Monroe County), Indiana, USA"),
+                     ("Washington", "Washington, DC, USA")):
+            self.assertEqual(self.ids(a), self.ids(b), f"{a} vs {b}")
+            self.assertEqual(len(self.ids(a)), 1)
+
+    def test_resolution_is_case_insensitive(self):
+        self.assertEqual(self.ids("rome"), self.ids("Rome"))
+
+    # 3. scopes are not places
+    def test_non_geographic_entries_carry_no_coordinates(self):
+        for string in ("Worldwide", "international",
+                       "online (traditionalist-Catholic media)"):
+            got = self.ids(string)
+            self.assertEqual(len(got), 1, string)
+            entry = self.entries[got[0]]
+            self.assertEqual(entry["kind"], "non-geographic", string)
+            self.assertNotIn("lat", entry, string)
+            self.assertNotIn("lon", entry, string)
+
+    def test_survey_populations_get_no_pin(self):
+        for string in ("Latin America (survey)", "USA (survey, 10 countries)"):
+            entry = self.entries[self.ids(string)[0]]
+            self.assertEqual(entry["precision"], "none", string)
+
+    # disambiguations that a geocoder's top hit gets wrong
+    def test_ambiguous_names_resolved_against_dataset_context(self):
+        cases = {
+            "Astana": (51.13, 71.43),      # Kazakhstan, not a castle in Malaysia
+            "Cairo": (30.04, 31.24),       # Egypt, not Cairo, Illinois
+            "Bloomington": (39.17, -86.53),  # Indiana, not Illinois or Minnesota
+            "Fribourg": (46.81, 7.16),     # the city, not the canton
+            "Lucca, Italy": (43.84, 10.50),  # the city, not the province
+        }
+        for string, (lat, lon) in cases.items():
+            entry = self.entries[self.ids(string)[0]]
+            self.assertAlmostEqual(entry["lat"], lat, places=1, msg=string)
+            self.assertAlmostEqual(entry["lon"], lon, places=1, msg=string)
+
+    # provenance and shape
+    def test_every_coordinate_records_its_source(self):
+        for entry in self.entries.values():
+            if "lat" in entry:
+                self.assertIn("source", entry, entry["id"])
+                self.assertIn("Nominatim", entry["source"], entry["id"])
+
+    def test_country_entries_are_marked_as_centroids(self):
+        for entry in self.entries.values():
+            if entry["kind"] in ("country", "region"):
+                self.assertEqual(entry["precision"], "country-centroid",
+                                 entry["id"])
+
+    def test_ids_and_variants_are_unique(self):
+        seen = {}
+        for entry in self.entries.values():
+            for name in [entry["name"]] + entry.get("variants", []):
+                key = name.casefold()
+                self.assertNotIn(key, seen,
+                                 f"{name!r} claimed by {seen.get(key)} and {entry['id']}")
+                seen[key] = entry["id"]
+
+    def test_every_dataset_place_string_resolves(self):
+        counts, _ = self.places.collect()
+        unmapped = []
+        for string in counts:
+            _, missing = self.places.resolve(string, self.index)
+            unmapped.extend(missing)
+        self.assertEqual(unmapped, [], f"unmapped: {sorted(set(unmapped))}")
+
+    def test_check_mode_exits_nonzero_when_something_is_unmapped(self):
+        empty = ({}, {})
+        original = self.places.load_gazetteer
+        self.places.load_gazetteer = lambda *a, **k: empty
+        try:
+            with silent():
+                self.assertEqual(self.places.main([]), 1)
+        finally:
+            self.places.load_gazetteer = original
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
@@ -1278,7 +1389,7 @@ class TestReadOnly(unittest.TestCase):
         for filename in ("mine-prep.py", "dataset-query.py",
                          "unverified-report.py", "xref.py", "sync-skills.py",
                          "build-keywords.py", "normalise-entities.py",
-                         "cof-xref.py", "cof-graph.py"):
+                         "cof-xref.py", "cof-graph.py", "places.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)
