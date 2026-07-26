@@ -1462,6 +1462,80 @@ class TestCofDates(unittest.TestCase):
         self.assertEqual(got, "undecided")
 
 
+
+class TestTemplateDrift(unittest.TestCase):
+    """Drift between the template scripts and the repos that vendor them."""
+
+    def setUp(self):
+        self.td = load("template-drift.py", "template_drift_tool")
+
+    def test_identical_files_do_not_drift(self):
+        src = "'use strict';\nconst A = 1;\nfunction f() { return A; }\n"
+        self.assertIsNone(self.td.compare(src, src))
+
+    def test_a_changed_line_outside_an_adopt_block_is_drift(self):
+        a = "const A = 1;\nfunction f() { return A; }\n"
+        b = "const A = 1;\nfunction f() { return A + 1; }\n"
+        got = self.td.compare(a, b)
+        self.assertIsNotNone(got)
+        self.assertEqual(got["changedLines"], 2)
+
+    def test_a_declared_adopt_block_may_differ_freely(self):
+        a = ("const X = 1;\n// >>> ADOPT: ua\nconst UA = 'template';\n// <<< ADOPT\n"
+             "function f() {}\n")
+        b = ("const X = 1;\n// >>> ADOPT: ua\nconst UA = 'this repo';\nconst EXTRA = 2;\n"
+             "// <<< ADOPT\nfunction f() {}\n")
+        self.assertIsNone(self.td.compare(a, b))
+
+    def test_deleting_a_declared_adopt_block_is_reported(self):
+        a = "// >>> ADOPT: ua\nconst UA = 'x';\n// <<< ADOPT\nfunction f() {}\n"
+        b = "const UA = 'x';\nfunction f() {}\n"
+        got = self.td.compare(a, b)
+        self.assertIsNotNone(got)
+        self.assertEqual(got["missingAdoptPoints"], ["ua"])
+
+    def test_the_regression_this_check_exists_for_is_caught(self):
+        """headerSafe reduced to a naive fold - the real check-links drift."""
+        tpl = ("function headerSafe(s) {\n  return String(s).normalize('NFKD')"
+               ".replace(/x/g, '');\n}\n")
+        repo = "function headerSafe(s) {\n  return String(s).replace(/y/g, '');\n}\n"
+        self.assertIsNotNone(self.td.compare(tpl, repo))
+
+    # --- what is deliberately NOT compared ---
+    def test_the_module_docblock_is_not_compared(self):
+        a = "'use strict';\n/**\n * Reads data/chronology.json.\n */\nconst A = 1;\n"
+        b = "'use strict';\n/**\n * Reads data/glossary.json.\n */\nconst A = 1;\n"
+        self.assertIsNone(self.td.compare(a, b))
+
+    def test_comments_are_not_compared(self):
+        a = "const A = 1; // official reference\n// a note\nfunction f() {}\n"
+        b = "const A = 1; // primary reference\n// a different note\nfunction f() {}\n"
+        # inline trailing comments are not stripped, so use whole-line comments
+        a = "// official reference\nconst A = 1;\nfunction f() {}\n"
+        b = "// primary reference\nconst A = 1;\nfunction f() {}\n"
+        self.assertIsNone(self.td.compare(a, b))
+
+    def test_a_code_change_hidden_among_comment_changes_is_still_caught(self):
+        a = "// note one\nconst A = 1;\nfunction f() {}\n"
+        b = "// note two\nconst A = 2;\nfunction f() {}\n"
+        self.assertIsNotNone(self.td.compare(a, b))
+
+    def test_blank_lines_are_not_drift(self):
+        a = "const A = 1;\n\n\nfunction f() {}\n"
+        b = "const A = 1;\nfunction f() {}\n"
+        self.assertIsNone(self.td.compare(a, b))
+
+    def test_validate_data_is_excluded_with_a_stated_reason(self):
+        self.assertIn("validate-data.js", self.td.NOT_SHARED)
+        self.assertTrue(self.td.NOT_SHARED["validate-data.js"].strip())
+        self.assertNotIn("validate-data.js", self.td.SHARED)
+
+    def test_the_family_is_currently_clean(self):
+        """The real repos must pass. This is the check doing its job."""
+        with silent():
+            self.assertEqual(self.td.main([]), 0)
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
@@ -1469,7 +1543,7 @@ class TestReadOnly(unittest.TestCase):
         for filename in ("mine-prep.py", "dataset-query.py",
                          "unverified-report.py", "xref.py", "sync-skills.py",
                          "build-keywords.py", "normalise-entities.py",
-                         "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py"):
+                         "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py", "template-drift.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)

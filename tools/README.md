@@ -543,6 +543,67 @@ index, 18 undecided**. *Undecided is a real result and must stay in the output*:
 nothing is promoted to `dateVerified: true` without a third anchor, for which
 the COFemAudio upload record is the obvious candidate.
 
+## `template-drift.py` — has a template fix reached the repos that run it?
+
+Vendored **skills** have drift detection (`sync-skills.py --check`). Vendored
+template **scripts** had none, and the cost was measured, not imagined:
+
+- `check-links.js` gained `headerSafe()` in the template ([core#12]) so that an
+  em dash in a project title could not make `fetch` throw. **The fix reached
+  exactly one repo** — `fsspx`, where it was written. Four repos grew four
+  *different* local variants, and in two of them (`tariqa`, `rcc`) there was no
+  sanitiser at all — so `fetch` threw, `checkUrl` swallowed it, and the weekly
+  link-health run reported **every reference as inconclusive** while looking
+  healthy.
+- `translate.js` gained a provenance fix that reached **no** adopting repo until
+  it was ported by hand — and even then one call site was missed in all five.
+
+```sh
+python3 tools/template-drift.py             # exit 1 on drift
+python3 tools/template-drift.py --repo rcc
+python3 tools/template-drift.py --json
+```
+
+### The contract: the template declares its adoption points
+
+A byte-comparison is useless here, because adopting repos legitimately customise
+parts of these files. So the template marks what may change:
+
+```js
+// >>> ADOPT: user-agent
+// A repo may set its own fallback name and repo URL. It must still route the
+// title through headerSafe().
+function deriveUserAgent(projectName) { … }
+// <<< ADOPT
+```
+
+Everything **outside** an ADOPT block is shared machinery and must match.
+Everything inside is the repo's. Deleting a block the template declares is
+itself reported, so a repo cannot quietly drop the marker to silence the check.
+
+Current adoption points: `user-agent`, `translatable-keys`, `dataset`,
+`official-ref`, `recapture-log`, `report-footer`, `project-fallback`.
+
+### What is deliberately not compared, and why
+
+- **`validate-data.js` is not a shared script.** Each repo validates its own
+  schema; glossary's differs in **363 of 321 lines** — it is a different program
+  that happens to share a filename. It is *seeded* by the template and owned by
+  the repo.
+- **The module docblock and all comments are skipped.** Comment prose is
+  legitimately per-repo (glossary says "primary reference" where a chronology
+  says "official"). Diffing prose would report drift forever, the check would be
+  muted, and the muting would hide the code drift this exists to find — which is
+  precisely how `headerSafe` went unpropagated. The trade-off is explicit: a
+  comment-only template change will not be flagged. A comment-only change is not
+  a fix.
+
+11 tests, including that a code change hidden among comment changes is still
+caught, that deleting a declared ADOPT block is reported, and that the real
+family currently passes.
+
+[core#12]: https://github.com/cronologia/core/issues/12
+
 ## `sync-skills.py` — vendor the skills into a project
 
 ```

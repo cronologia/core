@@ -40,15 +40,21 @@ const path = require('path');
 const https = require('https');
 
 const ROOT = path.join(__dirname, '..');
+// >>> ADOPT: dataset
+// A repo points this at its own source of truth (chronology.json, glossary.json).
 const DATA_FILE = path.join(ROOT, 'data', 'chronology.json');
+// <<< ADOPT
 const I18N_DIR = path.join(ROOT, 'data', 'i18n');
 const DEFAULT_LOCALES = ['es', 'pt'];
 
+// >>> ADOPT: translatable-keys
+// A repo adds the keys its own build.js renders. It MUST mirror build.js's set.
 const TRANSLATABLE_KEYS = new Set([
   'title', 'subtitle', 'description', 'dataQualityNote', 'label', 'value', 'text',
   'place', 'role', 'country', 'notes', 'note', 'heading', 'navLabel', 'summary',
   'detail', 'status', 'relation', 'unitNote', 'sourceLabel', 'display', 'unit', 'edgeLabel',
 ]);
+// <<< ADOPT
 
 /** Collect the unique translatable strings from the dataset, in a stable order. */
 function collectStrings(data) {

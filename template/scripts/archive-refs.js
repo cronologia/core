@@ -34,7 +34,10 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
+// >>> ADOPT: dataset
+// A repo points this at its own source of truth (chronology.json, glossary.json).
 const DATA_FILE = path.join(ROOT, 'data', 'chronology.json');
+// <<< ADOPT
 const ARCHIVES_FILE = path.join(ROOT, 'data', 'archives.json');
 
 const MAX_SAVES = clampInt(process.env.ARCHIVE_MAX_SAVES, 25, 0, 500);
@@ -42,8 +45,11 @@ const SAVE_DELAY_MS = Math.max(10000, clampInt(process.env.ARCHIVE_SAVE_DELAY_MS
 const REFRESH_DAYS = clampInt(process.env.ARCHIVE_REFRESH_DAYS, 7, 0, 3650);
 const LOOKUP_DELAY_MS = 1500;
 
+// >>> ADOPT: user-agent
+// A repo may name itself here. Keep the cronologia-archive-refs/1.0 prefix.
 const USER_AGENT =
   'cronologia-archive-refs/1.0 (Cronologia chronology project; +https://github.com/cronologia/core)';
+// <<< ADOPT
 
 function clampInt(raw, dflt, min, max) {
   const n = parseInt(raw, 10);
@@ -181,7 +187,11 @@ async function main() {
     const url = ref.url;
     if (!url) continue;
     const existing = archives.snapshots[url];
+    // >>> ADOPT: official-ref
+    // Which references get a fresh re-capture. Schema-specific: a chronology
+    // marks them `official: true`, the glossary uses `type: "primary"`.
     const isOfficial = ref.official === true;
+    // <<< ADOPT
     const label = `${ref.id || '?'} ${url}`;
 
     // Idempotence: skip what archives.json already has, unless this is an
@@ -197,7 +207,10 @@ async function main() {
         pending++;
         continue;
       }
+      // >>> ADOPT: recapture-log
+      // Wording follows this repo's term for a primary/official reference.
       console.log(`re-capturing official ref: ${label}`);
+      // <<< ADOPT
       await politePause(SAVE_DELAY_MS);
       const saved = await savePage(url);
       saves++;
