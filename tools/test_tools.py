@@ -1382,6 +1382,86 @@ class TestPlaces(unittest.TestCase):
             self.places.load_gazetteer = original
 
 
+
+class TestCofDates(unittest.TestCase):
+    """Neighbour-consistency checking for COF lecture dates."""
+
+    def setUp(self):
+        self.cd = load("cof-dates.py", "cof_dates_tool")
+
+    @staticmethod
+    def docs(*triples):
+        return [{"id": f"COF{a:03d}", "aula": a, "date": d,
+                 "dateProvenance": "header-long-form"} for a, d in triples]
+
+    def test_a_date_in_sequence_is_not_an_anomaly(self):
+        docs = self.docs((1, "2009-03-07"), (2, "2009-03-14"), (3, "2009-03-21"))
+        self.assertEqual(self.cd.find_anomalies(docs), [])
+
+    def test_a_whole_year_off_with_the_day_intact_is_a_probable_year_typo(self):
+        docs = self.docs((26, "2009-10-03"), (27, "2010-10-10"), (28, "2009-10-17"))
+        got = self.cd.find_anomalies(docs)
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0]["id"], "COF027")
+        self.assertEqual(got[0]["kind"], "probable-year-typo")
+
+    def test_a_few_days_out_of_order_is_an_ordering_anomaly_not_a_typo(self):
+        docs = self.docs((104, "2011-04-30"), (105, "2011-05-07"), (106, "2011-05-04"),
+                         (107, "2011-05-28"))
+        kinds = {a["id"]: a["kind"] for a in self.cd.find_anomalies(docs)}
+        self.assertIn("COF106", kinds)
+        self.assertEqual(kinds["COF106"], "ordering-anomaly")
+
+    def test_a_file_is_not_blamed_when_its_neighbours_are_the_ones_in_conflict(self):
+        # 10 and 12 are out of order with each other; 11 must not be flagged.
+        docs = self.docs((10, "2009-06-20"), (11, "2009-06-13"), (12, "2009-06-06"))
+        self.assertNotIn("COF011", [a["id"] for a in self.cd.find_anomalies(docs)])
+
+    def test_undated_files_are_ignored_rather_than_guessed(self):
+        docs = self.docs((1, "2009-03-07"), (3, "2009-03-21"))
+        docs.append({"id": "COF002", "aula": 2, "date": None})
+        self.assertEqual(self.cd.find_anomalies(docs), [])
+
+    # --- adjudication between the two sources -----------------------------
+    def test_sequence_can_favour_the_header(self):
+        # aula 220: the header fits the weekly series, the index does not
+        neighbours = {219: __import__("datetime").date(2013, 9, 7),
+                      221: __import__("datetime").date(2013, 9, 21)}
+        import datetime
+        got = self.cd.adjudicate(220, datetime.date(2013, 9, 14),
+                                 datetime.date(2012, 9, 14), neighbours)
+        self.assertEqual(got, "header")
+
+    def test_sequence_can_favour_the_index(self):
+        # aula 222: the header falls after aula 223, the index fits
+        import datetime
+        neighbours = {221: datetime.date(2013, 9, 21), 223: datetime.date(2013, 10, 12)}
+        got = self.cd.adjudicate(222, datetime.date(2013, 10, 22),
+                                 datetime.date(2013, 10, 5), neighbours)
+        self.assertEqual(got, "index")
+
+    def test_undecided_when_both_values_fit(self):
+        import datetime
+        neighbours = {1: datetime.date(2009, 3, 1), 3: datetime.date(2009, 4, 1)}
+        got = self.cd.adjudicate(2, datetime.date(2009, 3, 10),
+                                 datetime.date(2009, 3, 20), neighbours)
+        self.assertEqual(got, "undecided")
+
+    def test_undecided_when_the_neighbours_themselves_disagree(self):
+        import datetime
+        neighbours = {1: datetime.date(2009, 4, 1), 3: datetime.date(2009, 3, 1)}
+        got = self.cd.adjudicate(2, datetime.date(2009, 3, 10),
+                                 datetime.date(2009, 3, 20), neighbours)
+        self.assertEqual(got, "undecided")
+
+    def test_neither_source_is_preferred_by_default(self):
+        """The tool must never resolve a disagreement it cannot adjudicate."""
+        import datetime
+        got = self.cd.adjudicate(5, datetime.date(2009, 1, 1),
+                                 datetime.date(2010, 1, 1), {})
+        self.assertEqual(got, "undecided")
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
@@ -1389,7 +1469,7 @@ class TestReadOnly(unittest.TestCase):
         for filename in ("mine-prep.py", "dataset-query.py",
                          "unverified-report.py", "xref.py", "sync-skills.py",
                          "build-keywords.py", "normalise-entities.py",
-                         "cof-xref.py", "cof-graph.py", "places.py"):
+                         "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)

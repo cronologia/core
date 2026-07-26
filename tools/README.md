@@ -493,6 +493,56 @@ wrong match is auditable later rather than invisible. Nothing is auto-accepted.
 Coordinates are OpenStreetMap data under ODbL 1.0 — attribution belongs on any
 published map.
 
+## `cof-dates.py` — are the COF lecture dates consistent?
+
+`archive/cof/index.json` marks every `revisada` file `dateVerified: true` because
+the lecture date was read from the transcription's own header. Consuming repos
+cite "aula N, `<date>`" on that basis.
+
+**The headers are not all right.** Sorting the 257 dated files by aula number,
+fourteen carry a date inconsistent with *both* their immediate dated neighbours —
+including five off by very close to a whole year while the day and month fit the
+sequence perfectly. `COF079.md` reads `16 de outubro de 2012` between two aulas
+dated October **2010**. The manifest is faithful; the defect is upstream.
+
+```sh
+python3 tools/cof-dates.py            # anomalies, exit 1 if any
+python3 tools/cof-dates.py --index    # header vs the community index lineage
+python3 tools/cof-dates.py --json     # machine-readable
+```
+
+That was found by hand once. This makes it a standing check, so it is not
+rediscovered by hand a second time — the lesson of #21.
+
+### It reports; it never corrects
+
+The header is the evidence. An inference from neighbouring aulas is not, and a
+course can legitimately be recorded, released or renumbered out of order. So the
+tool separates **probable year typos** (a whole-year offset with the day and
+month intact) from **ordering anomalies** (days or weeks), and decides nothing.
+
+### `--index`: two sources, and neither is authoritative
+
+A second source is vaulted in `archive/webcaptures/` — the community index
+lineage (Rafael Almeida → the Mateus Santos Pereira extension → the Jornal
+Cidadania continuation). Those three are **one source, not three**: they carry
+identical dates for 485 of 485 shared aulas, quirks included.
+
+It disagrees with the headers on **33** aulas, and **both sides carry year
+typos**. Aulas 217–220 are a continuous weekly series on one book:
+
+| aula | header | index | sequence supports |
+|---|---|---|---|
+| 220 | 2013-09-14 | 2012-09-14 | **header** — the index breaks its own series |
+| 222 | 2013-10-22 | 2013-10-05 | **index** — the header falls after aula 223 |
+
+So neither source may be preferred wholesale; a bulk import of the index would
+have introduced a fresh error at aula 220. `--index` applies the neighbour test
+to both and reports which side the sequence supports — currently **4 header, 11
+index, 18 undecided**. *Undecided is a real result and must stay in the output*:
+nothing is promoted to `dateVerified: true` without a third anchor, for which
+the COFemAudio upload record is the obvious candidate.
+
 ## `sync-skills.py` — vendor the skills into a project
 
 ```
