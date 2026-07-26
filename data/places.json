@@ -1,0 +1,693 @@
+{
+  "_meta": {
+    "purpose": "Coordinates for the place strings used in Cronologia chronology datasets. The site build is network-free (core ADR-0004), so coordinates cannot be looked up at build time; they are committed here instead.",
+    "usage": "A place string may name MORE THAN ONE location and therefore resolves to a LIST of ids. Resolve with tools/places.py, never by splitting strings ad hoc.",
+    "coordinateSource": "OpenStreetMap Nominatim, ODbL 1.0 (https://osm.org/copyright). Every entry records the exact display_name it was confirmed against, so a wrong match is auditable rather than invisible.",
+    "curation": "Candidates were PROPOSED by tools/places.py --propose and accepted only after reading the returned display_name. Top hits were wrong in several cases: \"Astana\" returned a castle in Malaysia, \"Cairo\" returned Cairo, Illinois, \"Fribourg\" returned the canton rather than the city where the SSPX was founded, \"Lucca\" returned the province rather than the city, and \"Bloomington (Monroe County), Indiana, USA\" returned a filling station. Nothing here was auto-accepted.",
+    "precision": "settlement = a town/city/hamlet centre. country-centroid = a whole country or region; the point is NOT where anything happened and must be rendered differently from a settlement, or omitted from maps.",
+    "nonGeographic": "Entries with kind \"non-geographic\" resolve deliberately to NO coordinates. \"Worldwide\", \"international\" and survey populations are scopes, not places; dropping a pin for them would invent a location the source does not claim.",
+    "retrieved": "retrieved 2026-07-26",
+    "jurisdictions": "Some place strings name ecclesiastical jurisdictions (e.g. \"Diocese of Arlington\"). These are pinned at the see city with a note; the pin marks the see, never the territory."
+  },
+  "places": [
+    {
+      "id": "amsterdam",
+      "name": "Amsterdam",
+      "kind": "city",
+      "lat": 52.3730796,
+      "lon": 4.8924534,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Amsterdam, Noord-Holland, Nederland (retrieved 2026-07-26)"
+    },
+    {
+      "id": "ann-arbor",
+      "name": "Ann Arbor, Michigan, USA",
+      "kind": "city",
+      "lat": 42.2813722,
+      "lon": -83.7484616,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Ann Arbor, Washtenaw County, Michigan, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Ann Arbor, USA"
+      ]
+    },
+    {
+      "id": "astana",
+      "name": "Astana, Kazakhstan",
+      "kind": "city",
+      "lat": 51.1282205,
+      "lon": 71.4306682,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Астана, 010000, Қазақстан (retrieved 2026-07-26)",
+      "variants": [
+        "Astana"
+      ]
+    },
+    {
+      "id": "basel",
+      "name": "Basel, Switzerland",
+      "kind": "city",
+      "lat": 47.5581077,
+      "lon": 7.5878261,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Basel, Basel-Stadt, Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "bloomington-in",
+      "name": "Bloomington, Indiana, USA",
+      "kind": "city",
+      "lat": 39.1670396,
+      "lon": -86.5342881,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Bloomington, Monroe County, Indiana, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Bloomington",
+        "Bloomington (Monroe County), Indiana, USA"
+      ]
+    },
+    {
+      "id": "boston",
+      "name": "Boston, Massachusetts, USA",
+      "kind": "city",
+      "lat": 42.3588336,
+      "lon": -71.0578303,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Boston, Suffolk County, Massachusetts, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Boston, USA"
+      ]
+    },
+    {
+      "id": "buenos-aires",
+      "name": "Buenos Aires, Argentina",
+      "kind": "city",
+      "lat": -34.6095579,
+      "lon": -58.3887904,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Buenos Aires, Comuna 1, Argentina (retrieved 2026-07-26)",
+      "variants": [
+        "Buenos Aires"
+      ]
+    },
+    {
+      "id": "cachoeira-paulista",
+      "name": "Cachoeira Paulista, Brazil",
+      "kind": "town",
+      "lat": -22.6605578,
+      "lon": -45.0081689,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Cachoeira Paulista, São Paulo, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "cairo",
+      "name": "Cairo, Egypt",
+      "kind": "city",
+      "lat": 30.0443879,
+      "lon": 31.2357257,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — القاهرة, مصر (retrieved 2026-07-26)",
+      "variants": [
+        "Cairo"
+      ]
+    },
+    {
+      "id": "cambridge-uk",
+      "name": "Cambridge, England",
+      "kind": "city",
+      "lat": 52.1975846,
+      "lon": 0.1391537,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Cambridge, Cambridgeshire, England, United Kingdom (retrieved 2026-07-26)",
+      "variants": [
+        "Cambridge"
+      ]
+    },
+    {
+      "id": "campinas",
+      "name": "Campinas, Brazil",
+      "kind": "city",
+      "lat": -22.9056391,
+      "lon": -47.059564,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Campinas, São Paulo, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "campos",
+      "name": "Campos dos Goytacazes, Brazil",
+      "kind": "city",
+      "lat": -21.7546,
+      "lon": -41.3242,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Campos dos Goytacazes, Rio de Janeiro, Brasil (retrieved 2026-07-26)",
+      "variants": [
+        "Campos, Brazil"
+      ]
+    },
+    {
+      "id": "castel-gandolfo",
+      "name": "Castel Gandolfo, Italy",
+      "kind": "town",
+      "lat": 41.7425222,
+      "lon": 12.6488774,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Castel Gandolfo, Roma Capitale, Lazio, Italia (retrieved 2026-07-26)",
+      "variants": [
+        "Castel Gandolfo"
+      ]
+    },
+    {
+      "id": "cork",
+      "name": "Cork, Ireland",
+      "kind": "city",
+      "lat": 51.8985136,
+      "lon": -8.4726423,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Cork, County Cork, Munster, Ireland (retrieved 2026-07-26)"
+    },
+    {
+      "id": "edinburgh",
+      "name": "Edinburgh, Scotland",
+      "kind": "city",
+      "lat": 55.9533456,
+      "lon": -3.1883749,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — City of Edinburgh, Scotland, United Kingdom (retrieved 2026-07-26)"
+    },
+    {
+      "id": "el-palmar-de-troya",
+      "name": "El Palmar de Troya, Spain",
+      "kind": "town",
+      "lat": 37.060659,
+      "lon": -5.8031769,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — El Palmar de Troya, Sevilla, Andalucía, España (retrieved 2026-07-26)"
+    },
+    {
+      "id": "fortaleza",
+      "name": "Fortaleza, Brazil",
+      "kind": "city",
+      "lat": -3.7932167,
+      "lon": -38.5280359,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Fortaleza, Ceará, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "fribourg",
+      "name": "Fribourg, Switzerland",
+      "kind": "city",
+      "lat": 46.8055656,
+      "lon": 7.1612669,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Fribourg - Freiburg, District de la Sarine, Schweiz (retrieved 2026-07-26)",
+      "variants": [
+        "Fribourg"
+      ]
+    },
+    {
+      "id": "gaithersburg",
+      "name": "Gaithersburg, Maryland, USA",
+      "kind": "city",
+      "lat": 39.1399187,
+      "lon": -77.1929215,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Gaithersburg, Montgomery County, Maryland, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "gibsonia",
+      "name": "Gibsonia, Pennsylvania, USA",
+      "kind": "hamlet",
+      "lat": 40.6300671,
+      "lon": -79.9695004,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Gibsonia, Richland Township, Allegheny County, Pennsylvania, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "la-reja",
+      "name": "La Reja, Argentina",
+      "kind": "town",
+      "lat": -34.6460954,
+      "lon": -58.8300289,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — La Reja, Partido de Moreno, Buenos Aires, Argentina (retrieved 2026-07-26)"
+    },
+    {
+      "id": "lausanne",
+      "name": "Lausanne, Switzerland",
+      "kind": "city",
+      "lat": 46.5218269,
+      "lon": 6.6327025,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Lausanne, District de Lausanne, Vaud, Schweiz (retrieved 2026-07-26)",
+      "variants": [
+        "Lausanne"
+      ]
+    },
+    {
+      "id": "lille",
+      "name": "Lille, France",
+      "kind": "city",
+      "lat": 50.6365654,
+      "lon": 3.0635282,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Lille, Nord, Hauts-de-France, France (retrieved 2026-07-26)"
+    },
+    {
+      "id": "london",
+      "name": "London, England",
+      "kind": "city",
+      "lat": 51.5074456,
+      "lon": -0.1277653,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Greater London, England, United Kingdom (retrieved 2026-07-26)",
+      "variants": [
+        "London"
+      ]
+    },
+    {
+      "id": "los-angeles",
+      "name": "Los Angeles, California, USA",
+      "kind": "city",
+      "lat": 34.0536909,
+      "lon": -118.242766,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Los Angeles, Los Angeles County, California, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Los Angeles, USA"
+      ]
+    },
+    {
+      "id": "lucca",
+      "name": "Lucca, Italy",
+      "kind": "city",
+      "lat": 43.8428381,
+      "lon": 10.502876,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Lucca, Toscana, Italia (retrieved 2026-07-26)"
+    },
+    {
+      "id": "mechelen",
+      "name": "Mechelen (Malines), Belgium",
+      "kind": "city",
+      "lat": 51.0281381,
+      "lon": 4.4803453,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Mechelen, Antwerpen, Vlaanderen, België (retrieved 2026-07-26)",
+      "variants": [
+        "Malines, Belgium"
+      ]
+    },
+    {
+      "id": "margate",
+      "name": "Margate, England",
+      "kind": "town",
+      "lat": 51.3878174,
+      "lon": 1.3819699,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Margate, Thanet, Kent, England, United Kingdom (retrieved 2026-07-26)"
+    },
+    {
+      "id": "martigny",
+      "name": "Martigny, Switzerland",
+      "kind": "town",
+      "lat": 46.103115,
+      "lon": 7.0727354,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Martigny, Bas-Valais, Valais, Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "menzingen",
+      "name": "Menzingen, Zug, Switzerland",
+      "kind": "village",
+      "lat": 47.178291,
+      "lon": 8.5899339,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Menzingen, Zug, 6313, Schweiz (retrieved 2026-07-26)",
+      "variants": [
+        "Menzingen"
+      ]
+    },
+    {
+      "id": "milan",
+      "name": "Milan, Italy",
+      "kind": "city",
+      "lat": 45.4542119,
+      "lon": 9.111351,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Milano, Lombardia, Italia (retrieved 2026-07-26)"
+    },
+    {
+      "id": "moscow",
+      "name": "Moscow, Russia",
+      "kind": "city",
+      "lat": 55.7505412,
+      "lon": 37.6174782,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Москва, Россия (retrieved 2026-07-26)"
+    },
+    {
+      "id": "mostaganem",
+      "name": "Mostaganem, Algeria",
+      "kind": "city",
+      "lat": 35.928808,
+      "lon": 0.089978,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Mostaganem, Daïra Mostaganem, Algeria (retrieved 2026-07-26)"
+    },
+    {
+      "id": "needham",
+      "name": "Needham, Massachusetts, USA",
+      "kind": "town",
+      "lat": 42.2802645,
+      "lon": -71.2360624,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Needham, Norfolk County, Massachusetts, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "new-york",
+      "name": "New York City, USA",
+      "kind": "city",
+      "lat": 40.7127281,
+      "lon": -74.0060152,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — New York, United States (retrieved 2026-07-26)",
+      "variants": [
+        "New York, USA"
+      ]
+    },
+    {
+      "id": "nova-friburgo",
+      "name": "Nova Friburgo, Brazil",
+      "kind": "city",
+      "lat": -22.2800004,
+      "lon": -42.5325303,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Nova Friburgo, Rio de Janeiro, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "oxford",
+      "name": "Oxford, England",
+      "kind": "city",
+      "lat": 51.7520131,
+      "lon": -1.2578499,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Oxford, Oxfordshire, England, United Kingdom (retrieved 2026-07-26)"
+    },
+    {
+      "id": "paris",
+      "name": "Paris, France",
+      "kind": "city",
+      "lat": 48.8534951,
+      "lon": 2.3483915,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Paris, Île-de-France, France (retrieved 2026-07-26)",
+      "variants": [
+        "Paris"
+      ]
+    },
+    {
+      "id": "recife",
+      "name": "Recife, Brazil",
+      "kind": "city",
+      "lat": -8.0584933,
+      "lon": -34.8848193,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Recife, Pernambuco, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "richmond-va",
+      "name": "Richmond, Virginia, USA",
+      "kind": "city",
+      "lat": 37.5385087,
+      "lon": -77.43428,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Richmond, Virginia, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "rome",
+      "name": "Rome, Italy",
+      "kind": "city",
+      "lat": 41.8933203,
+      "lon": 12.4829321,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Roma, Roma Capitale, Lazio, Italia (retrieved 2026-07-26)",
+      "variants": [
+        "Rome"
+      ]
+    },
+    {
+      "id": "rome-circus-maximus",
+      "name": "Rome — Circus Maximus",
+      "kind": "site",
+      "lat": 41.8861584,
+      "lon": 12.4853087,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Circo Massimo, Municipio Roma I, Roma, Italia (retrieved 2026-07-26)",
+      "variants": [
+        "Rome (Circus Maximus)"
+      ]
+    },
+    {
+      "id": "south-bend",
+      "name": "South Bend, Indiana, USA",
+      "kind": "city",
+      "lat": 41.6833813,
+      "lon": -86.2500066,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — South Bend, Saint Joseph County, Indiana, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "sao-fidelis",
+      "name": "São Fidélis, Brazil",
+      "kind": "town",
+      "lat": -21.6467054,
+      "lon": -41.7463412,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — São Fidélis, Rio de Janeiro, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "sao-paulo",
+      "name": "São Paulo, Brazil",
+      "kind": "city",
+      "lat": -23.5506507,
+      "lon": -46.6333824,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — São Paulo, Região Sudeste, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "tehran",
+      "name": "Tehran, Iran",
+      "kind": "city",
+      "lat": 35.6892523,
+      "lon": 51.3896004,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — شهر تهران, استان تهران, ایران (retrieved 2026-07-26)",
+      "variants": [
+        "Tehran"
+      ]
+    },
+    {
+      "id": "topeka",
+      "name": "Topeka, Kansas, USA",
+      "kind": "city",
+      "lat": 39.049011,
+      "lon": -95.677556,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Topeka, Shawnee County, Kansas, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Topeka"
+      ]
+    },
+    {
+      "id": "valinhos",
+      "name": "Valinhos, Brazil",
+      "kind": "city",
+      "lat": -22.97056,
+      "lon": -46.99583,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Valinhos, São Paulo, Brasil (retrieved 2026-07-26)",
+      "variants": [
+        "Valinhos"
+      ]
+    },
+    {
+      "id": "vatican",
+      "name": "Vatican City",
+      "kind": "city",
+      "lat": 41.903411,
+      "lon": 12.4528527,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Civitas Vaticana - Città del Vaticano (retrieved 2026-07-26)",
+      "variants": [
+        "Vatican"
+      ]
+    },
+    {
+      "id": "wangs",
+      "name": "Wangs, Switzerland",
+      "kind": "village",
+      "lat": 47.0326174,
+      "lon": 9.4325307,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Wangs, Vilters-Wangs, St. Gallen, Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "washington-dc",
+      "name": "Washington, DC, USA",
+      "kind": "city",
+      "lat": 38.8950982,
+      "lon": -77.0363849,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Washington, District of Columbia, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Washington",
+        "Washington DC"
+      ]
+    },
+    {
+      "id": "econe",
+      "name": "Écône, Valais, Switzerland",
+      "kind": "hamlet",
+      "lat": 46.1569124,
+      "lon": 7.2050144,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Écône, Saxon, Martigny, Bas-Valais, Valais, Schweiz (retrieved 2026-07-26)",
+      "variants": [
+        "Écône"
+      ]
+    },
+    {
+      "id": "brazil",
+      "name": "Brazil",
+      "kind": "country",
+      "lat": -10.3333333,
+      "lon": -53.2,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "england",
+      "name": "England",
+      "kind": "region",
+      "lat": 52.5310214,
+      "lon": -1.2649062,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — England, United Kingdom (retrieved 2026-07-26)"
+    },
+    {
+      "id": "france",
+      "name": "France",
+      "kind": "country",
+      "lat": 46.603354,
+      "lon": 1.8883335,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — France (retrieved 2026-07-26)"
+    },
+    {
+      "id": "italy",
+      "name": "Italy",
+      "kind": "country",
+      "lat": 42.6384261,
+      "lon": 12.674297,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Italia (retrieved 2026-07-26)"
+    },
+    {
+      "id": "morocco",
+      "name": "Morocco",
+      "kind": "country",
+      "lat": 31.1728205,
+      "lon": -7.3362482,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Maroc (retrieved 2026-07-26)"
+    },
+    {
+      "id": "poland",
+      "name": "Poland",
+      "kind": "country",
+      "lat": 52.215933,
+      "lon": 19.134422,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Polska (retrieved 2026-07-26)"
+    },
+    {
+      "id": "switzerland",
+      "name": "Switzerland",
+      "kind": "country",
+      "lat": 46.7985624,
+      "lon": 8.2319736,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "united-states",
+      "name": "United States",
+      "kind": "country",
+      "lat": 39.7837304,
+      "lon": -100.445882,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "non-geo-worldwide",
+      "name": "Worldwide",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A scope, not a location. Renders no pin."
+    },
+    {
+      "id": "non-geo-international",
+      "name": "International",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A scope, not a location. Renders no pin."
+    },
+    {
+      "id": "non-geo-online",
+      "name": "Online",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A medium, not a location. Renders no pin.",
+      "variants": [
+        "online (traditionalist-Catholic media)"
+      ]
+    },
+    {
+      "id": "non-geo-survey-latam",
+      "name": "Latin America (survey)",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A survey population spanning many countries; a single pin would misrepresent it."
+    },
+    {
+      "id": "non-geo-survey-usa",
+      "name": "USA (survey, 10 countries)",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A survey population spanning ten countries; a single pin would misrepresent it."
+    },
+    {
+      "id": "hauterive-abbey",
+      "name": "Hauterive Abbey, Switzerland",
+      "kind": "site",
+      "lat": 46.7644648,
+      "lon": 7.1176974,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Abbaye d'Hauterive, Chemin de l'Abbaye, Posieux, Hauterive, District de la Sarine, Fribourg, Schweiz (retrieved 2026-07-26)",
+      "note": "The abbey itself, in Posieux (Fribourg canton) — not the village of Hauterive. Found only by a targeted query; the bare dataset string returns no candidate."
+    },
+    {
+      "id": "arlington-va",
+      "name": "Arlington, Virginia, USA",
+      "kind": "city",
+      "lat": 38.8903961,
+      "lon": -77.0841585,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Arlington, Arlington County, Virginia, 22209, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Diocese of Arlington, Virginia, USA"
+      ],
+      "note": "The dataset string names an ecclesiastical JURISDICTION, not a settlement. Pinned at the see city. A diocese covers a territory, so this point marks the see and must not be read as the extent of the diocese."
+    }
+  ],
+  "unresolved": []
+}
