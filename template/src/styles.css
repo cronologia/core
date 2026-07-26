@@ -216,11 +216,77 @@ figure.numbers-chart figcaption { margin-top: .25rem; }
   section { margin: 1.25rem 0; }
   table.meetings thead th { position: static; }
   /* Figures must not split across pages */
-  .lineage-branch, figure.branch-timeline, figure.numbers-chart, .nc-series, .party-card, .related-card, .cp-card { break-inside: avoid; page-break-inside: avoid; }
+  .lineage-branch, figure.branch-timeline, figure.numbers-chart, figure.chrono-spine, .nc-series, .party-card, .related-card, .cp-card { break-inside: avoid; page-break-inside: avoid; }
   /* Trees are static HTML/CSS and print as-is; the subway SVG scales to the
      page width via its viewBox instead of scrolling */
   .viz-scroll { overflow: visible; }
   .branch-timeline-svg { width: 100% !important; height: auto !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Chronology spine — the density figure at the top of the page.
+
+   Every quantity is encoded twice: bar height AND the printed count. Nothing
+   is carried by colour alone, so the figure survives greyscale, print and
+   colour-vision deficiency. The unverified segment is distinguished by a
+   repeating-gradient hatch, not a hue.
+   ------------------------------------------------------------------------ */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+figure.chrono-spine { margin: 0 0 .5rem; }
+ol.cs-track-list {
+  display: flex; align-items: flex-end; gap: .3rem;
+  margin: 0; padding: 0; list-style: none; min-height: 132px;
+}
+.cs-col { flex: 1 1 0; min-width: 38px; text-align: center; }
+.cs-col a {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  height: 100%; text-decoration: none; color: inherit; border-radius: 4px; padding: .15rem 0;
+}
+.cs-col a:hover, .cs-col a:focus-visible { background: var(--accent-soft); outline: none; }
+.cs-col a:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.cs-count { font-size: .78rem; font-weight: 700; color: var(--muted); line-height: 1.4; }
+.cs-col a:hover .cs-count, .cs-col a:focus-visible .cs-count { color: var(--accent-dark); }
+.cs-track { display: block; width: 100%; height: 84px; display: flex; align-items: flex-end; }
+.cs-bar {
+  display: block; width: 100%; background: var(--accent); border-radius: 2px 2px 0 0;
+  min-height: 3px; position: relative; overflow: hidden;
+}
+/* Unverified dates: a hatch sitting at the TOP of the bar, so the verified
+   portion stays readable as a solid block underneath it. */
+.cs-unverified {
+  display: block; width: 100%; position: absolute; top: 0; left: 0;
+  background: repeating-linear-gradient(
+    45deg, var(--surface) 0 3px, transparent 3px 6px
+  );
+  border-bottom: 1px solid var(--surface);
+}
+.cs-label { font-size: .72rem; color: var(--muted); margin-top: .25rem; white-space: nowrap; }
+.cs-empty .cs-track { border-bottom: 1px dotted var(--line); }
+
+/* An explicit, labelled break — never a silent rescale. */
+.cs-break {
+  flex: 0 0 auto; align-self: stretch; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; padding: 0 .4rem;
+  border-left: 1px dashed var(--line); border-right: 1px dashed var(--line);
+  max-width: 130px;
+}
+.cs-break-mark { color: var(--muted); font-size: 1.1rem; line-height: 1; }
+.cs-break-label {
+  font-size: .68rem; color: var(--muted); text-align: center;
+  margin-top: .3rem; line-height: 1.25;
+}
+figure.chrono-spine figcaption {
+  font-size: .78rem; color: var(--muted); margin-top: .5rem; line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .cs-col { min-width: 30px; }
+  .cs-label { font-size: .62rem; }
+  .cs-break-label { font-size: .6rem; }
 }
 
 /* Language switcher (i18n) */
