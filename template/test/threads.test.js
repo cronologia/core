@@ -28,6 +28,10 @@ function runValidator(mutate) {
   fs.copyFileSync(path.join(ROOT, 'build.js'), path.join(dir, 'build.js'));
   fs.copyFileSync(path.join(ROOT, 'scripts', 'validate-data.js'), path.join(dir, 'scripts', 'validate-data.js'));
   fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
+  // The example dataset now carries a `map` block, whose validation reads the
+  // vendored base map — copy it so the scratch validates the real fixture.
+  fs.mkdirSync(path.join(dir, 'src'));
+  fs.copyFileSync(path.join(ROOT, 'src', 'latam.svg'), path.join(dir, 'src', 'latam.svg'));
   const d = JSON.parse(JSON.stringify(base));
   mutate(d);
   fs.writeFileSync(path.join(dir, 'data', 'chronology.json'), JSON.stringify(d));

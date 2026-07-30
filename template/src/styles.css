@@ -350,3 +350,37 @@ figure.places-map figcaption { font-size: .78rem; color: var(--muted); margin-to
   .pm-controls { display: none; }
   .pm-future { display: initial; } /* the print form is the complete map */
 }
+
+/* Country tier map (`map` key) — the tl presence-map pattern, core#3 item 2.
+   Tier fills follow listing order (strongest first), derived from the site's
+   accent so every adopter gets a coherent scale for free; max four tiers
+   (validator-enforced) keeps it readable on screen and paper. */
+.latam-svg { width: 100%; height: auto; display: block; }
+.latam-bg { fill: #e6eaef; stroke: #fff; stroke-width: .5; }
+.map-cols { display: grid; grid-template-columns: minmax(260px, 440px) 1fr; gap: 1.25rem; align-items: start; }
+@media (max-width: 760px) { .map-cols { grid-template-columns: 1fr; } }
+.atlas-map { max-width: 440px; }
+.atlas-map svg { width: 100%; height: auto; display: block; }
+.latam-c { fill: #dfe3ea; stroke: #fff; stroke-width: .6; transition: fill .12s ease; }
+.latam-c:hover, .latam-c:focus-visible { outline: none; stroke: var(--ink); stroke-width: 1.2; }
+.latam-c.map-t0 { fill: var(--accent); cursor: pointer; }
+.latam-c.map-t1 { fill: color-mix(in srgb, var(--accent) 55%, #eef0ee); cursor: pointer; }
+.latam-c.map-t2 { fill: color-mix(in srgb, var(--accent) 32%, #eef0ee); cursor: pointer; }
+.latam-c.map-t3 { fill: color-mix(in srgb, var(--accent) 16%, #eef0ee); cursor: pointer; }
+.ptl-caption { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: .35rem .6rem; font-size: .82rem; margin: .5rem 0; min-height: 1.5em; }
+.ptl-legend { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .5rem; font-size: .8rem; color: var(--muted); }
+.ptl-key { display: inline-flex; align-items: center; gap: .35rem; }
+.atlas-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: #dfe3ea; }
+.atlas-swatch.map-t0 { background: var(--accent); }
+.atlas-swatch.map-t1 { background: color-mix(in srgb, var(--accent) 55%, #eef0ee); }
+.atlas-swatch.map-t2 { background: color-mix(in srgb, var(--accent) 32%, #eef0ee); }
+.atlas-swatch.map-t3 { background: color-mix(in srgb, var(--accent) 16%, #eef0ee); }
+.atlas-credit { color: var(--muted); font-size: .72rem; margin: .3rem 0 0; }
+.map-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .8rem; }
+.map-card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: .7rem .9rem; }
+.map-card h3 { margin: 0 0 .25rem; font-size: .98rem; }
+.map-card p { margin: 0; font-size: .88rem; }
+@media print {
+  #map .atlas-map { break-inside: avoid; page-break-inside: avoid; }
+  .latam-c, .atlas-swatch { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

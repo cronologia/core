@@ -8,25 +8,85 @@
     "lastUpdated": "2026-01-01",
     "dataQualityNote": "Work-in-progress dataset compiled from public sources (see references). Contested claims are attributed to their authors; dates not yet verified against a primary source are flagged with a ? mark. Corrections against primary sources are welcome.",
     "vizChips": [
-      { "href": "#chronology", "label": "📜 Chronology" },
-      { "href": "#lineage", "label": "🌳 Genealogy" },
-      { "href": "#branch-timeline", "label": "🚇 Divisions" },
-      { "href": "#numbers-chart", "label": "📊 Numbers" }
+      {
+        "href": "#chronology",
+        "label": "📜 Chronology"
+      },
+      {
+        "href": "#lineage",
+        "label": "🌳 Genealogy"
+      },
+      {
+        "href": "#branch-timeline",
+        "label": "🚇 Divisions"
+      },
+      {
+        "href": "#numbers-chart",
+        "label": "📊 Numbers"
+      }
     ]
   },
   "facts": [
-    { "label": "What it is", "value": "<one-sentence neutral description>", "sources": ["example-ref"] },
-    { "label": "Founded", "value": "<date, place — with the founding actor>", "sources": ["example-ref"] }
+    {
+      "label": "What it is",
+      "value": "<one-sentence neutral description>",
+      "sources": [
+        "example-ref"
+      ]
+    },
+    {
+      "label": "Founded",
+      "value": "<date, place — with the founding actor>",
+      "sources": [
+        "example-ref"
+      ]
+    }
   ],
   "events": [
-    { "year": 1970, "date": "1970-01-01", "dateVerified": true, "place": "<city, country>", "title": "<event>", "text": "<one neutral sentence>", "sources": ["example-ref"] },
-    { "year": 1980, "date": "1980", "dateVerified": false, "place": "<city>", "title": "<event with uncertain date>", "text": "<sources disagree — say how. Prose fields may cross-link the shared glossary with an inline marker, e.g. a [[latae-sententiae|latae sententiae]] penalty or plain [[schism]].>", "sources": ["example-ref"] }
+    {
+      "year": 1970,
+      "date": "1970-01-01",
+      "dateVerified": true,
+      "place": "<city, country>",
+      "title": "<event>",
+      "text": "<one neutral sentence>",
+      "sources": [
+        "example-ref"
+      ]
+    },
+    {
+      "year": 1980,
+      "date": "1980",
+      "dateVerified": false,
+      "place": "<city>",
+      "title": "<event with uncertain date>",
+      "text": "<sources disagree — say how. Prose fields may cross-link the shared glossary with an inline marker, e.g. a [[latae-sententiae|latae sententiae]] penalty or plain [[schism]].>",
+      "sources": [
+        "example-ref"
+      ]
+    }
   ],
   "figures": [
-    { "name": "<name>", "role": "<role, neutrally described; attribute any contested characterization>", "dates": "1900–1990", "country": "<country>", "sources": ["example-ref"] }
+    {
+      "name": "<name>",
+      "role": "<role, neutrally described; attribute any contested characterization>",
+      "dates": "1900–1990",
+      "country": "<country>",
+      "sources": [
+        "example-ref"
+      ]
+    }
   ],
   "organizations": [
-    { "name": "<related organization>", "founded": "1975", "place": "<place>", "relation": "<relationship to the subject — including what it is NOT, for common confusions>", "sources": ["example-ref"] }
+    {
+      "name": "<related organization>",
+      "founded": "1975",
+      "place": "<place>",
+      "relation": "<relationship to the subject — including what it is NOT, for common confusions>",
+      "sources": [
+        "example-ref"
+      ]
+    }
   ],
   "lineage": {
     "heading": "Genealogy",
@@ -36,24 +96,32 @@
       {
         "title": "<main line — from <founder>>",
         "summary": "<one-sentence orientation for this branch>",
-        "sources": ["example-ref"],
+        "sources": [
+          "example-ref"
+        ],
         "root": {
           "name": "<founder>",
           "detail": "<consecrated/initiated when, where, by whom>",
-          "sources": ["example-ref"],
+          "sources": [
+            "example-ref"
+          ],
           "children": [
             {
               "name": "<direct successor>",
               "detail": "<place, date>",
               "status": "<time-bounded status, attributed (e.g. 'X declared ... in YYYY; the group disputes it')>",
-              "sources": ["example-ref"]
+              "sources": [
+                "example-ref"
+              ]
             },
             {
               "name": "<associated figure — NOT a successor>",
               "edge": "indirect",
               "edgeLabel": "association, not consecration",
               "detail": "<the indirect link, attributed — renders with a DASHED connector>",
-              "sources": ["example-ref"]
+              "sources": [
+                "example-ref"
+              ]
             }
           ]
         }
@@ -62,8 +130,16 @@
         "title": "<separate line — no connection to the main line>",
         "separate": true,
         "summary": "<included for disambiguation only; `separate: true` sets it apart visually>",
-        "sources": ["example-ref"],
-        "root": { "name": "<other founder>", "detail": "<origin of this distinct line>", "sources": ["example-ref"] }
+        "sources": [
+          "example-ref"
+        ],
+        "root": {
+          "name": "<other founder>",
+          "detail": "<origin of this distinct line>",
+          "sources": [
+            "example-ref"
+          ]
+        }
       }
     ]
   },
@@ -72,11 +148,45 @@
     "navLabel": "Divisions",
     "note": "<how the organization's divisions forked over time; contested labels ('schism', 'expulsion') attributed to who uses them>",
     "end": 2026,
-    "trunk": { "id": "main", "label": "<organization>", "start": 1970, "note": "<founding — date, place, actor>", "sources": ["example-ref"] },
+    "trunk": {
+      "id": "main",
+      "label": "<organization>",
+      "start": 1970,
+      "note": "<founding — date, place, actor>",
+      "sources": [
+        "example-ref"
+      ]
+    },
     "branches": [
-      { "id": "split-a", "label": "<first split>", "year": 1983, "note": "<who left / was expelled and why — attributed>", "sources": ["example-ref"] },
-      { "id": "split-b", "label": "<group that ended>", "year": 1988, "end": 2002, "note": "<a branch with an `end` year (merged/reconciled/dissolved) renders a terminal dot>", "sources": ["example-ref"] },
-      { "id": "split-c", "label": "<split from a split>", "year": 2012, "from": "split-a", "note": "<`from` forks this branch off split-a's line instead of the trunk>", "sources": ["example-ref"] }
+      {
+        "id": "split-a",
+        "label": "<first split>",
+        "year": 1983,
+        "note": "<who left / was expelled and why — attributed>",
+        "sources": [
+          "example-ref"
+        ]
+      },
+      {
+        "id": "split-b",
+        "label": "<group that ended>",
+        "year": 1988,
+        "end": 2002,
+        "note": "<a branch with an `end` year (merged/reconciled/dissolved) renders a terminal dot>",
+        "sources": [
+          "example-ref"
+        ]
+      },
+      {
+        "id": "split-c",
+        "label": "<split from a split>",
+        "year": 2012,
+        "from": "split-a",
+        "note": "<`from` forks this branch off split-a's line instead of the trunk>",
+        "sources": [
+          "example-ref"
+        ]
+      }
     ]
   },
   "numbersChart": {
@@ -90,9 +200,15 @@
         "sourceLabel": "<who reported it — e.g. the movement itself, self-report>",
         "unit": "million participants",
         "axisMax": 4,
-        "sources": ["example-ref"],
+        "sources": [
+          "example-ref"
+        ],
         "points": [
-          { "year": 1994, "value": 3.8, "display": "≈ 3.8 million participants (1994, self-reported)" }
+          {
+            "year": 1994,
+            "value": 3.8,
+            "display": "≈ 3.8 million participants (1994, self-reported)"
+          }
         ]
       },
       {
@@ -100,9 +216,50 @@
         "sourceLabel": "<who reported it — e.g. an independent survey organization>",
         "unit": "% share",
         "axisMax": 100,
-        "sources": ["example-survey"],
+        "sources": [
+          "example-survey"
+        ],
         "points": [
-          { "year": 2006, "value": 50, "display": "≈ half of the population, by survey estimate" }
+          {
+            "year": 2006,
+            "value": 50,
+            "display": "≈ half of the population, by survey estimate"
+          }
+        ]
+      }
+    ]
+  },
+  "map": {
+    "navLabel": "Map",
+    "note": "<one sentence framing what the map claims — and what an unfilled country does not mean>",
+    "unlistedLabel": "not yet documented here",
+    "tiers": [
+      {
+        "id": "core",
+        "label": "<what the strongest tier asserts>"
+      },
+      {
+        "id": "presence",
+        "label": "<what the second tier asserts>"
+      }
+    ],
+    "countries": [
+      {
+        "code": "BR",
+        "name": "<country>",
+        "tier": "core",
+        "note": "<why it sits in this tier — cited>",
+        "sources": [
+          "example-ref"
+        ]
+      },
+      {
+        "code": "AR",
+        "name": "<country>",
+        "tier": "presence",
+        "note": "<why — cited>",
+        "sources": [
+          "example-ref"
         ]
       }
     ]
@@ -110,11 +267,29 @@
   "disambiguation": {
     "note": "<why this subject is contested terrain>",
     "items": [
-      { "title": "<X ≠ Y>", "text": "<the distinction people flatten, stated with attribution — e.g. [[sedevacantism]] is not the same as [[schism]] (link ids must exist in data/glossary-terms.json)>", "sources": ["example-ref"] }
+      {
+        "title": "<X ≠ Y>",
+        "text": "<the distinction people flatten, stated with attribution — e.g. [[sedevacantism]] is not the same as [[schism]] (link ids must exist in data/glossary-terms.json)>",
+        "sources": [
+          "example-ref"
+        ]
+      }
     ]
   },
   "references": [
-    { "id": "example-ref", "title": "<title>", "url": "https://example.org", "publisher": "<publisher (perspective label if not obvious)>", "type": "encyclopedia" },
-    { "id": "example-survey", "title": "<survey title — the external estimate>", "url": "https://example.org/survey", "publisher": "<independent survey organization>", "type": "survey" }
+    {
+      "id": "example-ref",
+      "title": "<title>",
+      "url": "https://example.org",
+      "publisher": "<publisher (perspective label if not obvious)>",
+      "type": "encyclopedia"
+    },
+    {
+      "id": "example-survey",
+      "title": "<survey title — the external estimate>",
+      "url": "https://example.org/survey",
+      "publisher": "<independent survey organization>",
+      "type": "survey"
+    }
   ]
 }
