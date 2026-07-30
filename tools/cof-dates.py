@@ -29,7 +29,8 @@ Usage
     python3 tools/cof-dates.py                  # report anomalies, exit 1 if any
     python3 tools/cof-dates.py --quiet          # exit status only
     python3 tools/cof-dates.py --json           # machine-readable
-    python3 tools/cof-dates.py --index          # header vs the community index lineage
+    python3 tools/cof-dates.py --index          # header vs every other witness
+    python3 tools/cof-dates.py --cadence        # dates off the course's weekday
 
 The --index mode
 ----------------
@@ -63,6 +64,31 @@ value (one shared upstream typo, most likely). When the vaulted listing is
 present, --index shows it as a third column with its own sequence-fit verdict;
 aulas whose duplicate files disagree are excluded rather than picked between.
 As with the other two sources: never bulk-import, adjudicate per aula.
+
+The Resumos witness
+-------------------
+A fourth set of date claims, and the only CONTEMPORANEOUS one: the six volumes
+of *Resumos de Aulas* compiled by Mário Chainho, a student, while the course
+ran — vaulted at `archive/webcaptures/cof-resumos-chainho-dates.json` with the
+PDFs beside them. Aulas 1-30 only, but it adjudicates 7 of the 33
+disagreements, backing the header at aulas 1-3 and the index at 12, 18, 23 and
+27 — a 3/4 split, one more demonstration that neither may be preferred
+wholesale. It also carries an error of its own at aula 6, so it adjudicates
+nothing on its own authority here either.
+
+The cadence check (--cadence)
+-----------------------------
+The course ran on Saturdays: 242 of 257 transcription headers, 552 of 585
+index-lineage dates and 30 of 30 Resumos dates. That makes the weekday a cheap
+test wholly independent of the neighbour sequence, and it catches errors the
+neighbour test structurally cannot — a date can be off by exactly seven days,
+or sit at the end of the corpus with no following neighbour, and still be
+wrong.
+
+It is a FLAG, NOT A VERDICT, and the distinction is load-bearing: aula 263 is a
+Friday in all three sources, which reads as a genuine off-cadence session
+rather than three independent errors. Where every candidate for an aula is
+off-cadence, suspect the session, not the sources.
 """
 
 import datetime
@@ -78,6 +104,17 @@ INDEX_LINEAGE = os.path.join(
 FILENAME_WITNESS = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     'archive', 'webcaptures', 'cof-completo-zip-listing.json')
+
+RESUMOS_WITNESS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    'archive', 'webcaptures', 'cof-resumos-chainho-dates.json')
+
+# The course ran on Saturdays. Measured: 242 of 257 transcription headers, 552
+# of 585 index-lineage dates, and 30 of 30 Chainho Resumos dates. A weekday
+# other than Saturday is therefore a FLAG, never a verdict — aula 263 is a
+# Friday in all three sources and reads as a genuine off-cadence session.
+COURSE_WEEKDAY = 5          # Monday=0
+WEEKDAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 
 DEFAULT_MANIFEST = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -159,6 +196,32 @@ def load_filename_witness(path=FILENAME_WITNESS):
     return filename_dates(data.get('files', []))
 
 
+def load_resumos_witness(path=RESUMOS_WITNESS):
+    """Return {aula: iso date} from the vaulted Chainho Resumos table, or {}.
+
+    Aulas 1-30 only. A participant document written while the course ran, so
+    the closest thing to a contemporaneous witness the family holds — and it
+    carries an error of its own at aula 6, which is why it adjudicates
+    nothing on its own here either.
+    """
+    try:
+        with open(path, encoding='utf-8') as fh:
+            data = json.load(fh)
+    except FileNotFoundError:
+        return {}
+    return {int(k): v['date'] for k, v in data.get('aulas', {}).items()
+            if v.get('date')}
+
+
+def off_cadence(value):
+    """True when a date is not the course's usual weekday. A flag, not a verdict."""
+    return datetime.date.fromisoformat(value).weekday() != COURSE_WEEKDAY
+
+
+def weekday_of(value):
+    return WEEKDAYS[datetime.date.fromisoformat(value).weekday()]
+
+
 def adjudicate(aula, header, index, dated_by_aula):
     """Which value, if either, does the surrounding sequence support?
 
@@ -195,12 +258,12 @@ def _fits_sequence(aula, value, dated_by_aula):
     return lo <= value <= hi
 
 
-def compare_sources(docs, lineage, filenames=None):
+def compare_sources(docs, lineage, filenames=None, resumos=None):
     """Rows where the header and the index lineage disagree, with a verdict.
 
-    When the filename witness is supplied, each row also carries its value
-    and whether that value fits the neighbour sequence. The witness never
-    changes `sequenceSupports` — it is a third voice, not a tiebreaker.
+    When the filename or Resumos witnesses are supplied, each row also carries
+    their values, and the weekday of each candidate. No witness ever changes
+    `sequenceSupports` — they are further voices, not tiebreakers.
     """
     man = {d['aula']: d for d in docs if d.get('aula')}
     dated = {a: _date(d['date']) for a, d in man.items() if d.get('date')}
@@ -227,6 +290,24 @@ def compare_sources(docs, lineage, filenames=None):
                 else 'index' if f is not None and f == i
                 else 'neither' if f is not None
                 else None)
+        if resumos is not None:
+            r = _date(resumos[aula]) if aula in resumos else None
+            row['resumos'] = r.isoformat() if r else None
+            row['resumosMatches'] = (
+                'header' if r is not None and r == h
+                else 'index' if r is not None and r == i
+                else 'neither' if r is not None
+                else None)
+        # The cadence read. Off-cadence is a flag worth checking, not a
+        # verdict: where EVERY candidate is off-cadence the session itself
+        # was probably off-cadence.
+        row['weekday'] = {'header': weekday_of(row['header']),
+                          'index': weekday_of(row['index'])}
+        for key in ('filenames', 'resumos'):
+            if row.get(key):
+                row['weekday'][key] = weekday_of(row[key])
+        on = [k for k, v in row['weekday'].items() if v == WEEKDAYS[COURSE_WEEKDAY]]
+        row['onCadence'] = on
         rows.append(row)
     return rows
 
@@ -245,7 +326,8 @@ def main(argv):
             print('index lineage not found at', INDEX_LINEAGE)
             return 2
         filenames = load_filename_witness() or None
-        rows = compare_sources(docs, lineage, filenames)
+        resumos = load_resumos_witness() or None
+        rows = compare_sources(docs, lineage, filenames, resumos)
         if as_json:
             json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
             sys.stdout.write('\n')
@@ -259,16 +341,55 @@ def main(argv):
             covered = sum(1 for r in rows if r.get('filenames'))
             print(f'filename witness (cof_completo zip): {len(filenames)} dated aulas, '
                   f'covers {covered} of the {len(rows)} disagreements')
-        print('\nNeither source is authoritative and BOTH carry year typos.'
-              '\nNothing here is corrected; a verdict of "undecided" is a real result.\n')
+        if resumos:
+            covered = sum(1 for r in rows if r.get('resumos'))
+            print(f'Resumos witness (Chainho, aulas 1-30): {len(resumos)} dated aulas, '
+                  f'covers {covered} of the {len(rows)} disagreements')
+        cadence = Counter(len(r['onCadence']) for r in rows)
+        print(f"cadence: {cadence[0]} disagreements where NO candidate falls on a "
+              f"{WEEKDAYS[COURSE_WEEKDAY]}")
+        print('\nNo source is authoritative and ALL carry typos. Off-cadence is a flag,'
+              '\nnot a verdict. Nothing here is corrected; "undecided" is a real result.\n')
         for r in rows:
-            line = (f"  aula {r['aula']:>3}  header {r['header']}  index {r['index']}  "
-                    f"[~{r['offByDays']}d]  -> {r['sequenceSupports']}")
+            line = (f"  aula {r['aula']:>3}  header {r['header']} {r['weekday']['header']}"
+                    f"  index {r['index']} {r['weekday']['index']}"
+                    f"  [~{r['offByDays']}d]  -> {r['sequenceSupports']}")
             if r.get('filenames'):
                 fit = {True: 'fits sequence', False: 'breaks sequence',
                        None: 'sequence cannot judge'}[r['filenamesFits']]
-                line += f"  | filenames {r['filenames']} ({r['filenamesMatches']}; {fit})"
+                line += (f"\n         filenames {r['filenames']} "
+                         f"{r['weekday']['filenames']} ({r['filenamesMatches']}; {fit})")
+            if r.get('resumos'):
+                line += (f"\n         resumos   {r['resumos']} "
+                         f"{r['weekday']['resumos']} ({r['resumosMatches']}; contemporaneous)")
+            if not r['onCadence']:
+                line += '\n         NO candidate is on cadence - possibly a genuine off-cadence session'
             print(line)
+        return 1 if rows else 0
+
+    if '--cadence' in argv:
+        rows = [{'id': d['id'], 'aula': d.get('aula'), 'date': d['date'],
+                 'weekday': weekday_of(d['date']),
+                 'alsoNeighbourAnomaly': bool(d.get('dateAnomaly')),
+                 'alsoDisagrees': bool(d.get('dateDisagreement'))}
+                for d in docs if d.get('date') and off_cadence(d['date'])]
+        rows.sort(key=lambda r: (r['aula'] or 0))
+        dated = [d for d in docs if d.get('date')]
+        if as_json:
+            json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
+            sys.stdout.write('\n')
+            return 1 if rows else 0
+        print(f'{len(dated)} dated docs | {len(rows)} NOT on the course cadence '
+              f'({WEEKDAYS[COURSE_WEEKDAY]})')
+        print('\nOff-cadence is a FLAG, NOT a verdict. The course ran on '
+              f'{WEEKDAYS[COURSE_WEEKDAY]}s\n(242/257 headers, 552/585 index dates, 30/30 '
+              'Resumos), but special and\nrescheduled sessions are real - where every source '
+              'agrees on an off-cadence\ndate, the session was probably held off cadence.\n')
+        for r in rows:
+            flags = [k for k, v in (('neighbour-anomaly', r['alsoNeighbourAnomaly']),
+                                    ('disagrees-with-a-witness', r['alsoDisagrees'])) if v]
+            print(f"  {r['id']} aula {str(r['aula']):>4}  {r['date']} {r['weekday']}"
+                  f"   {', '.join(flags) or 'NOT otherwise flagged - look here first'}")
         return 1 if rows else 0
 
     anomalies = find_anomalies(docs)
