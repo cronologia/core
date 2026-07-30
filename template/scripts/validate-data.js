@@ -298,12 +298,13 @@ if (d.placesMap !== undefined) {
         else if (seen.has(p.id)) err(`${pAt}.id "${p.id}" duplicated`);
         else seen.add(p.id);
         if (!isStr(p.name)) err(`${pAt}.name missing`);
-        // Coordinates are cited like everything else in this family.
-        if (!isStr(p.source)) err(`${pAt}.source missing (coordinates are cited like any other fact)`);
         if (p.kind === 'non-geographic') {
-          // Scopes ("Worldwide") deliberately carry no coordinates.
+          // Scopes ("Worldwide") deliberately carry no coordinates — and so
+          // have no coordinate source to cite.
           if (p.lat !== undefined || p.lon !== undefined) err(`${pAt}: non-geographic entries must not carry lat/lon`);
         } else {
+          // Coordinates are cited like everything else in this family.
+          if (!isStr(p.source)) err(`${pAt}.source missing (coordinates are cited like any other fact)`);
           if (!isNum(p.lat) || p.lat < -90 || p.lat > 90) err(`${pAt}.lat must be a number in [-90, 90]`);
           if (!isNum(p.lon) || p.lon < -180 || p.lon > 180) err(`${pAt}.lon must be a number in [-180, 180]`);
         }
