@@ -209,6 +209,25 @@ function localizeData(data, dict, lang) {
   };
   const copy = walk(data, null);
   copy.meta = Object.assign({}, copy.meta, { language: lang });
+  // `place` IS translated prose (the chronology's Place column reads in the
+  // page's language), but the gazetteer behind the places map is keyed on the
+  // CANONICAL English strings — a translated "Roma" resolves to nothing. So
+  // record the source string next to the translated one and let the map resolve
+  // on that. Without this a localized page silently loses markers AND its
+  // caption reports the events as missing from the gazetteer, which is false:
+  // the entries are there, only the lookup key was translated out from under
+  // them. Compound strings are the worst case — "Topeka / Los Angeles, USA"
+  // keeps its first pin and drops the second, exactly the origin-misplacement
+  // failure the list-valued resolution exists to prevent (core#24).
+  // Set ONLY when translation actually moved the string, so English (and any
+  // untranslated place) stays byte-identical to the source — the identity-
+  // localization invariant the helper tests pin. The map falls back to `place`.
+  if (Array.isArray(copy.events) && Array.isArray(data.events)) {
+    copy.events.forEach((ev, i) => {
+      const src = data.events[i];
+      if (src && src.place && ev.place !== src.place) ev.placeKey = src.place;
+    });
+  }
   return copy;
 }
 
@@ -1052,7 +1071,10 @@ function layoutPlacesMap(pm, events, places) {
 
   for (const ev of sorted) {
     if (!ev.place) continue;
-    const { ids, missing } = resolvePlaceString(ev.place, index);
+    // `placeKey` is the canonical English string kept by localizeData; `place`
+    // may have been translated, and the gazetteer is keyed on the canonical
+    // form. Resolve on the key, never on the display string.
+    const { ids, missing } = resolvePlaceString(ev.placeKey || ev.place, index);
     for (const m of missing) unresolvedStrings.add(m);
     if (missing.length > 0) unresolvedEvents += 1;
     const geoIds = ids.filter((id) => {
