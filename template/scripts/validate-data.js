@@ -378,6 +378,55 @@ if (d.placesMap !== undefined) {
   }
 }
 
+// ---- map (country tier map — core#3) ---------------------------------------
+if (d.map !== undefined) {
+  const m = d.map;
+  const at = 'map';
+  for (const k of ['heading', 'navLabel']) {
+    if (m[k] !== undefined && !isStr(m[k])) err(`${at}.${k} must be a string`);
+  }
+  if (!isStr(m.note)) err(`${at}.note missing (the section's editorial framing)`);
+  if (!isStr(m.unlistedLabel)) err(`${at}.unlistedLabel missing — say what an UNFILLED country means here; on a contested subject, absence is a statement too`);
+  let svgIds = null;
+  try {
+    const svg = fs.readFileSync(path.join(ROOT, 'src', 'latam.svg'), 'utf8');
+    svgIds = new Set([...svg.matchAll(/id="ne-([A-Z]{2})"/g)].map((x) => x[1]));
+  } catch {
+    err(`${at}: src/latam.svg missing — the map cannot render without the vendored base map (copy it from core/template)`);
+  }
+  const tierIds = new Set();
+  if (!isArr(m.tiers) || m.tiers.length === 0 || m.tiers.length > 4) {
+    err(`${at}.tiers must be 1–4 entries of { id, label } (listing order = visual rank, strongest first; four steps keep the scale readable)`);
+  } else {
+    m.tiers.forEach((t, i) => {
+      const tAt = `${at}.tiers[${i}]`;
+      if (!isStr(t.id)) err(`${tAt}.id missing`);
+      else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(t.id)) err(`${tAt}.id must be kebab-case, got "${t.id}"`);
+      else if (tierIds.has(t.id)) err(`${tAt}.id duplicated: ${t.id}`);
+      else tierIds.add(t.id);
+      if (!isStr(t.label)) err(`${tAt}.label missing (the legend renders it — a tier is an editorial claim, so it must say what it claims)`);
+    });
+  }
+  if (!isArr(m.countries) || m.countries.length === 0) {
+    err(`${at}.countries must be a non-empty array`);
+  } else {
+    const seen = new Set();
+    m.countries.forEach((c, i) => {
+      const cAt = `${at}.countries[${i}]`;
+      if (!isStr(c.code) || !/^[A-Z]{2}$/.test(c.code)) err(`${cAt}.code must be an ISO alpha-2 code, got "${c.code}"`);
+      else if (seen.has(c.code)) err(`${cAt}.code duplicated: ${c.code}`);
+      else {
+        seen.add(c.code);
+        if (svgIds && !svgIds.has(c.code)) err(`${cAt}.code "${c.code}" has no path in src/latam.svg (regenerate with scripts/gen-latam-svg.js if the country should be added)`);
+      }
+      if (!isStr(c.name)) err(`${cAt}.name missing`);
+      if (!isStr(c.tier) || !tierIds.has(c.tier)) err(`${cAt}.tier: unknown tier "${c.tier}" (not declared in map.tiers)`);
+      if (!isStr(c.note)) err(`${cAt}.note missing`);
+      checkSources(cAt, c.sources, true);
+    });
+  }
+}
+
 // ---- disambiguation -------------------------------------------------------
 if (d.disambiguation !== undefined) {
   const items = d.disambiguation.items;

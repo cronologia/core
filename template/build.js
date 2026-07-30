@@ -53,7 +53,7 @@ const ROUTES = [''];
 const TRANSLATABLE_KEYS = new Set([
   'title', 'subtitle', 'description', 'dataQualityNote', 'label', 'value', 'text',
   'place', 'role', 'country', 'notes', 'note', 'heading', 'navLabel', 'summary',
-  'detail', 'status', 'relation', 'unitNote', 'sourceLabel', 'display', 'unit', 'edgeLabel',
+  'detail', 'status', 'relation', 'unitNote', 'sourceLabel', 'display', 'unit', 'edgeLabel', 'unlistedLabel',
   // Lane bases are prose and RENDER on the page (renderSwimlanes publishes each
   // lane's grounding), so they are translated like any other visible prose.
   'basis', 'intro',
@@ -82,6 +82,7 @@ const UI = {
     mapApproxBadge: 'country-level, approximate',
     mapLegendUnverified: 'dashed marker = the first date recorded there is not yet verified against a primary source',
     mapCredit: 'Basemap: Natural Earth (public domain).',
+    tierMapHeading: 'Map', tierMapHint: 'Hover or focus a country for details.',
     mapPinLabel: (name, n, y, u) => `${name}: ${n} event${n === 1 ? '' : 's'}, first recorded ${y}${u ? ' (date not yet verified)' : ''}`,
     mapListHeading: 'Mapped places',
     mapCaption: (nEv, nPl, span) => `${nEv} events at ${nPl} mapped places, first recorded ${span}.`,
@@ -125,6 +126,7 @@ const UI = {
     mapApproxBadge: 'nivel de país, aproximado',
     mapLegendUnverified: 'marcador discontinuo = la primera fecha registrada allí aún no está verificada con una fuente primaria',
     mapCredit: 'Mapa base: Natural Earth (dominio público).',
+    tierMapHeading: 'Mapa', tierMapHint: 'Pase el cursor o enfoque un país para ver detalles.',
     mapPinLabel: (name, n, y, u) => `${name}: ${n} acontecimiento${n === 1 ? '' : 's'}, primero registrado en ${y}${u ? ' (fecha aún no verificada)' : ''}`,
     mapListHeading: 'Lugares en el mapa',
     mapCaption: (nEv, nPl, span) => `${nEv} acontecimientos en ${nPl} lugares del mapa, primeros registros ${span}.`,
@@ -168,6 +170,7 @@ const UI = {
     mapApproxBadge: 'nível de país, aproximado',
     mapLegendUnverified: 'marcador tracejado = a primeira data registada ali ainda não foi verificada com uma fonte primária',
     mapCredit: 'Mapa-base: Natural Earth (domínio público).',
+    tierMapHeading: 'Mapa', tierMapHint: 'Passe o cursor ou foque um país para ver detalhes.',
     mapPinLabel: (name, n, y, u) => `${name}: ${n} acontecimento${n === 1 ? '' : 's'}, primeiro registo em ${y}${u ? ' (data ainda não verificada)' : ''}`,
     mapListHeading: 'Lugares no mapa',
     mapCaption: (nEv, nPl, span) => `${nEv} acontecimentos em ${nPl} lugares do mapa, primeiros registos ${span}.`,
@@ -1530,6 +1533,109 @@ function renderReference(r, n, archives) {
         </li>`;
 }
 
+
+// ---------------------------------------------------------------------------
+// Country tier map (`map` key — the tl presence-map pattern, core#3 item 2).
+// A static choropleth of the vendored Latin America base map (src/latam.svg):
+// each listed country is filled by its TIER — a per-repo, DATA-DECLARED
+// vocabulary, like the thread lanes (core#23): what a tier means is an
+// editorial claim, so its id and legend label live in the data, never in the
+// renderer. Distinct from `placesMap` (event pins): this section says what
+// KIND of place a country is in the subject's story, not where events
+// happened. The year-slider mode (fsp's member map) is a declared follow-up.
+
+const LATAM_SVG_FILE = path.join(__dirname, 'src', 'latam.svg');
+
+function loadLatamSvg() {
+  try {
+    return fs.readFileSync(LATAM_SVG_FILE, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Replace glossary [[markers]] with their visible text (no link) — for HTML
+ * ATTRIBUTES, where an anchor cannot render. Keeps a marked-up country note
+ * readable in the map tooltip while the card below carries the real link.
+ */
+function stripGlossaryMarkers(value) {
+  const s = String(value ?? '');
+  if (s.indexOf('[[') === -1) return s;
+  return s.replace(new RegExp(GLOSSARY_MARKER.source, 'g'), (_m, id, label) => (label && label.trim() ? label : id));
+}
+
+/**
+ * Render the country tier map. Returns '' when the data declares no map —
+ * the page is then byte-identical to a build without the feature. A missing
+ * src/latam.svg also renders '' here, but validate-data.js errors on that
+ * combination first, so a broken adoption never fails silently.
+ */
+function renderTierMap(map, refNumById, ui) {
+  if (!map || !Array.isArray(map.countries) || map.countries.length === 0) return '';
+  let svg = loadLatamSvg();
+  if (!svg) return '';
+
+  const tiers = Array.isArray(map.tiers) ? map.tiers : [];
+  const rank = new Map(tiers.map((t, i) => [t.id, i]));
+
+  for (const c of map.countries) {
+    const marker = `id="ne-${c.code}" class="latam-c"`;
+    svg = svg.replace(
+      marker,
+      `id="ne-${c.code}" class="latam-c map-t${rank.get(c.tier)}" tabindex="0" ` +
+        `data-name="${esc(stripGlossaryMarkers(c.name))}" data-note="${esc(stripGlossaryMarkers(c.note))}"`
+    );
+  }
+
+  const legend = tiers
+    .map((t, i) => `            <span class="ptl-key"><span class="atlas-swatch map-t${i}"></span> ${esc(t.label)}</span>`)
+    .join('\n')
+    + `\n            <span class="ptl-key"><span class="atlas-swatch"></span> ${esc(map.unlistedLabel)}</span>`;
+
+  const cards = map.countries
+    .map((c) => `        <div class="map-card map-card-t${rank.get(c.tier)}">
+          <h3>${esc(c.name)}</h3>
+          <p>${renderText(c.note)}${renderCites(c.sources, refNumById)}</p>
+        </div>`)
+    .join('\n');
+
+  const heading = map.heading || ui.tierMapHeading;
+  return `    <section id="map" class="viz">
+      <h2>${esc(heading)}</h2>
+      <p class="section-intro">${esc(map.note)}</p>
+      <div class="map-cols">
+        <div class="atlas-map">
+${svg}
+          <p class="ptl-caption" id="tier-map-caption" aria-live="polite">${esc(ui.tierMapHint)}</p>
+          <div class="ptl-legend">
+${legend}
+          </div>
+          <p class="atlas-credit">${esc(ui.mapCredit)}</p>
+        </div>
+        <div class="map-cards">
+${cards}
+        </div>
+      </div>
+      <script>
+        (function () {
+          var cap = document.getElementById('tier-map-caption');
+          if (!cap) return;
+          var idle = cap.textContent;
+          var reset = function () { cap.textContent = idle; };
+          document.querySelectorAll('#map .latam-c[data-name]').forEach(function (el) {
+            var show = function () { cap.textContent = el.getAttribute('data-name') + ' — ' + el.getAttribute('data-note'); };
+            el.addEventListener('mouseenter', show);
+            el.addEventListener('focus', show);
+            el.addEventListener('mouseleave', reset);
+            el.addEventListener('blur', reset);
+          });
+        })();
+      </script>
+    </section>
+`;
+}
+
 function renderPage(data, archives, opts = {}) {
   const { meta, facts, events, figures, organizations, disambiguation, references } = data;
   const lang = opts.lang || (meta && meta.language) || 'en';
@@ -1542,6 +1648,7 @@ function renderPage(data, archives, opts = {}) {
   const numbersChart = data.numbersChart;
   const chronologySpine = data.chronologySpine;
   const placesMap = data.placesMap;
+  const tierMap = data.map;
   // The lane taxonomy lives in meta; declaring one turns the figure on.
   const threads = meta && meta.threads;
 
@@ -1555,6 +1662,7 @@ function renderPage(data, archives, opts = {}) {
   const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
   const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
+  const tierMapHtml = renderTierMap(tierMap, refNumById, ui);
   const swimlanesHtml = renderSwimlanes(threads, events, refNumById, ui);
 
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
@@ -1613,7 +1721,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${tierMapHtml ? `\n      <a href="#map">${esc((tierMap && tierMap.navLabel) || ui.tierMapHeading)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -1645,7 +1753,7 @@ ${eventRows}
       </div>
     </section>
 
-${swimlanesHtml}${placesMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
+${swimlanesHtml}${placesMapHtml}${tierMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
@@ -1725,6 +1833,7 @@ module.exports = {
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   layoutNumbersChart, renderNumbersChart,
+  renderTierMap, stripGlossaryMarkers,
   layoutChronologySpine, renderChronologySpine, decadeBucket, decadeColumns, collapseAfterOf,
   layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,

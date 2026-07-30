@@ -20,6 +20,7 @@ data/archives.json       MACHINE-GENERATED Wayback snapshot cache (written by sc
 data/glossary-terms.json VENDORED, PINNED list of cronologia/glossary term ids (written by scripts/sync-glossary-terms.js; committed) — validates [[term-id]] cross-links offline
 data/places.json         VENDORED, PINNED copy of the cronologia/core gazetteer (written by scripts/sync-places.js; committed) — coordinates for the optional placesMap renderer; only needed when placesMap is declared
 src/styles.css           Stylesheet (copied into the build)
+src/latam.svg            VENDORED Latin America base map (Natural Earth, public domain) — used by the `map` tier renderer; regenerate with scripts/gen-latam-svg.js (dev-only, needs npm)
 src/world-land.json      COMMITTED world basemap for the placesMap renderer (Natural Earth 1:110m, public domain; see its _meta) — only needed when placesMap is declared
 scripts/validate-data.js Schema check (runs in CI before the build) — also fails on unknown glossary [[term-id]] links
 scripts/archive-refs.js  Wayback preservation: snapshot lookup + Save Page Now for references[] -> data/archives.json
@@ -99,6 +100,19 @@ byte-identical to a build without the feature. Shapes are shown in
   `value`, a human-readable attributed `display`, and an optional `year`. The
   `<figcaption>` cites every series. `heading`/`navLabel` default to "Numbers".
   Sits in its own `.viz-scroll` container; prints as static panels.
+- **`map`** — country tier map (`renderTierMap`): a static choropleth of the
+  vendored Latin America base map, the tl presence-map pattern. Tiers are a
+  per-repo, DATA-DECLARED vocabulary (`tiers: [{ id, label }]`, 1–4 entries,
+  listing order = visual rank) — what a tier means is an editorial claim, so
+  it lives in the data with its legend label, never in the renderer. Each
+  `countries[]` entry (`code` ISO alpha-2, must exist in src/latam.svg;
+  `name`; `tier`; cited `note`) fills its country and gets a hover/focus
+  tooltip (aria-live caption) plus a citation card. `unlistedLabel` is
+  REQUIRED: on a contested subject, an unfilled country is a statement too,
+  and the legend must say what it means. Distinct from `placesMap` (event
+  pins): this says what KIND of place a country is in the story, not where
+  events happened. fsp's year-slider membership map is a declared follow-up
+  (core#3), not covered by this key yet.
 
 - **`meta.threads`** — the per-repo lane taxonomy (core#23) and, once declared,
   the **swimlanes** figure (`renderSwimlanes`): one row per lane, one column per
