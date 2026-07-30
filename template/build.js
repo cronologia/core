@@ -1509,6 +1509,7 @@ module.exports = {
   layoutNumbersChart, renderNumbersChart,
   layoutChronologySpine, renderChronologySpine,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
+  loadPlaces, loadWorld,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
