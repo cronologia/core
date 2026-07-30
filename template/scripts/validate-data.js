@@ -12,11 +12,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { glossaryMarkerIds } = require('../build.js');
+const { glossaryMarkerIds, placeIndex, resolvePlaceString } = require('../build.js');
 
 const ROOT = path.join(__dirname, '..');
 const FILE = 'data/chronology.json';
 const GLOSSARY_TERMS_FILE = 'data/glossary-terms.json';
+const PLACES_FILE = 'data/places.json';
 const errors = [];
 
 const isStr = (v) => typeof v === 'string' && v.length > 0;
@@ -260,6 +261,73 @@ if (d.numbersChart !== undefined) {
         });
       }
     });
+  }
+}
+
+// ---- placesMap (gazetteer-driven map) --------------------------------------
+// Design principles (core#24): a place string resolves to a LIST of gazetteer
+// ids (compound " / " strings are one event in several places); an unresolved
+// place string is a WARNING, never a hard error — the dataset must stay
+// editable without a coordinate lookup blocking a commit. The vendored
+// gazetteer itself, however, must be well-formed when the map is declared.
+if (d.placesMap !== undefined) {
+  const pm = d.placesMap;
+  const at = 'placesMap';
+  if (pm === null || typeof pm !== 'object' || Array.isArray(pm)) {
+    err(`${at} must be an object`);
+  } else {
+    for (const k of ['heading', 'navLabel', 'note']) {
+      if (pm[k] !== undefined && !isStr(pm[k])) err(`${at}.${k} must be a string`);
+    }
+  }
+
+  let gaz = null;
+  try {
+    gaz = JSON.parse(fs.readFileSync(path.join(ROOT, PLACES_FILE), 'utf8'));
+  } catch (e) {
+    err(`${at} is declared but ${PLACES_FILE} is missing or unreadable (${e.message}). Run: node scripts/sync-places.js`);
+  }
+  if (gaz) {
+    if (!isArr(gaz.places) || gaz.places.length === 0) {
+      err(`${PLACES_FILE}: places must be a non-empty array`);
+    } else {
+      const seen = new Set();
+      gaz.places.forEach((p, i) => {
+        const pAt = `${PLACES_FILE}: places[${i}]`;
+        if (!isStr(p.id)) err(`${pAt}.id missing`);
+        else if (seen.has(p.id)) err(`${pAt}.id "${p.id}" duplicated`);
+        else seen.add(p.id);
+        if (!isStr(p.name)) err(`${pAt}.name missing`);
+        // Coordinates are cited like everything else in this family.
+        if (!isStr(p.source)) err(`${pAt}.source missing (coordinates are cited like any other fact)`);
+        if (p.kind === 'non-geographic') {
+          // Scopes ("Worldwide") deliberately carry no coordinates.
+          if (p.lat !== undefined || p.lon !== undefined) err(`${pAt}: non-geographic entries must not carry lat/lon`);
+        } else {
+          if (!isNum(p.lat) || p.lat < -90 || p.lat > 90) err(`${pAt}.lat must be a number in [-90, 90]`);
+          if (!isNum(p.lon) || p.lon < -180 || p.lon > 180) err(`${pAt}.lon must be a number in [-180, 180]`);
+        }
+        if (p.variants !== undefined && (!isArr(p.variants) || p.variants.some((v) => !isStr(v)))) {
+          err(`${pAt}.variants must be an array of strings`);
+        }
+      });
+    }
+
+    // Unresolved place strings: warn, never fail (core#24).
+    const index = placeIndex(gaz);
+    const unresolved = new Map(); // string -> event count
+    for (const ev of d.events || []) {
+      if (!ev.place) continue;
+      const { missing } = resolvePlaceString(ev.place, index);
+      for (const m of missing) unresolved.set(m, (unresolved.get(m) || 0) + 1);
+    }
+    if (unresolved.size) {
+      console.warn(
+        `⚠ ${unresolved.size} place string(s) not in the gazetteer (events stay valid; they will not be mapped):\n`
+        + [...unresolved.entries()].map(([s, n]) => `  - "${s}" (${n} event${n === 1 ? '' : 's'})`).join('\n')
+        + '\n  Add them to cronologia/core data/places.json and re-run scripts/sync-places.js.'
+      );
+    }
   }
 }
 
