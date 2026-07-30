@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap, renderPage, UI,
+  placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap, renderPage, localizeData, UI,
 } = require('../build.js');
 
 const ev = (year, place, dateVerified) => ({
@@ -162,4 +162,45 @@ test('pt/es locales render localized strings', () => {
     assert.ok(html.includes(UI[lang].mapHeading));
     assert.ok(html.includes(UI[lang].mapListHeading));
   }
+});
+
+/* -------------------------------------------------------------------------
+ * i18n: the map must resolve identically in every locale.
+ *
+ * `place` is a translated field but the gazetteer is keyed on the canonical
+ * English strings, so a localized build resolved on the DISPLAY string loses
+ * markers — and its caption then reports the events as missing from the
+ * gazetteer, which is false. Worse, a compound string keeps whichever half
+ * survived translation, silently dropping the other pin. localizeData carries
+ * the source string as `placeKey` for exactly this; these tests pin it.
+ * ---------------------------------------------------------------------- */
+
+test('localizeData keeps the canonical place string as placeKey', () => {
+  const data = { meta: { language: 'en' }, events: [ev(1901, 'Rome'), ev(1902, 'Topeka / Los Angeles, USA')] };
+  const dict = { Rome: 'Roma', 'Topeka / Los Angeles, USA': 'Topeka / Los Angeles, EUA' };
+  const localized = localizeData(data, dict, 'pt');
+  assert.strictEqual(localized.events[0].place, 'Roma');          // display is translated
+  assert.strictEqual(localized.events[0].placeKey, 'Rome');       // lookup key is not
+  assert.strictEqual(localized.events[1].placeKey, 'Topeka / Los Angeles, USA');
+});
+
+test('a translated place still maps, and the compound keeps BOTH pins', () => {
+  const data = {
+    meta: { language: 'en' }, placesMap: {},
+    events: [ev(1901, 'Rome'), ev(1902, 'Topeka / Los Angeles, USA'), ev(1969, 'Brazil')],
+  };
+  const dict = {
+    Rome: 'Roma', 'Topeka / Los Angeles, USA': 'Topeka / Los Angeles, EUA', Brazil: 'Brasil',
+  };
+  const en = layoutPlacesMap(data.placesMap, data.events, GAZ);
+  const pt = layoutPlacesMap(data.placesMap, localizeData(data, dict, 'pt').events, GAZ);
+
+  assert.deepStrictEqual(
+    pt.pins.map((p) => p.id).sort(),
+    en.pins.map((p) => p.id).sort(),
+    'localized build must map the same places as English',
+  );
+  assert.ok(pt.pins.some((p) => p.id === 'los-angeles'), 'compound string lost its second pin when translated');
+  assert.strictEqual(pt.unresolvedEvents, 0, 'translated places must not be reported as missing from the gazetteer');
+  assert.strictEqual(pt.mappedEvents, en.mappedEvents);
 });
