@@ -111,6 +111,52 @@ else {
   });
 }
 
+// ---- threads (per-repo lane taxonomy — core#23) -----------------------------
+// Events may carry an OPTIONAL `threads: string[]` naming the storyline(s)
+// they belong to. The vocabulary is per-repo and editorial: it must be declared
+// in meta.threads — with a visible editorial note and each lane's grounding —
+// never invented in code or derived by clustering the text. An absent field is
+// always valid (this rolls out with no flag day), and a dataset without the
+// key must build byte-identically. See sourcing-rules ("Thread taxonomies are
+// a reading") for the editorial rules the declaration encodes.
+const laneIds = new Set();
+if (d.meta && d.meta.threads !== undefined) {
+  const t = d.meta.threads;
+  const at = 'meta.threads';
+  if (!isStr(t.note)) {
+    err(`${at}.note missing — the visible statement that the lane taxonomy is an editorial reading, not a neutral fact (rendered wherever lanes render)`);
+  }
+  if (!isArr(t.lanes) || t.lanes.length === 0) {
+    err(`${at}.lanes must be a non-empty array of { id, label, basis }`);
+  } else {
+    t.lanes.forEach((l, i) => {
+      const lAt = `${at}.lanes[${i}]`;
+      if (!isStr(l.id)) err(`${lAt}.id missing`);
+      else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(l.id)) err(`${lAt}.id must be kebab-case, got "${l.id}"`);
+      else if (laneIds.has(l.id)) err(`${lAt}.id duplicated: ${l.id}`);
+      else laneIds.add(l.id);
+      if (!isStr(l.label)) err(`${lAt}.label missing`);
+      if (!isStr(l.basis)) err(`${lAt}.basis missing — name what grounds this lane, so the editorial decision is recorded in the data, not implied by it`);
+      checkSources(lAt, l.sources, false);
+    });
+  }
+}
+if (isArr(d.events)) {
+  d.events.forEach((ev, i) => {
+    if (ev.threads === undefined) return;
+    const at = `events[${i}]`;
+    if (!isArr(ev.threads) || !ev.threads.every(isStr)) {
+      return err(`${at}.threads must be an array of lane ids (an array even for one lane — cross-cutting events belong to more than one thread)`);
+    }
+    if (laneIds.size === 0) {
+      return err(`${at}.threads used but meta.threads declares no lanes — declare the taxonomy (note + lanes with id/label/basis) before tagging events`);
+    }
+    for (const th of ev.threads) {
+      if (!laneIds.has(th)) err(`${at}.threads: unknown lane id "${th}" (not declared in meta.threads.lanes)`);
+    }
+  });
+}
+
 // ---- figures --------------------------------------------------------------
 if (!isArr(d.figures) || d.figures.length === 0) err('figures[] missing or empty');
 else {

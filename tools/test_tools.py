@@ -1372,14 +1372,22 @@ class TestPlaces(unittest.TestCase):
         self.assertEqual(unmapped, [], f"unmapped: {sorted(set(unmapped))}")
 
     def test_check_mode_exits_nonzero_when_something_is_unmapped(self):
+        # Hermetic: stub BOTH the gazetteer and the dataset scan. Relying on
+        # collect() finding real sibling checkouts made this test pass or fail
+        # depending on which repos happened to be cloned next to core.
         empty = ({}, {})
-        original = self.places.load_gazetteer
+        one_place = ({"Nowhereville, Atlantis": 1},
+                     {"Nowhereville, Atlantis": {"fsspx"}})
+        original_load = self.places.load_gazetteer
+        original_collect = self.places.collect
         self.places.load_gazetteer = lambda *a, **k: empty
+        self.places.collect = lambda *a, **k: one_place
         try:
             with silent():
                 self.assertEqual(self.places.main([]), 1)
         finally:
-            self.places.load_gazetteer = original
+            self.places.load_gazetteer = original_load
+            self.places.collect = original_collect
 
 
 

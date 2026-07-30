@@ -30,6 +30,35 @@ and neutrality matter more than completeness. Five rules govern everything:
    corroboration; otherwise they are cited as attributed perspectives. Verify
    proper names against audio before quoting auto-captions.
 
+## Thread taxonomies are a reading
+
+Tagging events with thread lanes (`meta.threads` + `events[].threads`,
+core#23) is classifying a contested chronology — an interpretive act, not a
+schema chore. A taxonomy over a contested chronology *is a reading of it*, so
+the five rules above apply to the taxonomy itself:
+
+- **Declare it; never derive it.** Lanes exist only as a per-repo declaration
+  in `meta.threads`, each with a `basis` naming what grounds it (an actor's own
+  periodization, a scholarly framework — cite it in `sources` where one
+  exists). Never invent lane values in code, and never assign them by
+  clustering the text.
+- **Omission editorializes.** No lane for something reads as "not part of the
+  story". When deciding the lanes, write down what was left out and why —
+  in the ticket that decides them, not silently.
+- **Beware false symmetry.** Giving "the Society's account" and "Rome's
+  account" equal lanes implies a parity the sources may not support. Lanes are
+  containers for events, not a claim that the parties' accounts weigh the same.
+- **Cross-cutting is normal.** `threads` is always an array; an event that
+  belongs to two storylines is tagged with both. If events keep needing to be
+  forced into one lane, the taxonomy is distorting — fix the lanes.
+- **Per-repo vocabularies differ, and should.** A project charting ideas needs
+  different lanes from one charting an institution. Never impose one shared
+  vocabulary across repos, and never backfill lane values across a dataset in
+  a single automated pass — tagging is per-event editorial work.
+- **Say it is not neutral.** `meta.threads.note` (required by the validator) is
+  the visible statement that the lanes are an editorial reading; any UI that
+  renders lanes must render it.
+
 Before searching a corpus or a source for a name, read the project's
 `KEYWORDS.md`: the naming variants and the terms known to return nothing live
 there, and it is a finding aid — listing a term is not asserting it.
