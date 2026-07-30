@@ -101,6 +101,35 @@ Print baseline: `src/styles.css` ships an `@media print` block (nav/chips
 hidden, figures `break-inside: avoid`, the subway SVG scaled to page width) —
 extend it when adding a new visualization.
 
+## Thread lanes (optional, off by default — schema only; renderer pending, core#23)
+
+Events may carry `threads: string[]` naming which parallel storyline(s) an
+event belongs to (always an array — cross-cutting events belong to more than
+one). The vocabulary is **per-repo and editorial**: it must be declared in
+`meta.threads`, never invented in code or derived by clustering the text:
+
+```json
+"meta": {
+  "threads": {
+    "note": "<visible editorial statement: these lanes are a reading of the chronology, not a neutral fact>",
+    "lanes": [
+      { "id": "rome-relations", "label": "Relations with Rome",
+        "basis": "<what grounds this lane — the actor's own periodization, a scholarly framework… cite it>",
+        "sources": ["optional-ref-id"] }
+    ]
+  }
+}
+```
+
+`scripts/validate-data.js` enforces: unknown lane id on an event → error;
+`threads` used without a declared taxonomy → error; missing `note` or a lane
+missing `basis` → error; **absent field → valid** (no flag day), and a dataset
+without the key builds byte-identically. Choosing the lanes is an editorial
+decision governed by the sourcing-rules skill ("Thread taxonomies are a
+reading") — decide and record it per repo before tagging events. The swimlane
+renderer is a follow-up (core#23 → #22); until it ships the field is inert in
+the build.
+
 ## Glossary cross-links (optional, off by default)
 
 Prose fields can link into the shared **Cronologia glossary**
