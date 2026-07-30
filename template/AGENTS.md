@@ -100,6 +100,19 @@ byte-identical to a build without the feature. Shapes are shown in
   `<figcaption>` cites every series. `heading`/`navLabel` default to "Numbers".
   Sits in its own `.viz-scroll` container; prints as static panels.
 
+- **`meta.threads`** — the per-repo lane taxonomy (core#23) and, once declared,
+  the **swimlanes** figure (`renderSwimlanes`): one row per lane, one column per
+  decade, each cell that lane's event count, rendered as a real `<table>`
+  because the data is categorical-over-time. Declaring a taxonomy is what turns
+  the figure on — a classification the site keeps but never shows would be
+  latent editorialising. Three rules the renderer enforces and any redesign must
+  keep: `meta.threads.note` renders WITH the figure (it is the visible statement
+  that the lanes are a reading); every lane's `basis` renders below it with its
+  citations; and lane labels render VERBATIM, because a label may carry a
+  load-bearing hedge ("Antecedents (attributed, not adopted)"). Gap collapsing is
+  shared with the spine via `decadeColumns()`, so two figures on one page cannot
+  disagree about the same gap.
+
 Print baseline: `src/styles.css` ships an `@media print` block (nav/chips
 hidden, figures `break-inside: avoid`, the subway SVG scaled to page width) —
 extend it when adding a new visualization.
