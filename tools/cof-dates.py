@@ -222,6 +222,38 @@ def weekday_of(value):
     return WEEKDAYS[datetime.date.fromisoformat(value).weekday()]
 
 
+def cadence_rows(docs):
+    """Every date — header or tail candidate — that is off the course weekday.
+
+    The tail carries more dates than the headers do (328 candidates against
+    257 headers), so a cadence sweep that looked only at headers would miss
+    the majority of the manifest's dates.
+    """
+    rows = []
+    for d in docs:
+        if d.get('date') and off_cadence(d['date']):
+            rows.append({
+                'id': d['id'], 'aula': d.get('aula'), 'date': d['date'],
+                'kind': 'header', 'weekday': weekday_of(d['date']),
+                'alsoNeighbourAnomaly': bool(d.get('dateAnomaly')),
+                'alsoDisagrees': bool(d.get('dateDisagreement')),
+                'alternative': None})
+            continue
+        cand = d.get('dateCandidate')
+        if cand and off_cadence(cand['date']):
+            alt = cand.get('offCadence', {}).get('onCadenceAlternative')
+            rows.append({
+                'id': d['id'], 'aula': d.get('aula'), 'date': cand['date'],
+                'kind': 'candidate', 'weekday': weekday_of(cand['date']),
+                'alsoNeighbourAnomaly': False,
+                'alsoDisagrees': cand.get('witnessesAgree') is False,
+                'alternative': alt['date'] if alt else (
+                    'both witnesses agree on this off-cadence date'
+                    if cand.get('filenames') == cand['date'] else None)})
+    rows.sort(key=lambda r: (r['aula'] or 0))
+    return rows
+
+
 def adjudicate(aula, header, index, dated_by_aula):
     """Which value, if either, does the surrounding sequence support?
 
@@ -368,19 +400,17 @@ def main(argv):
         return 1 if rows else 0
 
     if '--cadence' in argv:
-        rows = [{'id': d['id'], 'aula': d.get('aula'), 'date': d['date'],
-                 'weekday': weekday_of(d['date']),
-                 'alsoNeighbourAnomaly': bool(d.get('dateAnomaly')),
-                 'alsoDisagrees': bool(d.get('dateDisagreement'))}
-                for d in docs if d.get('date') and off_cadence(d['date'])]
-        rows.sort(key=lambda r: (r['aula'] or 0))
+        rows = cadence_rows(docs)
         dated = [d for d in docs if d.get('date')]
+        cands = [d for d in docs if d.get('dateCandidate')]
         if as_json:
             json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
             sys.stdout.write('\n')
             return 1 if rows else 0
-        print(f'{len(dated)} dated docs | {len(rows)} NOT on the course cadence '
-              f'({WEEKDAYS[COURSE_WEEKDAY]})')
+        n_h = sum(1 for r in rows if r['kind'] == 'header')
+        n_c = len(rows) - n_h
+        print(f'{len(dated)} header dates + {len(cands)} tail candidates | '
+              f'off cadence: {n_h} headers, {n_c} candidates')
         print('\nOff-cadence is a FLAG, NOT a verdict. The course ran on '
               f'{WEEKDAYS[COURSE_WEEKDAY]}s\n(242/257 headers, 552/585 index dates, 30/30 '
               'Resumos), but special and\nrescheduled sessions are real - where every source '
@@ -389,7 +419,10 @@ def main(argv):
             flags = [k for k, v in (('neighbour-anomaly', r['alsoNeighbourAnomaly']),
                                     ('disagrees-with-a-witness', r['alsoDisagrees'])) if v]
             print(f"  {r['id']} aula {str(r['aula']):>4}  {r['date']} {r['weekday']}"
-                  f"   {', '.join(flags) or 'NOT otherwise flagged - look here first'}")
+                  f"  [{r['kind']}]  "
+                  f"{', '.join(flags) or 'NOT otherwise flagged - look here first'}")
+            if r['alternative']:
+                print(f"        -> {r['alternative']}")
         return 1 if rows else 0
 
     anomalies = find_anomalies(docs)

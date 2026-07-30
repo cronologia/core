@@ -1536,6 +1536,39 @@ class TestCofDates(unittest.TestCase):
         rows = self.cd.compare_sources(docs, {89: "2010-12-22"})
         self.assertEqual(rows[0]["onCadence"], [])
 
+    def test_cadence_sweep_covers_tail_candidates_not_only_headers(self):
+        docs = [
+            {"id": "COF263", "aula": 263, "date": "2014-09-12"},          # Fri header
+            {"id": "COF300", "aula": 300, "date": "2015-08-01"},          # Sat header
+            {"id": "COF317", "aula": 317, "date": None,
+             "dateCandidate": {"date": "2015-11-29"}},                    # Sun candidate
+            {"id": "COF318", "aula": 318, "date": None,
+             "dateCandidate": {"date": "2015-12-05"}},                    # Sat candidate
+        ]
+        rows = self.cd.cadence_rows(docs)
+        self.assertEqual([(r["id"], r["kind"]) for r in rows],
+                         [("COF263", "header"), ("COF317", "candidate")])
+
+    def test_cadence_sweep_surfaces_an_on_cadence_alternative(self):
+        docs = [{"id": "COF501", "aula": 501, "date": None, "dateCandidate": {
+            "date": "2019-01-04",                    # Friday
+            "filenames": "2020-01-04",               # Saturday
+            "witnessesAgree": False,
+            "offCadence": {"onCadenceAlternative": {"date": "2020-01-04"}}}}]
+        row = self.cd.cadence_rows(docs)[0]
+        self.assertEqual(row["alternative"], "2020-01-04")
+        self.assertTrue(row["alsoDisagrees"])
+
+    def test_cadence_sweep_says_when_both_witnesses_share_the_off_cadence_date(self):
+        """Agreement on an odd weekday points at the session, not the sources."""
+        docs = [{"id": "COF350", "aula": 350, "date": None, "dateCandidate": {
+            "date": "2016-08-12", "filenames": "2016-08-12",   # both Friday
+            "witnessesAgree": True}}]
+        row = self.cd.cadence_rows(docs)[0]
+        self.assertEqual(row["alternative"],
+                         "both witnesses agree on this off-cadence date")
+        self.assertFalse(row["alsoDisagrees"])
+
     def test_on_cadence_names_which_sources_fall_on_the_course_weekday(self):
         docs = self.docs((17, "2009-08-01"), (18, "2009-08-18"),
                          (19, "2009-08-15"))
