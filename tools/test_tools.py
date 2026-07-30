@@ -1461,6 +1461,47 @@ class TestCofDates(unittest.TestCase):
                                  datetime.date(2010, 1, 1), {})
         self.assertEqual(got, "undecided")
 
+    # --- the filename witness ----------------------------------------------
+    def test_filename_dates_excludes_aulas_whose_duplicate_files_disagree(self):
+        files = [{"aula": 117, "date": "2011-08-06"},
+                 {"aula": 117, "date": "2013-08-24"},
+                 {"aula": 229, "date": "2013-11-30"},
+                 {"aula": 229, "date": "2013-11-30"},   # same date twice is fine
+                 {"aula": 305, "date": None},           # undated file, ignored
+                 {"aula": None, "date": "2009-07-04"}]  # unassigned file, ignored
+        got = self.cd.filename_dates(files)
+        self.assertEqual(got, {229: "2013-11-30"})
+
+    def test_filename_witness_is_a_third_voice_not_a_tiebreaker(self):
+        # aula 220: header fits the sequence, index does not; the filename
+        # witness sides with the index but must not change the verdict.
+        docs = self.docs((219, "2013-09-07"), (220, "2013-09-14"),
+                         (221, "2013-09-21"))
+        lineage = {220: "2012-09-14"}
+        rows = self.cd.compare_sources(docs, lineage, {220: "2012-09-14"})
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["sequenceSupports"], "header")
+        self.assertEqual(rows[0]["filenamesMatches"], "index")
+        self.assertIs(rows[0]["filenamesFits"], False)
+
+    def test_filename_witness_can_fit_where_both_named_sources_break(self):
+        # aula 176: header and index both break the sequence; only the
+        # filename value fits. The verdict stays undecided between the two
+        # named sources - the witness is reported alongside, not promoted.
+        docs = self.docs((175, "2012-10-13"), (176, "2012-09-08"),
+                         (177, "2012-10-27"))
+        lineage = {176: "2012-01-20"}
+        rows = self.cd.compare_sources(docs, lineage, {176: "2012-10-20"})
+        self.assertEqual(rows[0]["sequenceSupports"], "undecided")
+        self.assertEqual(rows[0]["filenamesMatches"], "neither")
+        self.assertIs(rows[0]["filenamesFits"], True)
+
+    def test_rows_omit_witness_fields_when_no_witness_is_supplied(self):
+        docs = self.docs((219, "2013-09-07"), (220, "2013-09-14"),
+                         (221, "2013-09-21"))
+        rows = self.cd.compare_sources(docs, {220: "2012-09-14"})
+        self.assertNotIn("filenames", rows[0])
+
 
 
 class TestTemplateDrift(unittest.TestCase):

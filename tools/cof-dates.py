@@ -47,6 +47,22 @@ the direction of error has to be established per aula.
 --index applies the same neighbour test to both and says which side, if either,
 the sequence supports. It adjudicates nothing on its own: where the neighbours
 cannot decide, it says so.
+
+The filename witness
+--------------------
+A third, substantially independent set of date claims exists: the dates
+embedded in the audio filenames of the archive.org `cof_completo` zip, vaulted
+as `archive/webcaptures/cof-completo-zip-listing.json` (504 dated filenames,
+mostly seminariodefilosofia.org-style server download names). Measured on
+ingest it contradicts the index lineage at four of that lineage's five
+idiosyncratic quirks, and the index shares none of its slips — so neither
+copied the other. It is NOT clean: it is a grab-bag of five naming families,
+11 duplicate aulas carry internally disagreeing dates, 21 of its dates break
+its own sequence, and at aula 220 it shares the index's sequence-breaking
+value (one shared upstream typo, most likely). When the vaulted listing is
+present, --index shows it as a third column with its own sequence-fit verdict;
+aulas whose duplicate files disagree are excluded rather than picked between.
+As with the other two sources: never bulk-import, adjudicate per aula.
 """
 
 import datetime
@@ -58,6 +74,10 @@ import sys
 INDEX_LINEAGE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     'archive', 'webcaptures', 'cof-index-mateus-santos-pereira.json')
+
+FILENAME_WITNESS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    'archive', 'webcaptures', 'cof-completo-zip-listing.json')
 
 DEFAULT_MANIFEST = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -115,6 +135,30 @@ def load_index_lineage(path=INDEX_LINEAGE):
     return {int(k): v['date'] for k, v in data.get('aulas', {}).items() if v.get('date')}
 
 
+def filename_dates(files):
+    """Return {aula: iso date} from zip-listing entries.
+
+    An aula whose files carry more than one distinct embedded date is
+    excluded entirely — picking between duplicate files would be a silent
+    adjudication, and those aulas need a per-case reading.
+    """
+    seen = {}
+    for f in files:
+        if f.get('aula') and f.get('date'):
+            seen.setdefault(f['aula'], set()).add(f['date'])
+    return {a: dates.pop() for a, dates in seen.items() if len(dates) == 1}
+
+
+def load_filename_witness(path=FILENAME_WITNESS):
+    """Return {aula: iso date} from the vaulted cof_completo listing, or {}."""
+    try:
+        with open(path, encoding='utf-8') as fh:
+            data = json.load(fh)
+    except FileNotFoundError:
+        return {}
+    return filename_dates(data.get('files', []))
+
+
 def adjudicate(aula, header, index, dated_by_aula):
     """Which value, if either, does the surrounding sequence support?
 
@@ -137,8 +181,27 @@ def adjudicate(aula, header, index, dated_by_aula):
     return 'undecided'
 
 
-def compare_sources(docs, lineage):
-    """Rows where the header and the index lineage disagree, with a verdict."""
+def _fits_sequence(aula, value, dated_by_aula):
+    """True/False when the nearest dated neighbours can judge, else None."""
+    if value is None:
+        return None
+    prev = max((a for a in dated_by_aula if a < aula), default=None)
+    nxt = min((a for a in dated_by_aula if a > aula), default=None)
+    if prev is None or nxt is None:
+        return None
+    lo, hi = dated_by_aula[prev], dated_by_aula[nxt]
+    if lo > hi:
+        return None
+    return lo <= value <= hi
+
+
+def compare_sources(docs, lineage, filenames=None):
+    """Rows where the header and the index lineage disagree, with a verdict.
+
+    When the filename witness is supplied, each row also carries its value
+    and whether that value fits the neighbour sequence. The witness never
+    changes `sequenceSupports` — it is a third voice, not a tiebreaker.
+    """
     man = {d['aula']: d for d in docs if d.get('aula')}
     dated = {a: _date(d['date']) for a, d in man.items() if d.get('date')}
     rows = []
@@ -148,13 +211,23 @@ def compare_sources(docs, lineage):
         if h is None or i is None or h == i:
             continue
         neighbours = {a: v for a, v in dated.items() if a != aula}
-        rows.append({
+        row = {
             'aula': aula,
             'header': h.isoformat(),
             'index': i.isoformat(),
             'offByDays': abs((h - i).days),
             'sequenceSupports': adjudicate(aula, h, i, neighbours),
-        })
+        }
+        if filenames is not None:
+            f = _date(filenames[aula]) if aula in filenames else None
+            row['filenames'] = f.isoformat() if f else None
+            row['filenamesFits'] = _fits_sequence(aula, f, neighbours)
+            row['filenamesMatches'] = (
+                'header' if f is not None and f == h
+                else 'index' if f is not None and f == i
+                else 'neither' if f is not None
+                else None)
+        rows.append(row)
     return rows
 
 
@@ -171,7 +244,8 @@ def main(argv):
         if not lineage:
             print('index lineage not found at', INDEX_LINEAGE)
             return 2
-        rows = compare_sources(docs, lineage)
+        filenames = load_filename_witness() or None
+        rows = compare_sources(docs, lineage, filenames)
         if as_json:
             json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
             sys.stdout.write('\n')
@@ -181,11 +255,20 @@ def main(argv):
               f'{len(rows)} disagree with the transcription header')
         print(f"sequence supports: header {tally['header']} | index {tally['index']} | "
               f"undecided {tally['undecided']}")
+        if filenames:
+            covered = sum(1 for r in rows if r.get('filenames'))
+            print(f'filename witness (cof_completo zip): {len(filenames)} dated aulas, '
+                  f'covers {covered} of the {len(rows)} disagreements')
         print('\nNeither source is authoritative and BOTH carry year typos.'
               '\nNothing here is corrected; a verdict of "undecided" is a real result.\n')
         for r in rows:
-            print(f"  aula {r['aula']:>3}  header {r['header']}  index {r['index']}  "
-                  f"[~{r['offByDays']}d]  -> {r['sequenceSupports']}")
+            line = (f"  aula {r['aula']:>3}  header {r['header']}  index {r['index']}  "
+                    f"[~{r['offByDays']}d]  -> {r['sequenceSupports']}")
+            if r.get('filenames'):
+                fit = {True: 'fits sequence', False: 'breaks sequence',
+                       None: 'sequence cannot judge'}[r['filenamesFits']]
+                line += f"  | filenames {r['filenames']} ({r['filenamesMatches']}; {fit})"
+            print(line)
         return 1 if rows else 0
 
     anomalies = find_anomalies(docs)
