@@ -11,7 +11,12 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
-const base = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'chronology.example.json'), 'utf8'));
+// The template ships a fixture; an adopting repo has only its real dataset.
+// Take whichever exists so this test is portable to both (adopt-template #6).
+const BASE_FILE = ['chronology.example.json', 'chronology.json']
+  .map((f) => path.join(ROOT, 'data', f))
+  .find((p) => fs.existsSync(p));
+const base = JSON.parse(fs.readFileSync(BASE_FILE, 'utf8'));
 
 const TAXONOMY = {
   note: 'These lanes are an editorial reading of the chronology, not a neutral fact; events may sit in more than one lane, and absence from a lane is not a claim of irrelevance.',
