@@ -54,6 +54,9 @@ const TRANSLATABLE_KEYS = new Set([
   'title', 'subtitle', 'description', 'dataQualityNote', 'label', 'value', 'text',
   'place', 'role', 'country', 'notes', 'note', 'heading', 'navLabel', 'summary',
   'detail', 'status', 'relation', 'unitNote', 'sourceLabel', 'display', 'unit', 'edgeLabel',
+  // Lane bases are prose and RENDER on the page (renderSwimlanes publishes each
+  // lane's grounding), so they are translated like any other visible prose.
+  'basis', 'intro',
 ]);
 
 // Interface strings the compiler emits itself (everything not sourced from data).
@@ -87,6 +90,14 @@ const UI = {
     mapSliderLabel: 'Show places first recorded up to',
     mapPlay: '▶ Play', mapPause: '⏸ Pause',
     mapShowing: (y, shown, total) => `Showing places first recorded up to ${y}: ${shown} of ${total}.`,
+    swHeading: 'Parallel storylines', swNav: 'Storylines',
+    swIntro: 'The chronology read as parallel storylines: one row per lane, one column per decade, each cell the number of that lane’s events in that decade. An event that belongs to several storylines is counted in each, so the rows sum to more than the number of events. Select a number to jump to that decade in the chronology.',
+    swLaneHeader: 'Storyline', swTotalHeader: 'Events',
+    swBasesHeading: 'What each lane is grounded in',
+    swCellLabel: (lane, dec, n, u) => `${lane}, ${dec}: ${n} event${n === 1 ? '' : 's'}${u ? `, ${u} with a date not yet verified against a primary source` : ''}`,
+    swEmptyCell: (lane, dec) => `${lane}, ${dec}: no recorded events`,
+    swCaption: (n, lanes, span, assign) => `${n} events across ${lanes} lanes, ${span} · ${assign} lane assignments, because an event may belong to more than one storyline. Gaps are shown as explicit breaks, never compressed away.`,
+    swUntaggedNote: (n) => `${n} dated event${n === 1 ? ' carries' : 's carry'} no lane yet and ${n === 1 ? 'is' : 'are'} therefore not shown here.`,
     flagTitle: 'Date not yet verified against a primary source',
     factFlagTitle: 'Not yet verified against a primary source',
     footer: 'Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.\n      Part of the Cronologia project family.',
@@ -122,6 +133,14 @@ const UI = {
     mapSliderLabel: 'Mostrar lugares registrados por primera vez hasta',
     mapPlay: '▶ Reproducir', mapPause: '⏸ Pausa',
     mapShowing: (y, shown, total) => `Mostrando lugares registrados por primera vez hasta ${y}: ${shown} de ${total}.`,
+    swHeading: 'Relatos paralelos', swNav: 'Relatos',
+    swIntro: 'La cronología leída como relatos paralelos: una fila por franja, una columna por década, y en cada celda el número de acontecimientos de esa franja en esa década. Un acontecimiento que pertenece a varios relatos se cuenta en cada uno, de modo que las filas suman más que el total de acontecimientos. Seleccione un número para ir a esa década en la cronología.',
+    swLaneHeader: 'Relato', swTotalHeader: 'Acontecimientos',
+    swBasesHeading: 'En qué se funda cada franja',
+    swCellLabel: (lane, dec, n, u) => `${lane}, ${dec}: ${n} acontecimiento${n === 1 ? '' : 's'}${u ? `, ${u} con fecha aún no verificada con una fuente primaria` : ''}`,
+    swEmptyCell: (lane, dec) => `${lane}, ${dec}: sin acontecimientos registrados`,
+    swCaption: (n, lanes, span, assign) => `${n} acontecimientos en ${lanes} franjas, ${span} · ${assign} asignaciones a franjas, porque un acontecimiento puede pertenecer a más de un relato. Los vacíos se muestran como cortes explícitos, nunca comprimidos.`,
+    swUntaggedNote: (n) => `${n} acontecimiento${n === 1 ? ' fechado no tiene' : 's fechados no tienen'} todavía ninguna franja y por eso no ${n === 1 ? 'aparece' : 'aparecen'} aquí.`,
     flagTitle: 'Fecha aún no verificada con una fuente primaria',
     factFlagTitle: 'Aún no verificado con una fuente primaria',
     footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
@@ -157,6 +176,14 @@ const UI = {
     mapSliderLabel: 'Mostrar lugares registados pela primeira vez até',
     mapPlay: '▶ Reproduzir', mapPause: '⏸ Pausar',
     mapShowing: (y, shown, total) => `A mostrar lugares registados pela primeira vez até ${y}: ${shown} de ${total}.`,
+    swHeading: 'Narrativas paralelas', swNav: 'Narrativas',
+    swIntro: 'A cronologia lida como narrativas paralelas: uma linha por faixa, uma coluna por década, e em cada célula o número de acontecimentos dessa faixa nessa década. Um acontecimento que pertence a várias narrativas é contado em cada uma, pelo que as linhas somam mais do que o total de acontecimentos. Selecione um número para ir a essa década na cronologia.',
+    swLaneHeader: 'Narrativa', swTotalHeader: 'Acontecimentos',
+    swBasesHeading: 'Em que se fundamenta cada faixa',
+    swCellLabel: (lane, dec, n, u) => `${lane}, ${dec}: ${n} acontecimento${n === 1 ? '' : 's'}${u ? `, ${u} com data ainda não verificada com uma fonte primária` : ''}`,
+    swEmptyCell: (lane, dec) => `${lane}, ${dec}: sem acontecimentos registados`,
+    swCaption: (n, lanes, span, assign) => `${n} acontecimentos em ${lanes} faixas, ${span} · ${assign} atribuições a faixas, porque um acontecimento pode pertencer a mais de uma narrativa. As lacunas são mostradas como cortes explícitos, nunca comprimidas.`,
+    swUntaggedNote: (n) => `${n} acontecimento${n === 1 ? ' datado não tem' : 's datados não têm'} ainda qualquer faixa e por isso não ${n === 1 ? 'aparece' : 'aparecem'} aqui.`,
     flagTitle: 'Data ainda não verificada com uma fonte primária',
     factFlagTitle: 'Ainda não verificado com uma fonte primária',
     footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
@@ -865,6 +892,57 @@ ${captionItems}
  * Absent key = '' = byte-identical page. Same contract as the other renderers.
  * ------------------------------------------------------------------------- */
 
+/** Decade of a year, as the bucket key both time renderers use. */
+function decadeBucket(year) {
+  return Math.floor(year / 10) * 10;
+}
+
+/**
+ * The shared COLUMN MODEL for every decade-based figure: which decades get a
+ * column, and where a run of empty ones collapses into an explicit labelled
+ * break. Extracted so the spine and the swimlanes cannot disagree about a gap —
+ * two figures on one page showing the same span differently would be a defect,
+ * and perennialism's 380-year hole is exactly where they would diverge.
+ *
+ * `presentDecades` is a Set of decades that have at least one event.
+ * Returns [{ type: 'decade', decade } | { type: 'break', count, from, to }].
+ */
+function decadeColumns(presentDecades, collapseAfter) {
+  const present = [...presentDecades].sort((a, b) => a - b);
+  if (present.length === 0) return [];
+  const first = present[0];
+  const last = present[present.length - 1];
+  const has = new Set(present);
+
+  const cells = [];
+  let run = [];
+  const flushRun = () => {
+    if (run.length === 0) return;
+    // A run shorter than the threshold is drawn as real empty columns, so
+    // small gaps keep their true width; only long runs collapse.
+    if (run.length < collapseAfter) {
+      for (const d of run) cells.push({ type: 'decade', decade: d });
+    } else {
+      cells.push({ type: 'break', count: run.length, from: run[0], to: run[run.length - 1] + 9 });
+    }
+    run = [];
+  };
+  for (let d = first; d <= last; d += 10) {
+    if (!has.has(d)) { run.push(d); continue; }
+    flushRun();
+    cells.push({ type: 'decade', decade: d });
+  }
+  flushRun();
+  return cells;
+}
+
+/** Normalize a `collapseAfter` option (consecutive empty decades before a break). */
+function collapseAfterOf(cfg) {
+  return cfg && Number.isFinite(cfg.collapseAfter) && cfg.collapseAfter > 0
+    ? Math.floor(cfg.collapseAfter)
+    : 2;
+}
+
 /**
  * Pure layout: bucket events by decade, collapse empty runs into breaks.
  * Returns null when there is nothing to draw (renderChronologySpine then '').
@@ -874,11 +952,9 @@ function layoutChronologySpine(spine, events) {
   const withYear = (events || []).filter((e) => Number.isFinite(e.year));
   if (withYear.length === 0) return null;
 
-  const collapseAfter = Number.isFinite(spine.collapseAfter) && spine.collapseAfter > 0
-    ? Math.floor(spine.collapseAfter)
-    : 2;
+  const collapseAfter = collapseAfterOf(spine);
 
-  const dec = (y) => Math.floor(y / 10) * 10;
+  const dec = decadeBucket;
   const counts = new Map();
   for (const e of withYear) {
     const d = dec(e.year);
@@ -888,35 +964,18 @@ function layoutChronologySpine(spine, events) {
     counts.set(d, c);
   }
 
-  const first = Math.min(...withYear.map((e) => dec(e.year)));
-  const last = Math.max(...withYear.map((e) => dec(e.year)));
   const max = Math.max(...[...counts.values()].map((c) => c.total));
 
-  const cells = [];
-  let run = [];
-  const flushRun = () => {
-    if (run.length === 0) return;
-    // A run shorter than the threshold is drawn as real empty columns, so
-    // small gaps keep their true width; only long runs collapse.
-    if (run.length < collapseAfter) {
-      for (const d of run) cells.push({ type: 'decade', decade: d, total: 0, unverified: 0, pct: 0, uPct: 0 });
-    } else {
-      cells.push({ type: 'break', count: run.length, from: run[0], to: run[run.length - 1] + 9 });
-    }
-    run = [];
-  };
-
-  for (let d = first; d <= last; d += 10) {
-    const c = counts.get(d);
-    if (!c) { run.push(d); continue; }
-    flushRun();
-    cells.push({
-      type: 'decade', decade: d, total: c.total, unverified: c.unverified,
-      pct: Math.round((c.total / max) * 1000) / 10,
-      uPct: Math.round((c.unverified / max) * 1000) / 10,
-    });
-  }
-  flushRun();
+  // Shared column model, so this figure and the swimlanes agree about gaps.
+  const cells = decadeColumns(counts.keys(), collapseAfter).map((col) => {
+    if (col.type === 'break') return col;
+    const c = counts.get(col.decade) || { total: 0, unverified: 0 };
+    return {
+      type: 'decade', decade: col.decade, total: c.total, unverified: c.unverified,
+      pct: max ? Math.round((c.total / max) * 1000) / 10 : 0,
+      uPct: max ? Math.round((c.unverified / max) * 1000) / 10 : 0,
+    };
+  });
 
   const years = withYear.map((e) => e.year);
   return {
@@ -1013,6 +1072,162 @@ ${cells}
  * Requires the vendored gazetteer data/places.json (scripts/sync-places.js)
  * and the basemap src/world-land.json. Absent key = '' = byte-identical page.
  * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Swimlanes — the thread-lane figure (core#23).
+ *
+ * One row per declared lane, one column per decade, each cell the number of
+ * that lane's events in that decade. It is rendered as a real <table> because
+ * that is what the data is: a categorical value over time, with row and column
+ * headers. The table IS the accessible baseline and the print form — the
+ * colour is decoration layered on a printed number, never the encoding.
+ *
+ * Five properties are deliberate and must survive any redesign:
+ *
+ * 1. THE EDITORIAL NOTE RENDERS WITH THE FIGURE, always. `meta.threads.note`
+ *    is the visible statement that the lanes are a reading and not a neutral
+ *    index; a lane display without it would assert exactly what the taxonomy
+ *    is careful not to claim (core#23, sourcing-rules).
+ * 2. EACH LANE'S GROUNDING IS ON THE PAGE. Every lane's `basis` renders below
+ *    the figure with its citations — the reasoning is published, not buried in
+ *    the data file or in a tooltip nobody opens.
+ * 3. LANE LABELS RENDER VERBATIM. A label may carry an attribution that is
+ *    load-bearing ("Antecedents (attributed, not adopted)"); truncating or
+ *    prettifying it would destroy the hedge.
+ * 4. GAPS ARE EXPLICIT, and identical to the spine's — both use
+ *    decadeColumns(), so one page cannot show the same span two ways.
+ * 5. UNVERIFIED DATES STAY VISIBLY UNVERIFIED: a cell states how many of its
+ *    events carry `dateVerified: false`, in text and with a hatch.
+ *
+ * Driven by `meta.threads` (the taxonomy) + `events[].threads`. Declaring a
+ * taxonomy is what turns the figure on: a classification the site keeps but
+ * never shows would be latent editorialising. Absent key = '' = byte-identical.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Pure layout: lanes × decade columns, with per-cell and per-lane totals.
+ * Returns null when there is nothing to draw (renderSwimlanes then '').
+ */
+function layoutSwimlanes(threads, events) {
+  if (!threads || !Array.isArray(threads.lanes) || threads.lanes.length === 0) return null;
+  const withYear = (events || []).filter((e) => Number.isFinite(e.year));
+  if (withYear.length === 0) return null;
+
+  const tagged = withYear.filter((e) => Array.isArray(e.threads) && e.threads.length > 0);
+  if (tagged.length === 0) return null;
+
+  const collapseAfter = collapseAfterOf(threads);
+  const present = new Set(tagged.map((e) => decadeBucket(e.year)));
+  const columns = decadeColumns(present, collapseAfter);
+
+  let maxCell = 0;
+  const lanes = threads.lanes.map((lane) => {
+    const mine = tagged.filter((e) => e.threads.includes(lane.id));
+    const cells = columns.map((col) => {
+      if (col.type === 'break') return col;
+      const inDecade = mine.filter((e) => decadeBucket(e.year) === col.decade);
+      const unverified = inDecade.filter((e) => e.dateVerified === false).length;
+      if (inDecade.length > maxCell) maxCell = inDecade.length;
+      return { type: 'decade', decade: col.decade, total: inDecade.length, unverified };
+    });
+    const years = mine.map((e) => e.year);
+    return {
+      id: lane.id,
+      label: lane.label,
+      basis: lane.basis,
+      sources: lane.sources,
+      cells,
+      total: mine.length,
+      unverified: mine.filter((e) => e.dateVerified === false).length,
+      span: years.length ? `${Math.min(...years)}–${Math.max(...years)}` : null,
+    };
+  });
+
+  const years = tagged.map((e) => e.year);
+  return {
+    lanes,
+    columns,
+    maxCell,
+    span: `${Math.min(...years)}–${Math.max(...years)}`,
+    taggedEvents: tagged.length,
+    // Events with a year but no lane: reported, never silently absent.
+    untagged: withYear.length - tagged.length,
+    // An event in two lanes is counted in both, so the column sums exceed the
+    // event count. Stated in the caption rather than hidden.
+    laneAssignments: lanes.reduce((n, l) => n + l.total, 0),
+  };
+}
+
+/** Render the swimlanes figure, or '' when the data declares no taxonomy. */
+function renderSwimlanes(threads, events, refNumById, ui) {
+  const layout = layoutSwimlanes(threads, events);
+  if (!layout) return '';
+  const t = ui || UI.en;
+
+  const headCells = layout.columns
+    .map((col) => (col.type === 'break'
+      ? `<th scope="col" class="sw-break" title="${esc(t.spineBreakLabel(col.count, col.from, col.to))}"><span aria-hidden="true">⸺</span><span class="visually-hidden">${esc(t.spineBreakLabel(col.count, col.from, col.to))}</span></th>`
+      : `<th scope="col">${esc(`${col.decade}s`)}</th>`))
+    .join('');
+
+  const rows = layout.lanes
+    .map((lane) => {
+      const cells = lane.cells
+        .map((c) => {
+          if (c.type === 'break') return '<td class="sw-break"></td>';
+          if (c.total === 0) {
+            return `<td class="sw-cell sw-zero"><span class="visually-hidden">${esc(t.swEmptyCell(lane.label, `${c.decade}s`))}</span></td>`;
+          }
+          // Intensity is a redundant cue on top of the printed number.
+          const step = layout.maxCell > 1 ? Math.ceil((c.total / layout.maxCell) * 4) : 4;
+          const label = t.swCellLabel(lane.label, `${c.decade}s`, c.total, c.unverified);
+          const hatch = c.unverified > 0 ? ' sw-has-unverified' : '';
+          return `<td class="sw-cell sw-i${step}${hatch}"><a href="#decade-${c.decade}" title="${esc(label)}">${c.total}${c.unverified > 0 ? `<span class="sw-flag" aria-hidden="true">?</span>` : ''}<span class="visually-hidden">${esc(label)}</span></a></td>`;
+        })
+        .join('');
+      return `          <tr>
+            <th scope="row">${esc(lane.label)}</th>
+${cells ? `            ${cells}\n` : ''}            <td class="sw-total">${lane.total}</td>
+          </tr>`;
+    })
+    .join('\n');
+
+  const bases = layout.lanes
+    .map((lane) => `            <li><strong>${esc(lane.label)}</strong> — ${renderText(lane.basis || '')}${renderCites(lane.sources, refNumById)}</li>`)
+    .join('\n');
+
+  const heading = threads.heading || t.swHeading;
+  const intro = threads.intro || t.swIntro;
+  const captionParts = [t.swCaption(layout.taggedEvents, layout.lanes.length, layout.span, layout.laneAssignments)]
+    .concat(layout.untagged ? [t.swUntaggedNote(layout.untagged)] : []);
+
+  return `    <section id="threads" class="viz">
+      <h2>${esc(heading)}</h2>
+      <p class="section-intro">${esc(intro)}</p>
+      <p class="notice notice-attribution">${esc(threads.note)}</p>
+      <figure class="swimlanes">
+        <div class="viz-scroll">
+        <table class="sw-grid">
+          <thead>
+            <tr><th scope="col">${esc(t.swLaneHeader)}</th>${headCells}<th scope="col" class="sw-total">${esc(t.swTotalHeader)}</th></tr>
+          </thead>
+          <tbody>
+${rows}
+          </tbody>
+        </table>
+        </div>
+        <figcaption>${captionParts.map(esc).join(' ')}</figcaption>
+      </figure>
+      <details class="sw-bases" open>
+        <summary>${esc(t.swBasesHeading)}</summary>
+        <ol class="branch-notes">
+${bases}
+        </ol>
+      </details>
+    </section>
+
+`;
+}
 
 const PLACE_COMPOUND_SEP = ' / ';
 
@@ -1327,6 +1542,8 @@ function renderPage(data, archives, opts = {}) {
   const numbersChart = data.numbersChart;
   const chronologySpine = data.chronologySpine;
   const placesMap = data.placesMap;
+  // The lane taxonomy lives in meta; declaring one turns the figure on.
+  const threads = meta && meta.threads;
 
   // Stable citation numbering: references keep their file order.
   const refNumById = new Map(references.map((r, i) => [r.id, i + 1]));
@@ -1338,6 +1555,7 @@ function renderPage(data, archives, opts = {}) {
   const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
   const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
+  const swimlanesHtml = renderSwimlanes(threads, events, refNumById, ui);
 
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
 
@@ -1395,7 +1613,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -1427,7 +1645,7 @@ ${eventRows}
       </div>
     </section>
 
-${placesMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
+${swimlanesHtml}${placesMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
@@ -1507,7 +1725,8 @@ module.exports = {
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   layoutNumbersChart, renderNumbersChart,
-  layoutChronologySpine, renderChronologySpine,
+  layoutChronologySpine, renderChronologySpine, decadeBucket, decadeColumns, collapseAfterOf,
+  layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
