@@ -10,6 +10,7 @@ const path = require('node:path');
 const {
   renderPage, renderRootStub, renderSitemap, renderRobots,
   siteBase, localizeData, loadDict, LOCALES, ROUTES, esc,
+  loadPlaces, loadWorld,
 } = require('../build.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -116,8 +117,12 @@ test('committed docs/ is the current render (no drift)', () => {
   assert.equal(fs.readFileSync(path.join(docs, 'index.html'), 'utf8'), renderRootStub(base), 'root stub drift — run node build.js');
   assert.equal(fs.readFileSync(path.join(docs, 'sitemap.xml'), 'utf8'), renderSitemap(base, ROUTES), 'sitemap drift — run node build.js');
   assert.equal(fs.readFileSync(path.join(docs, 'robots.txt'), 'utf8'), renderRobots(base), 'robots drift — run node build.js');
+  // Pass the same gazetteer and basemap main() does, or a dataset that
+  // declares placesMap renders map-less here and reports phantom drift.
+  const places = loadPlaces();
+  const world = loadWorld();
   for (const lang of LOCALES) {
     const f = path.join(docs, lang, 'index.html');
-    assert.equal(fs.readFileSync(f, 'utf8'), renderPage(localizeData(data, loadDict(lang), lang), archives(), { lang, base, route: '' }), `docs/${lang}/ drift — run node build.js`);
+    assert.equal(fs.readFileSync(f, 'utf8'), renderPage(localizeData(data, loadDict(lang), lang), archives(), { lang, base, route: '', places, world }), `docs/${lang}/ drift — run node build.js`);
   }
 });

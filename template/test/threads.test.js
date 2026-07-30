@@ -33,6 +33,10 @@ function runValidator(mutate) {
   fs.copyFileSync(path.join(ROOT, 'build.js'), path.join(dir, 'build.js'));
   fs.copyFileSync(path.join(ROOT, 'scripts', 'validate-data.js'), path.join(dir, 'scripts', 'validate-data.js'));
   fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
+  // A base dataset that declares placesMap needs the gazetteer beside it, or
+  // the validator fails on the map rather than on the threads under test.
+  const places = path.join(ROOT, 'data', 'places.json');
+  if (fs.existsSync(places)) fs.copyFileSync(places, path.join(dir, 'data', 'places.json'));
   const d = JSON.parse(JSON.stringify(base));
   mutate(d);
   fs.writeFileSync(path.join(dir, 'data', 'chronology.json'), JSON.stringify(d));
