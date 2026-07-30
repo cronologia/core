@@ -32,6 +32,19 @@
       ]
     },
     {
+      "id": "arlington-va",
+      "name": "Arlington, Virginia, USA",
+      "kind": "city",
+      "lat": 38.8903961,
+      "lon": -77.0841585,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Arlington, Arlington County, Virginia, 22209, United States (retrieved 2026-07-26)",
+      "variants": [
+        "Diocese of Arlington, Virginia, USA"
+      ],
+      "note": "The dataset string names an ecclesiastical JURISDICTION, not a settlement. Pinned at the see city. A diocese covers a territory, so this point marks the see and must not be read as the extent of the diocese."
+    },
+    {
       "id": "astana",
       "name": "Astana, Kazakhstan",
       "kind": "city",
@@ -51,6 +64,16 @@
       "lon": 7.5878261,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Basel, Basel-Stadt, Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "betteshanger",
+      "name": "Betteshanger, Kent, England",
+      "kind": "hamlet",
+      "lat": 51.2278708,
+      "lon": 1.3120444,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Betteshanger, Northbourne, Dover, Kent, England, CT14 0NN, United Kingdom (retrieved 2026-07-30)",
+      "note": "The hamlet lies in the civil parish of Northbourne, from which Lord Northbourne's title is taken; the 1939 Betteshanger Summer School was held at his farm here."
     },
     {
       "id": "bloomington-in",
@@ -76,6 +99,15 @@
       "variants": [
         "Boston, USA"
       ]
+    },
+    {
+      "id": "brazil",
+      "name": "Brazil",
+      "kind": "country",
+      "lat": -10.3333333,
+      "lon": -53.2,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Brasil (retrieved 2026-07-26)"
     },
     {
       "id": "buenos-aires",
@@ -165,6 +197,18 @@
       "source": "OpenStreetMap Nominatim — Cork, County Cork, Munster, Ireland (retrieved 2026-07-26)"
     },
     {
+      "id": "econe",
+      "name": "Écône, Valais, Switzerland",
+      "kind": "hamlet",
+      "lat": 46.1569124,
+      "lon": 7.2050144,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Écône, Saxon, Martigny, Bas-Valais, Valais, Schweiz (retrieved 2026-07-26)",
+      "variants": [
+        "Écône"
+      ]
+    },
+    {
       "id": "edinburgh",
       "name": "Edinburgh, Scotland",
       "kind": "city",
@@ -183,6 +227,15 @@
       "source": "OpenStreetMap Nominatim — El Palmar de Troya, Sevilla, Andalucía, España (retrieved 2026-07-26)"
     },
     {
+      "id": "england",
+      "name": "England",
+      "kind": "region",
+      "lat": 52.5310214,
+      "lon": -1.2649062,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — England, United Kingdom (retrieved 2026-07-26)"
+    },
+    {
       "id": "fortaleza",
       "name": "Fortaleza, Brazil",
       "kind": "city",
@@ -190,6 +243,15 @@
       "lon": -38.5280359,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Fortaleza, Ceará, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "france",
+      "name": "France",
+      "kind": "country",
+      "lat": 46.603354,
+      "lon": 1.8883335,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — France (retrieved 2026-07-26)"
     },
     {
       "id": "fribourg",
@@ -220,6 +282,25 @@
       "lon": -79.9695004,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Gibsonia, Richland Township, Allegheny County, Pennsylvania, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "hauterive-abbey",
+      "name": "Hauterive Abbey, Switzerland",
+      "kind": "site",
+      "lat": 46.7644648,
+      "lon": 7.1176974,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Abbaye d'Hauterive, Chemin de l'Abbaye, Posieux, Hauterive, District de la Sarine, Fribourg, Schweiz (retrieved 2026-07-26)",
+      "note": "The abbey itself, in Posieux (Fribourg canton) — not the village of Hauterive. Found only by a targeted query; the bare dataset string returns no candidate."
+    },
+    {
+      "id": "italy",
+      "name": "Italy",
+      "kind": "country",
+      "lat": 42.6384261,
+      "lon": 12.674297,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Italia (retrieved 2026-07-26)"
     },
     {
       "id": "la-reja",
@@ -285,18 +366,6 @@
       "source": "OpenStreetMap Nominatim — Lucca, Toscana, Italia (retrieved 2026-07-26)"
     },
     {
-      "id": "mechelen",
-      "name": "Mechelen (Malines), Belgium",
-      "kind": "city",
-      "lat": 51.0281381,
-      "lon": 4.4803453,
-      "precision": "settlement",
-      "source": "OpenStreetMap Nominatim — Mechelen, Antwerpen, Vlaanderen, België (retrieved 2026-07-26)",
-      "variants": [
-        "Malines, Belgium"
-      ]
-    },
-    {
       "id": "margate",
       "name": "Margate, England",
       "kind": "town",
@@ -313,6 +382,18 @@
       "lon": 7.0727354,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Martigny, Bas-Valais, Valais, Schweiz (retrieved 2026-07-26)"
+    },
+    {
+      "id": "mechelen",
+      "name": "Mechelen (Malines), Belgium",
+      "kind": "city",
+      "lat": 51.0281381,
+      "lon": 4.4803453,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Mechelen, Antwerpen, Vlaanderen, België (retrieved 2026-07-26)",
+      "variants": [
+        "Malines, Belgium"
+      ]
     },
     {
       "id": "menzingen",
@@ -334,6 +415,15 @@
       "lon": 9.111351,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Milano, Lombardia, Italia (retrieved 2026-07-26)"
+    },
+    {
+      "id": "morocco",
+      "name": "Morocco",
+      "kind": "country",
+      "lat": 31.1728205,
+      "lon": -7.3362482,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Maroc (retrieved 2026-07-26)"
     },
     {
       "id": "moscow",
@@ -375,6 +465,44 @@
       ]
     },
     {
+      "id": "non-geo-international",
+      "name": "International",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A scope, not a location. Renders no pin."
+    },
+    {
+      "id": "non-geo-online",
+      "name": "Online",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A medium, not a location. Renders no pin.",
+      "variants": [
+        "online (traditionalist-Catholic media)"
+      ]
+    },
+    {
+      "id": "non-geo-survey-latam",
+      "name": "Latin America (survey)",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A survey population spanning many countries; a single pin would misrepresent it."
+    },
+    {
+      "id": "non-geo-survey-usa",
+      "name": "USA (survey, 10 countries)",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A survey population spanning ten countries; a single pin would misrepresent it."
+    },
+    {
+      "id": "non-geo-worldwide",
+      "name": "Worldwide",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A scope, not a location. Renders no pin."
+    },
+    {
       "id": "nova-friburgo",
       "name": "Nova Friburgo, Brazil",
       "kind": "city",
@@ -403,6 +531,15 @@
       "variants": [
         "Paris"
       ]
+    },
+    {
+      "id": "poland",
+      "name": "Poland",
+      "kind": "country",
+      "lat": 52.215933,
+      "lon": 19.134422,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Polska (retrieved 2026-07-26)"
     },
     {
       "id": "recife",
@@ -447,15 +584,6 @@
       ]
     },
     {
-      "id": "south-bend",
-      "name": "South Bend, Indiana, USA",
-      "kind": "city",
-      "lat": 41.6833813,
-      "lon": -86.2500066,
-      "precision": "settlement",
-      "source": "OpenStreetMap Nominatim — South Bend, Saint Joseph County, Indiana, United States (retrieved 2026-07-26)"
-    },
-    {
       "id": "sao-fidelis",
       "name": "São Fidélis, Brazil",
       "kind": "town",
@@ -472,6 +600,24 @@
       "lon": -46.6333824,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — São Paulo, Região Sudeste, Brasil (retrieved 2026-07-26)"
+    },
+    {
+      "id": "south-bend",
+      "name": "South Bend, Indiana, USA",
+      "kind": "city",
+      "lat": 41.6833813,
+      "lon": -86.2500066,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — South Bend, Saint Joseph County, Indiana, United States (retrieved 2026-07-26)"
+    },
+    {
+      "id": "switzerland",
+      "name": "Switzerland",
+      "kind": "country",
+      "lat": 46.7985624,
+      "lon": 8.2319736,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — Schweiz (retrieved 2026-07-26)"
     },
     {
       "id": "tehran",
@@ -496,6 +642,15 @@
       "variants": [
         "Topeka"
       ]
+    },
+    {
+      "id": "united-states",
+      "name": "United States",
+      "kind": "country",
+      "lat": 39.7837304,
+      "lon": -100.445882,
+      "precision": "country-centroid",
+      "source": "OpenStreetMap Nominatim — United States (retrieved 2026-07-26)"
     },
     {
       "id": "valinhos",
@@ -542,151 +697,6 @@
         "Washington",
         "Washington DC"
       ]
-    },
-    {
-      "id": "econe",
-      "name": "Écône, Valais, Switzerland",
-      "kind": "hamlet",
-      "lat": 46.1569124,
-      "lon": 7.2050144,
-      "precision": "settlement",
-      "source": "OpenStreetMap Nominatim — Écône, Saxon, Martigny, Bas-Valais, Valais, Schweiz (retrieved 2026-07-26)",
-      "variants": [
-        "Écône"
-      ]
-    },
-    {
-      "id": "brazil",
-      "name": "Brazil",
-      "kind": "country",
-      "lat": -10.3333333,
-      "lon": -53.2,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — Brasil (retrieved 2026-07-26)"
-    },
-    {
-      "id": "england",
-      "name": "England",
-      "kind": "region",
-      "lat": 52.5310214,
-      "lon": -1.2649062,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — England, United Kingdom (retrieved 2026-07-26)"
-    },
-    {
-      "id": "france",
-      "name": "France",
-      "kind": "country",
-      "lat": 46.603354,
-      "lon": 1.8883335,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — France (retrieved 2026-07-26)"
-    },
-    {
-      "id": "italy",
-      "name": "Italy",
-      "kind": "country",
-      "lat": 42.6384261,
-      "lon": 12.674297,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — Italia (retrieved 2026-07-26)"
-    },
-    {
-      "id": "morocco",
-      "name": "Morocco",
-      "kind": "country",
-      "lat": 31.1728205,
-      "lon": -7.3362482,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — Maroc (retrieved 2026-07-26)"
-    },
-    {
-      "id": "poland",
-      "name": "Poland",
-      "kind": "country",
-      "lat": 52.215933,
-      "lon": 19.134422,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — Polska (retrieved 2026-07-26)"
-    },
-    {
-      "id": "switzerland",
-      "name": "Switzerland",
-      "kind": "country",
-      "lat": 46.7985624,
-      "lon": 8.2319736,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — Schweiz (retrieved 2026-07-26)"
-    },
-    {
-      "id": "united-states",
-      "name": "United States",
-      "kind": "country",
-      "lat": 39.7837304,
-      "lon": -100.445882,
-      "precision": "country-centroid",
-      "source": "OpenStreetMap Nominatim — United States (retrieved 2026-07-26)"
-    },
-    {
-      "id": "non-geo-worldwide",
-      "name": "Worldwide",
-      "kind": "non-geographic",
-      "precision": "none",
-      "note": "A scope, not a location. Renders no pin."
-    },
-    {
-      "id": "non-geo-international",
-      "name": "International",
-      "kind": "non-geographic",
-      "precision": "none",
-      "note": "A scope, not a location. Renders no pin."
-    },
-    {
-      "id": "non-geo-online",
-      "name": "Online",
-      "kind": "non-geographic",
-      "precision": "none",
-      "note": "A medium, not a location. Renders no pin.",
-      "variants": [
-        "online (traditionalist-Catholic media)"
-      ]
-    },
-    {
-      "id": "non-geo-survey-latam",
-      "name": "Latin America (survey)",
-      "kind": "non-geographic",
-      "precision": "none",
-      "note": "A survey population spanning many countries; a single pin would misrepresent it."
-    },
-    {
-      "id": "non-geo-survey-usa",
-      "name": "USA (survey, 10 countries)",
-      "kind": "non-geographic",
-      "precision": "none",
-      "note": "A survey population spanning ten countries; a single pin would misrepresent it."
-    },
-    {
-      "id": "hauterive-abbey",
-      "name": "Hauterive Abbey, Switzerland",
-      "kind": "site",
-      "lat": 46.7644648,
-      "lon": 7.1176974,
-      "precision": "settlement",
-      "source": "OpenStreetMap Nominatim — Abbaye d'Hauterive, Chemin de l'Abbaye, Posieux, Hauterive, District de la Sarine, Fribourg, Schweiz (retrieved 2026-07-26)",
-      "note": "The abbey itself, in Posieux (Fribourg canton) — not the village of Hauterive. Found only by a targeted query; the bare dataset string returns no candidate."
-    },
-    {
-      "id": "arlington-va",
-      "name": "Arlington, Virginia, USA",
-      "kind": "city",
-      "lat": 38.8903961,
-      "lon": -77.0841585,
-      "precision": "settlement",
-      "source": "OpenStreetMap Nominatim — Arlington, Arlington County, Virginia, 22209, United States (retrieved 2026-07-26)",
-      "variants": [
-        "Diocese of Arlington, Virginia, USA"
-      ],
-      "note": "The dataset string names an ecclesiastical JURISDICTION, not a settlement. Pinned at the see city. A diocese covers a territory, so this point marks the see and must not be read as the extent of the diocese."
     }
   ],
   "unresolved": []
