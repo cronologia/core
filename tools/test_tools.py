@@ -1509,6 +1509,40 @@ class TestCofDates(unittest.TestCase):
                          (221, "2013-09-21"))
         rows = self.cd.compare_sources(docs, {220: "2012-09-14"})
         self.assertNotIn("filenames", rows[0])
+        self.assertNotIn("resumos", rows[0])
+
+    # --- the contemporaneous Resumos witness, and the cadence check --------
+    def test_resumos_witness_is_reported_without_changing_the_verdict(self):
+        # aula 12: header duplicates aula 11's date; the Resumos back the
+        # index. The sequence still cannot decide, and must not pretend to.
+        docs = self.docs((11, "2009-06-20"), (12, "2009-06-20"),
+                         (13, "2009-07-04"))
+        rows = self.cd.compare_sources(docs, {12: "2009-06-27"},
+                                       resumos={12: "2009-06-27"})
+        self.assertEqual(rows[0]["resumos"], "2009-06-27")
+        self.assertEqual(rows[0]["resumosMatches"], "index")
+        self.assertEqual(rows[0]["sequenceSupports"], "undecided")
+
+    def test_off_cadence_flags_a_non_saturday(self):
+        self.assertTrue(self.cd.off_cadence("2009-08-18"))    # a Tuesday
+        self.assertFalse(self.cd.off_cadence("2009-08-08"))   # a Saturday
+        self.assertEqual(self.cd.weekday_of("2009-08-18"), "Tue")
+
+    def test_every_candidate_off_cadence_is_reported_as_such(self):
+        # aula 89: header Tuesday, index Wednesday. Neither is a Saturday, so
+        # the row must say so rather than implying one of them is right.
+        docs = self.docs((88, "2010-12-18"), (89, "2011-11-22"),
+                         (90, "2011-01-15"))
+        rows = self.cd.compare_sources(docs, {89: "2010-12-22"})
+        self.assertEqual(rows[0]["onCadence"], [])
+
+    def test_on_cadence_names_which_sources_fall_on_the_course_weekday(self):
+        docs = self.docs((17, "2009-08-01"), (18, "2009-08-18"),
+                         (19, "2009-08-15"))
+        rows = self.cd.compare_sources(docs, {18: "2009-08-08"},
+                                       resumos={18: "2009-08-08"})
+        self.assertEqual(sorted(rows[0]["onCadence"]), ["index", "resumos"])
+        self.assertEqual(rows[0]["weekday"]["header"], "Tue")
 
 
 
