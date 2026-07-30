@@ -1,0 +1,47 @@
+name: CI
+
+# core is the repo every project copies from — and until this workflow, the
+# only repo in the family with no gate at all. Two independent template
+# changes merged back-to-back on 2026-07-30 were verified in combination only
+# by a manual local run; this makes that check automatic.
+#
+# Gates every push/PR with the same three commands the adopting repos run
+# (validate + test + build, against the shipped example dataset) plus the
+# agent-tooling test suite. Network-free by design: the build never fetches,
+# and the tools tests are hermetic (they stub the sibling-repo scans).
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Template — validate the example dataset
+        working-directory: template
+        run: |
+          cp data/chronology.example.json data/chronology.json
+          node scripts/validate-data.js
+
+      - name: Template — test suite
+        working-directory: template
+        run: node --test
+
+      - name: Template — build
+        working-directory: template
+        run: node build.js
+
+      - name: Tools — test suite
+        run: python3 tools/test_tools.py
