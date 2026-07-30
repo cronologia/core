@@ -20,8 +20,10 @@ const path = require('path');
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'chronology.json');
 const ARCHIVES_FILE = path.join(ROOT, 'data', 'archives.json');
+const PLACES_FILE = path.join(ROOT, 'data', 'places.json');
 const I18N_DIR = path.join(ROOT, 'data', 'i18n');
 const SRC_DIR = path.join(ROOT, 'src');
+const WORLD_FILE = path.join(SRC_DIR, 'world-land.json');
 const OUT_DIR = path.join(ROOT, 'docs');
 
 /* ---------------------------------------------------------------------------
@@ -70,6 +72,21 @@ const UI = {
     spineBreakLabel: (n, from_, to) => `${n} decades with no recorded events (${from_}–${to})`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} event${n === 1 ? '' : 's'}${u ? `, ${u} with an unverified date` : ''}`,
     spineCaption: (n, span, u) => `${n} events, ${span}${u ? ` · ${u} with a date not yet verified against a primary source` : ''}. Gaps are shown as explicit breaks, never compressed away.`,
+    mapHeading: 'Events on the map', mapNav: 'Map',
+    mapIntro: 'Every recorded event that names a place, placed at that place. Marker area grows with the number of events there; an event naming more than one place appears at each. Select a marker to jump to its first decade in the chronology.',
+    mapLegendSize: 'marker area = number of recorded events',
+    mapLegendApprox: 'hollow marker = country-level location (approximate centre, not a specific site)',
+    mapApproxBadge: 'country-level, approximate',
+    mapLegendUnverified: 'dashed marker = the first date recorded there is not yet verified against a primary source',
+    mapCredit: 'Basemap: Natural Earth (public domain).',
+    mapPinLabel: (name, n, y, u) => `${name}: ${n} event${n === 1 ? '' : 's'}, first recorded ${y}${u ? ' (date not yet verified)' : ''}`,
+    mapListHeading: 'Mapped places',
+    mapCaption: (nEv, nPl, span) => `${nEv} events at ${nPl} mapped places, first recorded ${span}.`,
+    mapNonGeoNote: (n) => `${n} event${n === 1 ? ' has' : 's have'} a non-geographic scope (e.g. worldwide) and ${n === 1 ? 'is' : 'are'} deliberately not mapped.`,
+    mapUnresolvedNote: (n) => `${n} event${n === 1 ? '' : 's'} name${n === 1 ? 's' : ''} a place not yet in the gazetteer and ${n === 1 ? 'is' : 'are'} not mapped.`,
+    mapSliderLabel: 'Show places first recorded up to',
+    mapPlay: '▶ Play', mapPause: '⏸ Pause',
+    mapShowing: (y, shown, total) => `Showing places first recorded up to ${y}: ${shown} of ${total}.`,
     flagTitle: 'Date not yet verified against a primary source',
     factFlagTitle: 'Not yet verified against a primary source',
     footer: 'Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.\n      Part of the Cronologia project family.',
@@ -90,6 +107,21 @@ const UI = {
     spineBreakLabel: (n, from_, to) => `${n} décadas sin acontecimientos registrados (${from_}–${to})`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimiento${n === 1 ? '' : 's'}${u ? `, ${u} con fecha no verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimientos, ${span}${u ? ` · ${u} con fecha aún no verificada con una fuente primaria` : ''}. Los vacíos se muestran como cortes explícitos, nunca comprimidos.`,
+    mapHeading: 'Acontecimientos en el mapa', mapNav: 'Mapa',
+    mapIntro: 'Cada acontecimiento registrado que nombra un lugar, situado en ese lugar. El área del marcador crece con el número de acontecimientos allí; un acontecimiento que nombra más de un lugar aparece en cada uno. Seleccione un marcador para ir a su primera década en la cronología.',
+    mapLegendSize: 'área del marcador = número de acontecimientos registrados',
+    mapLegendApprox: 'marcador hueco = ubicación a nivel de país (centro aproximado, no un sitio concreto)',
+    mapApproxBadge: 'nivel de país, aproximado',
+    mapLegendUnverified: 'marcador discontinuo = la primera fecha registrada allí aún no está verificada con una fuente primaria',
+    mapCredit: 'Mapa base: Natural Earth (dominio público).',
+    mapPinLabel: (name, n, y, u) => `${name}: ${n} acontecimiento${n === 1 ? '' : 's'}, primero registrado en ${y}${u ? ' (fecha aún no verificada)' : ''}`,
+    mapListHeading: 'Lugares en el mapa',
+    mapCaption: (nEv, nPl, span) => `${nEv} acontecimientos en ${nPl} lugares del mapa, primeros registros ${span}.`,
+    mapNonGeoNote: (n) => `${n} acontecimiento${n === 1 ? ' tiene' : 's tienen'} un alcance no geográfico (p. ej. mundial) y deliberadamente no se ${n === 1 ? 'mapea' : 'mapean'}.`,
+    mapUnresolvedNote: (n) => `${n} acontecimiento${n === 1 ? ' nombra' : 's nombran'} un lugar que aún no está en el gacetero y no se ${n === 1 ? 'mapea' : 'mapean'}.`,
+    mapSliderLabel: 'Mostrar lugares registrados por primera vez hasta',
+    mapPlay: '▶ Reproducir', mapPause: '⏸ Pausa',
+    mapShowing: (y, shown, total) => `Mostrando lugares registrados por primera vez hasta ${y}: ${shown} de ${total}.`,
     flagTitle: 'Fecha aún no verificada con una fuente primaria',
     factFlagTitle: 'Aún no verificado con una fuente primaria',
     footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
@@ -110,6 +142,21 @@ const UI = {
     spineBreakLabel: (n, from_, to) => `${n} décadas sem acontecimentos registados (${from_}–${to})`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimento${n === 1 ? '' : 's'}${u ? `, ${u} com data não verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimentos, ${span}${u ? ` · ${u} com data ainda não verificada com uma fonte primária` : ''}. As lacunas são mostradas como cortes explícitos, nunca comprimidas.`,
+    mapHeading: 'Acontecimentos no mapa', mapNav: 'Mapa',
+    mapIntro: 'Cada acontecimento registado que nomeia um lugar, situado nesse lugar. A área do marcador cresce com o número de acontecimentos ali; um acontecimento que nomeia mais de um lugar aparece em cada um. Selecione um marcador para ir à sua primeira década na cronologia.',
+    mapLegendSize: 'área do marcador = número de acontecimentos registados',
+    mapLegendApprox: 'marcador vazado = localização ao nível do país (centro aproximado, não um local específico)',
+    mapApproxBadge: 'nível de país, aproximado',
+    mapLegendUnverified: 'marcador tracejado = a primeira data registada ali ainda não foi verificada com uma fonte primária',
+    mapCredit: 'Mapa-base: Natural Earth (domínio público).',
+    mapPinLabel: (name, n, y, u) => `${name}: ${n} acontecimento${n === 1 ? '' : 's'}, primeiro registo em ${y}${u ? ' (data ainda não verificada)' : ''}`,
+    mapListHeading: 'Lugares no mapa',
+    mapCaption: (nEv, nPl, span) => `${nEv} acontecimentos em ${nPl} lugares do mapa, primeiros registos ${span}.`,
+    mapNonGeoNote: (n) => `${n} acontecimento${n === 1 ? ' tem' : 's têm'} um alcance não geográfico (p. ex. mundial) e deliberadamente não ${n === 1 ? 'é mapeado' : 'são mapeados'}.`,
+    mapUnresolvedNote: (n) => `${n} acontecimento${n === 1 ? ' nomeia' : 's nomeiam'} um lugar que ainda não está no dicionário geográfico e não ${n === 1 ? 'é mapeado' : 'são mapeados'}.`,
+    mapSliderLabel: 'Mostrar lugares registados pela primeira vez até',
+    mapPlay: '▶ Reproduzir', mapPause: '⏸ Pausar',
+    mapShowing: (y, shown, total) => `A mostrar lugares registados pela primeira vez até ${y}: ${shown} de ${total}.`,
     flagTitle: 'Data ainda não verificada com uma fonte primária',
     factFlagTitle: 'Ainda não verificado com uma fonte primária',
     footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
@@ -344,6 +391,24 @@ function loadArchives() {
     return (parsed && parsed.snapshots) || {};
   } catch {
     return {};
+  }
+}
+
+/** Vendored gazetteer (data/places.json, refreshed by scripts/sync-places.js). */
+function loadPlaces() {
+  try {
+    return JSON.parse(fs.readFileSync(PLACES_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Committed world basemap (src/world-land.json — see its _meta for provenance). */
+function loadWorld() {
+  try {
+    return JSON.parse(fs.readFileSync(WORLD_FILE, 'utf8'));
+  } catch {
+    return null;
   }
 }
 
@@ -886,6 +951,303 @@ ${cells}
 `;
 }
 
+/* ---------------------------------------------------------------------------
+ * Places map — event places as sized markers on a world basemap.
+ *
+ * The chronology table names places; only a map shows the geography — for a
+ * diffusion story (Topeka → Pittsburgh → Ann Arbor → Brazil) the geography IS
+ * the argument. Extracted per core#3 item 2; the data half is core#24's
+ * committed gazetteer (data/places.json, vendored like glossary-terms.json).
+ *
+ * Five properties are deliberate and must survive any redesign:
+ *
+ * 1. A PLACE STRING RESOLVES TO A LIST of gazetteer ids, never a single one.
+ *    "Topeka / Los Angeles, USA" is ONE event in TWO places; dropping the
+ *    second pin would misplace the origin of rcc's entire subject (core#24).
+ * 2. NON-GEOGRAPHIC SCOPES ARE NOT MAPPED, and the omission is stated in the
+ *    caption. "Worldwide" is a scope, not a place; a pin for it would invent
+ *    a location the source does not claim.
+ * 3. COUNTRY-LEVEL LOCATIONS LOOK DIFFERENT (hollow marker). A centroid pin
+ *    drawn like a settlement pin implies a precision the data does not have.
+ * 4. UNVERIFIED DATES STAY VISIBLY UNVERIFIED (dashed marker + text). The
+ *    marker's "first recorded" year is an implicit dating claim, so it is
+ *    flagged exactly like the table's `?` when that earliest date carries
+ *    `dateVerified: false`.
+ * 5. NO COLOUR-ONLY OR POINTER-ONLY ENCODING. Every marker is a focusable
+ *    link with an accessible label, and the full text list of mapped places
+ *    renders under the figure — that list, not the picture, is the baseline
+ *    (and the print form beside the cropped map).
+ *
+ * The year control (a slider that hides places first recorded after the
+ * chosen year) is progressive enhancement: the no-JS and print state is the
+ * complete map, and the controls stay hidden until the inline script enables
+ * them.
+ *
+ * Driven by the optional top-level `placesMap` key:
+ *
+ *   placesMap: {
+ *     heading?:  string   // default: locale's mapHeading
+ *     navLabel?: string   // default: locale's mapNav
+ *     note?:     string   // replaces the default intro
+ *   }
+ *
+ * Requires the vendored gazetteer data/places.json (scripts/sync-places.js)
+ * and the basemap src/world-land.json. Absent key = '' = byte-identical page.
+ * ------------------------------------------------------------------------- */
+
+const PLACE_COMPOUND_SEP = ' / ';
+
+/** Build a lookup: casefolded place name/variant -> [gazetteer ids]. */
+function placeIndex(places) {
+  const index = new Map();
+  for (const e of (places && places.places) || []) {
+    for (const v of [e.name].concat(e.variants || [])) {
+      const key = String(v).toLowerCase();
+      const bucket = index.get(key) || [];
+      if (!bucket.includes(e.id)) bucket.push(e.id);
+      index.set(key, bucket);
+    }
+  }
+  return index;
+}
+
+/**
+ * Resolve one event's place string to gazetteer ids. A compound string
+ * (" / " separated) is one event in several places and yields several ids.
+ * Commas are address structure, never a separator (same rule as
+ * core/tools/places.py — keep the two implementations in agreement).
+ */
+function resolvePlaceString(place, index) {
+  const ids = [];
+  const missing = [];
+  for (const part of String(place).split(PLACE_COMPOUND_SEP).map((s) => s.trim()).filter(Boolean)) {
+    const hit = index.get(part.toLowerCase());
+    if (hit) { for (const id of hit) if (!ids.includes(id)) ids.push(id); }
+    else missing.push(part);
+  }
+  return { ids, missing };
+}
+
+/**
+ * Pure layout: aggregate events per mapped place, crop the viewBox to the
+ * used places, and account for every event the map does NOT show (so the
+ * caption can say so instead of silently dropping it).
+ * Returns null when there is nothing to draw (renderPlacesMap then '').
+ */
+function layoutPlacesMap(pm, events, places) {
+  if (!pm) return null;
+  const entries = new Map((((places && places.places) || [])).map((e) => [e.id, e]));
+  if (entries.size === 0) return null;
+  const index = placeIndex(places);
+
+  const perPlace = new Map(); // id -> { count, firstYear, firstUnverified }
+  const unresolvedStrings = new Set();
+  let nonGeoEvents = 0;
+  let unresolvedEvents = 0;
+  let mappedEvents = 0;
+
+  const sorted = [...(events || [])]
+    .filter((e) => Number.isFinite(e.year))
+    .sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
+
+  for (const ev of sorted) {
+    if (!ev.place) continue;
+    const { ids, missing } = resolvePlaceString(ev.place, index);
+    for (const m of missing) unresolvedStrings.add(m);
+    if (missing.length > 0) unresolvedEvents += 1;
+    const geoIds = ids.filter((id) => {
+      const e = entries.get(id);
+      return e && Number.isFinite(e.lat) && Number.isFinite(e.lon);
+    });
+    if (geoIds.length === 0) {
+      // Resolved, but only to non-geographic scopes ("Worldwide"): counted,
+      // deliberately not mapped. (Fully unresolved events are counted above.)
+      if (missing.length === 0 && ids.length > 0) nonGeoEvents += 1;
+      continue;
+    }
+    mappedEvents += 1;
+    for (const id of geoIds) {
+      const cur = perPlace.get(id) || { count: 0, firstYear: Infinity, firstUnverified: false };
+      cur.count += 1;
+      if (ev.year < cur.firstYear) {
+        cur.firstYear = ev.year;
+        cur.firstUnverified = ev.dateVerified === false;
+      } else if (ev.year === cur.firstYear && ev.dateVerified === false) {
+        // Any event in the first year with an unverified date keeps the flag.
+        cur.firstUnverified = cur.firstUnverified || true;
+      }
+      perPlace.set(id, cur);
+    }
+  }
+  if (perPlace.size === 0) return null;
+
+  // Crop to the used places. Padding keeps coastline context; minimum spans
+  // stop a tight cluster from zooming past the basemap's 1:110m resolution.
+  const xs = []; const ys = [];
+  for (const id of perPlace.keys()) {
+    const e = entries.get(id);
+    xs.push(e.lon + 180);
+    ys.push(90 - e.lat);
+  }
+  const pad = 6;
+  let minX = Math.min(...xs) - pad; let maxX = Math.max(...xs) + pad;
+  let minY = Math.min(...ys) - pad; let maxY = Math.max(...ys) + pad;
+  const MIN_W = 60; const MIN_H = 30;
+  if (maxX - minX < MIN_W) { const c = (minX + maxX) / 2; minX = c - MIN_W / 2; maxX = c + MIN_W / 2; }
+  if (maxY - minY < MIN_H) { const c = (minY + maxY) / 2; minY = c - MIN_H / 2; maxY = c + MIN_H / 2; }
+  minX = Math.max(0, minX); maxX = Math.min(360, maxX);
+  minY = Math.max(0, minY); maxY = Math.min(180, maxY);
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const vbW = r1(maxX - minX); const vbH = r1(maxY - minY);
+
+  // Marker radius in viewBox units, so it scales with the crop: area ~ count.
+  const rUnit = vbW / 150;
+  const pins = [...perPlace.entries()]
+    .map(([id, agg]) => {
+      const e = entries.get(id);
+      return {
+        id,
+        name: e.name,
+        note: e.note || '',
+        x: r1(e.lon + 180),
+        y: r1(90 - e.lat),
+        r: r1(rUnit * (1 + Math.sqrt(agg.count))),
+        count: agg.count,
+        firstYear: agg.firstYear,
+        firstUnverified: agg.firstUnverified,
+        approx: e.precision === 'country-centroid',
+      };
+    })
+    .sort((a, b) => a.firstYear - b.firstYear || a.name.localeCompare(b.name, 'en'));
+
+  const firstYears = [...new Set(pins.map((p) => p.firstYear))].sort((a, b) => a - b);
+  return {
+    pins,
+    viewBox: `${r1(minX)} ${r1(minY)} ${vbW} ${vbH}`,
+    mappedEvents,
+    nonGeoEvents,
+    unresolvedEvents,
+    unresolvedStrings: [...unresolvedStrings].sort(),
+    firstYears,
+    span: `${firstYears[0]}–${firstYears[firstYears.length - 1]}`,
+    hasApprox: pins.some((p) => p.approx),
+    hasUnverified: pins.some((p) => p.firstUnverified),
+  };
+}
+
+/** Render the places map, or '' when the data declares none. */
+function renderPlacesMap(pm, events, places, world, ui) {
+  const layout = layoutPlacesMap(pm, events, places);
+  if (!layout) return '';
+  if (!world || typeof world.d !== 'string' || !world.d) {
+    // The data declares a map; building silently without the basemap would
+    // ship a broken section. Fail loudly instead.
+    throw new Error('placesMap is declared in the data but src/world-land.json is missing or empty');
+  }
+  const t = ui || UI.en;
+
+  const pinMarkup = layout.pins
+    .map((p) => {
+      const cls = `pm-pin${p.approx ? ' pm-approx' : ''}${p.firstUnverified ? ' pm-unverified' : ''}`;
+      const label = t.mapPinLabel(p.name, p.count, p.firstYear, p.firstUnverified);
+      return `            <a class="${cls}" href="#decade-${Math.floor(p.firstYear / 10) * 10}" data-year="${p.firstYear}" aria-label="${esc(label)}"><circle cx="${p.x}" cy="${p.y}" r="${p.r}"/><title>${esc(label)}</title></a>`;
+    })
+    .join('\n');
+
+  const listItems = layout.pins
+    .map((p) => {
+      const flag = p.firstUnverified ? ` <span class="flag" title="${esc(t.flagTitle)}">?</span>` : '';
+      const approx = p.approx ? ` <span class="pm-approx-badge">${esc(t.mapApproxBadge)}</span>` : '';
+      return `          <li>${esc(t.mapPinLabel(p.name, p.count, p.firstYear, false))}${flag}${approx}${p.note ? ` <span class="muted">— ${esc(p.note)}</span>` : ''}</li>`;
+    })
+    .join('\n');
+
+  const legendParts = [t.mapLegendSize]
+    .concat(layout.hasApprox ? [t.mapLegendApprox] : [])
+    .concat(layout.hasUnverified ? [t.mapLegendUnverified] : []);
+  const captionNotes = [t.mapCaption(layout.mappedEvents, layout.pins.length, layout.span)]
+    .concat(layout.nonGeoEvents ? [t.mapNonGeoNote(layout.nonGeoEvents)] : [])
+    .concat(layout.unresolvedEvents ? [t.mapUnresolvedNote(layout.unresolvedEvents)] : []);
+
+  // Year control: progressive enhancement only — rendered hidden, enabled by
+  // the inline script, and pointless with a single first-year.
+  const minYear = layout.firstYears[0];
+  const maxYear = layout.firstYears[layout.firstYears.length - 1];
+  const slider = layout.firstYears.length > 1
+    ? `        <div class="pm-controls" hidden>
+          <button type="button" class="pm-play" data-play="${esc(t.mapPlay)}" data-pause="${esc(t.mapPause)}">${esc(t.mapPlay)}</button>
+          <label><span class="visually-hidden">${esc(t.mapSliderLabel)}</span>
+          <input type="range" class="pm-slider" min="${minYear}" max="${maxYear}" value="${maxYear}" step="1"></label>
+          <output class="pm-year">${maxYear}</output>
+        </div>\n`
+    : '';
+  const script = layout.firstYears.length > 1
+    ? `      <script>(function () {
+        var s = document.currentScript.closest('section');
+        var controls = s.querySelector('.pm-controls');
+        var slider = s.querySelector('.pm-slider');
+        var out = s.querySelector('.pm-year');
+        var play = s.querySelector('.pm-play');
+        var live = s.querySelector('.pm-live');
+        var pins = Array.prototype.slice.call(s.querySelectorAll('.pm-pin'));
+        var total = pins.length;
+        var liveTpl = ${JSON.stringify(t.mapShowing('{Y}', '{S}', '{T}'))};
+        var timer = null;
+        function apply(y) {
+          var shown = 0;
+          pins.forEach(function (p) {
+            var vis = Number(p.getAttribute('data-year')) <= y;
+            p.classList.toggle('pm-future', !vis);
+            if (vis) shown += 1;
+          });
+          out.textContent = y;
+          live.textContent = liveTpl.replace('{Y}', y).replace('{S}', shown).replace('{T}', total);
+        }
+        function stop() { if (timer) { clearInterval(timer); timer = null; play.textContent = play.getAttribute('data-play'); } }
+        slider.addEventListener('input', function () { stop(); apply(Number(slider.value)); });
+        play.addEventListener('click', function () {
+          if (timer) { stop(); return; }
+          if (Number(slider.value) >= ${maxYear}) slider.value = ${minYear};
+          play.textContent = play.getAttribute('data-pause');
+          timer = setInterval(function () {
+            var y = Number(slider.value) + 1;
+            slider.value = y;
+            apply(y);
+            if (y >= ${maxYear}) stop();
+          }, 350);
+        });
+        controls.hidden = false;
+        apply(${maxYear});
+      })();</script>\n`
+    : '';
+
+  const heading = pm.heading || t.mapHeading;
+  const intro = pm.note || t.mapIntro;
+  return `    <section id="places-map" class="viz">
+      <h2>${esc(heading)}</h2>
+      <p class="section-intro">${esc(intro)}</p>
+      <figure class="places-map">
+${slider}        <div class="viz-scroll">
+          <svg viewBox="${layout.viewBox}" role="img" aria-label="${esc(heading)}" preserveAspectRatio="xMidYMid meet">
+            <path class="pm-land" d="${world.d}" fill-rule="evenodd"/>
+${pinMarkup}
+          </svg>
+        </div>
+        <p class="pm-legend">${legendParts.map(esc).join(' · ')} · ${esc(t.mapCredit)}</p>
+        <p class="pm-live visually-hidden" aria-live="polite"></p>
+        <figcaption>${captionNotes.map(esc).join(' ')}</figcaption>
+      </figure>
+      <details class="pm-list" open>
+        <summary>${esc(t.mapListHeading)}</summary>
+        <ol>
+${listItems}
+        </ol>
+      </details>
+${script}    </section>
+
+`;
+}
+
 function renderEventRow(ev, refNumById, ui) {
   const flag = ev.dateVerified === false
     ? ` <span class="flag" title="${esc((ui || UI.en).flagTitle)}">?</span>`
@@ -942,6 +1304,7 @@ function renderPage(data, archives, opts = {}) {
   const branchTimeline = data.branchTimeline;
   const numbersChart = data.numbersChart;
   const chronologySpine = data.chronologySpine;
+  const placesMap = data.placesMap;
 
   // Stable citation numbering: references keep their file order.
   const refNumById = new Map(references.map((r, i) => [r.id, i + 1]));
@@ -952,6 +1315,7 @@ function renderPage(data, archives, opts = {}) {
   const branchTimelineHtml = renderBranchTimeline(branchTimeline, refNumById);
   const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
+  const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
 
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
 
@@ -1009,7 +1373,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -1041,7 +1405,7 @@ ${eventRows}
       </div>
     </section>
 
-${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
+${placesMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
@@ -1086,13 +1450,15 @@ function main() {
   const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
   const archives = loadArchives();
   const base = siteBase(data.meta);
+  const places = loadPlaces();
+  const world = loadWorld();
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   for (const lang of LOCALES) {
     const localized = localizeData(data, loadDict(lang), lang);
     const dir = path.join(OUT_DIR, lang);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'index.html'), renderPage(localized, archives, { lang, base, route: '' }));
+    fs.writeFileSync(path.join(dir, 'index.html'), renderPage(localized, archives, { lang, base, route: '', places, world }));
   }
   fs.writeFileSync(path.join(OUT_DIR, 'index.html'), renderRootStub(base));
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(base, ROUTES));
@@ -1120,6 +1486,7 @@ module.exports = {
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,
   layoutNumbersChart, renderNumbersChart,
   layoutChronologySpine, renderChronologySpine,
+  PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,

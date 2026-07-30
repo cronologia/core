@@ -300,3 +300,53 @@ figure.chrono-spine figcaption {
   background: #fff8e6; border-bottom: 1px solid #f0e2b8; color: #6b5a17;
   font-size: .82rem; text-align: center; padding: .45rem 1rem;
 }
+
+/* ---------------------------------------------------------------------------
+   Places map — event places as sized markers on a world basemap.
+
+   Encoding is never colour-only or pointer-only: marker AREA carries the
+   count, hollow-vs-filled carries precision, dashed carries an unverified
+   first date — and the full text list of mapped places renders under the
+   figure as the baseline. The year control is progressive enhancement: it is
+   hidden until the inline script enables it, so the no-JS and print state is
+   the complete map.
+   ------------------------------------------------------------------------ */
+figure.places-map { margin: 0 0 .5rem; }
+figure.places-map svg { display: block; width: 100%; height: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.pm-land { fill: var(--accent-soft); stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.pm-pin circle {
+  fill: var(--accent); fill-opacity: .78; stroke: var(--accent-dark);
+  stroke-width: 1.2px; vector-effect: non-scaling-stroke;
+}
+.pm-pin:hover circle, .pm-pin:focus-visible circle { fill-opacity: 1; }
+.pm-pin:focus-visible { outline: none; }
+.pm-pin:focus-visible circle { stroke-width: 3px; }
+/* Country-level locations: hollow — a centroid is not a site. */
+.pm-approx circle { fill: none; stroke: var(--accent-dark); stroke-width: 1.6px; }
+/* Unverified first date: dashed, mirroring the table's `?` flag. */
+.pm-unverified circle { stroke-dasharray: 3 2; }
+/* Year control (enabled by the inline script) hides later places. */
+.pm-future { display: none; }
+.pm-controls { display: flex; align-items: center; gap: .6rem; margin: 0 0 .5rem; }
+.pm-controls .pm-slider { flex: 1 1 auto; min-width: 120px; }
+.pm-controls .pm-play {
+  font: inherit; font-size: .8rem; padding: .25rem .6rem; border: 1px solid var(--line);
+  border-radius: 4px; background: var(--surface); color: inherit; cursor: pointer;
+}
+.pm-controls .pm-play:hover { background: var(--accent-soft); }
+.pm-year { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .9rem; min-width: 3ch; }
+.pm-legend { font-size: .75rem; color: var(--muted); margin: .5rem 0 0; line-height: 1.45; }
+figure.places-map figcaption { font-size: .78rem; color: var(--muted); margin-top: .35rem; line-height: 1.45; }
+.pm-list { margin: .35rem 0 0; }
+.pm-list summary { font-size: .8rem; color: var(--muted); cursor: pointer; }
+.pm-list ol { font-size: .8rem; color: var(--muted); margin: .35rem 0 0; padding-left: 1.4rem; line-height: 1.5; }
+.pm-approx-badge {
+  font-size: .68rem; border: 1px solid var(--line); border-radius: 3px;
+  padding: 0 .3rem; color: var(--muted); white-space: nowrap;
+}
+
+@media print {
+  figure.places-map { break-inside: avoid; page-break-inside: avoid; }
+  .pm-controls { display: none; }
+  .pm-future { display: initial; } /* the print form is the complete map */
+}

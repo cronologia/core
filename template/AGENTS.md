@@ -18,11 +18,14 @@ data/chronology.json     SOURCE OF TRUTH — facts, events, figures, organizatio
 data/i18n/{es,pt}.json   MACHINE-GENERATED translation caches (written by scripts/translate.js; committed) — do NOT hand-edit
 data/archives.json       MACHINE-GENERATED Wayback snapshot cache (written by scripts/archive-refs.js; committed)
 data/glossary-terms.json VENDORED, PINNED list of cronologia/glossary term ids (written by scripts/sync-glossary-terms.js; committed) — validates [[term-id]] cross-links offline
+data/places.json         VENDORED, PINNED copy of the cronologia/core gazetteer (written by scripts/sync-places.js; committed) — coordinates for the optional placesMap renderer; only needed when placesMap is declared
 src/styles.css           Stylesheet (copied into the build)
+src/world-land.json      COMMITTED world basemap for the placesMap renderer (Natural Earth 1:110m, public domain; see its _meta) — only needed when placesMap is declared
 scripts/validate-data.js Schema check (runs in CI before the build) — also fails on unknown glossary [[term-id]] links
 scripts/archive-refs.js  Wayback preservation: snapshot lookup + Save Page Now for references[] -> data/archives.json
 scripts/check-links.js   Link-health checker (out-of-band/CI): HEAD/ranged-GET status + soft-404 heuristic + Wayback lookup for references[]; JSON + Markdown report. Never edits data.
 scripts/sync-glossary-terms.js  Refresh data/glossary-terms.json from cronologia/glossary (out-of-band; needs network)
+scripts/sync-places.js   Refresh data/places.json from cronologia/core (out-of-band; sibling checkout or network); --check detects a stale copy
 scripts/translate.js     Fills data/i18n/*.json from a translation backend (env-configured; no-op offline)
 build.js                 Compiler: data/chronology.json (+ i18n + archives) -> docs/{en,es,pt}/ + sitemap + robots
 test/                    node:test suites (helpers + data invariants + per-locale drift check)

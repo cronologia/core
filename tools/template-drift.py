@@ -65,7 +65,7 @@ ROOT = os.path.dirname(CORE)
 TEMPLATE = os.path.join(CORE, "template", "scripts")
 
 # Scripts whose machinery is shared and therefore drift-checked.
-SHARED = ("archive-refs.js", "check-links.js", "translate.js", "sync-glossary-terms.js")
+SHARED = ("archive-refs.js", "check-links.js", "translate.js", "sync-glossary-terms.js", "sync-places.js")
 
 # Deliberately excluded, with the reason, so the omission is not mistaken for
 # an oversight. See the module docstring.
