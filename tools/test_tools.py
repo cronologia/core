@@ -1509,6 +1509,73 @@ class TestCofDates(unittest.TestCase):
                          (221, "2013-09-21"))
         rows = self.cd.compare_sources(docs, {220: "2012-09-14"})
         self.assertNotIn("filenames", rows[0])
+        self.assertNotIn("resumos", rows[0])
+
+    # --- the contemporaneous Resumos witness, and the cadence check --------
+    def test_resumos_witness_is_reported_without_changing_the_verdict(self):
+        # aula 12: header duplicates aula 11's date; the Resumos back the
+        # index. The sequence still cannot decide, and must not pretend to.
+        docs = self.docs((11, "2009-06-20"), (12, "2009-06-20"),
+                         (13, "2009-07-04"))
+        rows = self.cd.compare_sources(docs, {12: "2009-06-27"},
+                                       resumos={12: "2009-06-27"})
+        self.assertEqual(rows[0]["resumos"], "2009-06-27")
+        self.assertEqual(rows[0]["resumosMatches"], "index")
+        self.assertEqual(rows[0]["sequenceSupports"], "undecided")
+
+    def test_off_cadence_flags_a_non_saturday(self):
+        self.assertTrue(self.cd.off_cadence("2009-08-18"))    # a Tuesday
+        self.assertFalse(self.cd.off_cadence("2009-08-08"))   # a Saturday
+        self.assertEqual(self.cd.weekday_of("2009-08-18"), "Tue")
+
+    def test_every_candidate_off_cadence_is_reported_as_such(self):
+        # aula 89: header Tuesday, index Wednesday. Neither is a Saturday, so
+        # the row must say so rather than implying one of them is right.
+        docs = self.docs((88, "2010-12-18"), (89, "2011-11-22"),
+                         (90, "2011-01-15"))
+        rows = self.cd.compare_sources(docs, {89: "2010-12-22"})
+        self.assertEqual(rows[0]["onCadence"], [])
+
+    def test_cadence_sweep_covers_tail_candidates_not_only_headers(self):
+        docs = [
+            {"id": "COF263", "aula": 263, "date": "2014-09-12"},          # Fri header
+            {"id": "COF300", "aula": 300, "date": "2015-08-01"},          # Sat header
+            {"id": "COF317", "aula": 317, "date": None,
+             "dateCandidate": {"date": "2015-11-29"}},                    # Sun candidate
+            {"id": "COF318", "aula": 318, "date": None,
+             "dateCandidate": {"date": "2015-12-05"}},                    # Sat candidate
+        ]
+        rows = self.cd.cadence_rows(docs)
+        self.assertEqual([(r["id"], r["kind"]) for r in rows],
+                         [("COF263", "header"), ("COF317", "candidate")])
+
+    def test_cadence_sweep_surfaces_an_on_cadence_alternative(self):
+        docs = [{"id": "COF501", "aula": 501, "date": None, "dateCandidate": {
+            "date": "2019-01-04",                    # Friday
+            "filenames": "2020-01-04",               # Saturday
+            "witnessesAgree": False,
+            "offCadence": {"onCadenceAlternative": {"date": "2020-01-04"}}}}]
+        row = self.cd.cadence_rows(docs)[0]
+        self.assertEqual(row["alternative"], "2020-01-04")
+        self.assertTrue(row["alsoDisagrees"])
+
+    def test_cadence_sweep_says_when_both_witnesses_share_the_off_cadence_date(self):
+        """Agreement on an odd weekday points at the session, not the sources."""
+        docs = [{"id": "COF350", "aula": 350, "date": None, "dateCandidate": {
+            "date": "2016-08-12", "filenames": "2016-08-12",   # both Friday
+            "witnessesAgree": True}}]
+        row = self.cd.cadence_rows(docs)[0]
+        self.assertEqual(row["alternative"],
+                         "both witnesses agree on this off-cadence date")
+        self.assertFalse(row["alsoDisagrees"])
+
+    def test_on_cadence_names_which_sources_fall_on_the_course_weekday(self):
+        docs = self.docs((17, "2009-08-01"), (18, "2009-08-18"),
+                         (19, "2009-08-15"))
+        rows = self.cd.compare_sources(docs, {18: "2009-08-08"},
+                                       resumos={18: "2009-08-08"})
+        self.assertEqual(sorted(rows[0]["onCadence"]), ["index", "resumos"])
+        self.assertEqual(rows[0]["weekday"]["header"], "Tue")
 
 
 
