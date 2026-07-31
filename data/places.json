@@ -218,6 +218,15 @@
       "source": "OpenStreetMap Nominatim — City of Edinburgh, Scotland, United Kingdom (retrieved 2026-07-26)"
     },
     {
+      "id": "edmonton",
+      "name": "Edmonton, Alberta, Canada",
+      "kind": "city",
+      "lat": 53.5462055,
+      "lon": -113.491241,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Edmonton, Alberta, Canada (retrieved 2026-07-30)"
+    },
+    {
       "id": "el-palmar-de-troya",
       "name": "El Palmar de Troya, Spain",
       "kind": "town",
