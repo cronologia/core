@@ -508,8 +508,15 @@ dated October **2010**. The manifest is faithful; the defect is upstream.
 ```sh
 python3 tools/cof-dates.py            # anomalies, exit 1 if any
 python3 tools/cof-dates.py --index    # header vs the community index lineage
+python3 tools/cof-dates.py --cadence  # weekday check: the course met on
+                                      # Saturdays, so a non-Saturday date is a
+                                      # flag (never a verdict) — covers headers
+                                      # and the tail candidates
 python3 tools/cof-dates.py --json     # machine-readable
 ```
+
+Exit status 1 means "anomalies found", not "error" — a CI wrapper must not
+treat it as a crash.
 
 That was found by hand once. This makes it a standing check, so it is not
 rediscovered by hand a second time — the lesson of #21.

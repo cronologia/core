@@ -10,12 +10,16 @@ template, the working method as Claude skills, and agent-side analysis tooling.
 
 **No content lives here.** If a file mentions a bishop, a party, an order or a
 theologian, it belongs in a project repo. Core carries structure, not subject
-matter — with two narrow exceptions, both of which assert nothing about the
-world: example data (`template/data/chronology.example.json`), which specifies
-shapes and fixtures the template's own tests, and
-`tools/cof-entity-aliases.json`, a spelling-equivalence table for the COF
-corpus (which transcription of a name is which) kept as data so every merge is
-auditable in a diff. Neither is a claim; both are machinery.
+matter — with three narrow exceptions, each of which is resolution machinery
+rather than subject matter: example data
+(`template/data/chronology.example.json`), which specifies shapes and fixtures
+for the template's own tests; `tools/cof-entity-aliases.json`, a
+spelling-equivalence table for the COF corpus (which transcription of a name is
+which) kept as data so every merge is auditable in a diff; and
+`data/places.json`, the shared place gazetteer (which spelling of a place is
+which, and its coordinates) that the network-free builds resolve map pins from
+— kept here so every project draws the same map from the same strings. None of
+them makes a claim the chronologies argue over; all three are machinery.
 
 Core is consumed by copy, not by dependency: nothing here is published to a
 registry, and no project's build fetches it. Deleting `core/tools/` must not
@@ -118,7 +122,8 @@ different commits. Therefore:
    `data/chronology.example.json` as `data/chronology.json` and run
    `node scripts/validate-data.js && node --test && node build.js`; run
    `python3 -m unittest discover -s tools -p 'test_*.py'`.
-3. **Never edit another repo's data from here.** Core has no `data/` of its own
-   beyond the example, and no agent working in core touches a project dataset.
+3. **Never edit another repo's data from here.** Core's own `data/` holds only
+   the machinery exceptions above (example fixtures, the alias table, the place
+   gazetteer), and no agent working in core touches a project dataset.
 4. **Document the decision, not just the code.** A change to the shared
    contract gets an ADR in `adr/`; a change to the method gets a skill edit.

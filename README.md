@@ -21,6 +21,9 @@ family — who consumes what, and the standing project boundaries), and
   inconclusive ≠ dead.
 - [`adr/0004-python-agent-tooling-vs-node-build.md`](adr/0004-python-agent-tooling-vs-node-build.md)
   — agent-side Python in `tools/` vs zero-dependency Node in the build.
+- [`adr/0005-when-a-subject-becomes-its-own-repo.md`](adr/0005-when-a-subject-becomes-its-own-repo.md)
+  — the five-dimension test for when a subject graduates from a section to its
+  own project repo; an owner decision, recorded as an ADR.
 
 ```
 template/   Skeleton for a new chronology project: zero-dependency compiler,
@@ -79,7 +82,8 @@ skills/     Claude skills encoding the working method (canonical copies;
             See skills/README.md.
 adr/        Core's own decisions (0001 renderer contract, 0002 vendored
             pinned copies, 0003 preservation/link-health split, 0004
-            Python tooling vs the Node build).
+            Python tooling vs the Node build, 0005 when a subject
+            becomes its own repo).
 ```
 
 ## Starting a new project
