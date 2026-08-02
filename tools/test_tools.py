@@ -1647,7 +1647,13 @@ class TestTemplateDrift(unittest.TestCase):
         self.assertNotIn("validate-data.js", self.td.SHARED)
 
     def test_the_family_is_currently_clean(self):
-        """The real repos must pass. This is the check doing its job."""
+        """The real repos must pass - when any are on disk to check. An empty
+        comparison set exits 2 by design (core#45), so this test SKIPS rather
+        than passing vacuously when no sibling repo is checked out."""
+        present = [r for r in self.td.REPOS
+                   if os.path.isdir(os.path.join(self.td.ROOT, r, "scripts"))]
+        if not present:
+            self.skipTest("no family repo on disk - nothing to compare")
         with silent():
             self.assertEqual(self.td.main([]), 0)
 

@@ -285,7 +285,7 @@ function seoHead(meta, base, route, lang) {
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2).split('\n').map((l) => '  ' + l).join('\n')}
+${JSON.stringify(jsonLd, null, 2).replace(/</g, '\\u003c').split('\n').map((l) => '  ' + l).join('\n')}
   </script>`;
 }
 

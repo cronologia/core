@@ -125,6 +125,8 @@ def geocode(query, email=None):
 def main(argv):
     counts, where = collect()
     entries, index = load_gazetteer()
+    missing_repos = [r for r in REPOS
+                     if not os.path.exists(os.path.join(ROOT, r, 'data', 'chronology.json'))]
 
     if '--list' in argv:
         print(f'{len(counts)} distinct place strings, {sum(counts.values())} uses')
@@ -166,6 +168,13 @@ def main(argv):
     # default: --check
     print(f'gazetteer: {len(entries)} places, {len(index)} name variants')
     print(f'datasets:  {len(counts)} distinct strings, {sum(counts.values())} uses')
+    for r in missing_repos:
+        print(f'  MISSING REPO: {r} (dataset not on disk - nothing checked for it)')
+    if not counts:
+        # An empty scan is a failure, not a pass: 'all strings resolve' must
+        # mean 'checked and clean', never 'found nothing to check' (core#45).
+        print('NOTHING CHECKED - no listed repo dataset is on disk; this run verified nothing')
+        return 2
     if not unmapped:
         print('all place strings resolve')
         return 0

@@ -206,12 +206,15 @@ def main(argv):
 
     repos = [p[0] for p in pairs]
     findings = []
+    missing_repos = [r for r, d in pairs if not os.path.isdir(d)]
+    compared = 0
     for repo, scripts_dir in pairs:
         for name in SHARED:
             tpl = os.path.join(TEMPLATE, name)
             own = os.path.join(scripts_dir, name)
             if not os.path.exists(tpl) or not os.path.exists(own):
                 continue
+            compared += 1
             with open(tpl, encoding="utf-8") as fh:
                 t = fh.read()
             with open(own, encoding="utf-8") as fh:
@@ -226,10 +229,17 @@ def main(argv):
         sys.stdout.write("\n")
         return 1 if findings else 0
 
-    checked = len(repos) * len(SHARED)
-    print("template drift: %d shared script(s) x %d repo(s)" % (len(SHARED), len(repos)))
+    print("template drift: %d shared script(s) x %d repo(s), %d file pair(s) compared"
+          % (len(SHARED), len(repos), compared))
     for name, why in sorted(NOT_SHARED.items()):
         print("  not checked: %-20s %s" % (name, why))
+    for r in missing_repos:
+        print("  MISSING REPO: %s (not on disk - nothing compared for it)" % r)
+    if compared == 0:
+        # An empty comparison set is a failure, not a pass: 'no drift' must
+        # mean 'checked and clean', never 'found nothing to check' (core#45).
+        print("\nNOTHING COMPARED - no listed repo is on disk; this run verified nothing")
+        return 2
     if not findings:
         print("\nno drift - every shared script matches the template outside its ADOPT blocks")
         return 0
