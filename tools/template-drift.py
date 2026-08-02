@@ -75,7 +75,18 @@ NOT_SHARED = {
                         "the repo.",
 }
 
-REPOS = ("fsspx", "tariqa", "perennialism", "rcc", "glossary")
+REPOS = (
+    "fsspx",
+    "tariqa",
+    "perennialism",
+    "rcc",
+    "glossary",
+    "celam",
+    "grupopuebla",
+    "tfp",
+    "tl",
+    "fsp",
+)
 
 ADOPT_OPEN = re.compile(r"^\s*//\s*>>>\s*ADOPT:\s*(.+?)\s*$")
 ADOPT_CLOSE = re.compile(r"^\s*//\s*<<<\s*ADOPT\s*$")
