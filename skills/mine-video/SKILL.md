@@ -16,11 +16,17 @@ manglings included — in the hand-written half.
 1. **Identify.** Get title/channel via the oembed endpoint (no auth):
    `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=ID&format=json`
    Decide which project the video belongs to.
-2. **Transcript.** `tools/yt-transcript.sh ID <lang> out.txt "Header"` — use the
-   ORIGINAL language track (not auto-translations). The tv/web_embedded/android
-   player clients bypass the bot check; the subtitle endpoint rate-limits
-   (429) — sleep 15s+ between videos; persistent 429s → the timedtext-URL
-   fallback documented in the script. Deliver the transcript to the user.
+2. **Transcript.** `tools/yt-transcript.sh ID <lang|auto> out.txt "Header"`. It
+   fetches the ORIGINAL track, detected structurally by
+   `tools/pick-source-track.py`: YouTube auto-translations carry `tlang` on the
+   timedtext URL and the source track does not, so a language code is never the
+   test. The `<lang>` argument is an **assertion** — the script aborts if the
+   detected source disagrees, instead of handing you a machine translation of a
+   machine transcription. Pass `auto` when you do not already know the language
+   of the audio. No source track identifiable → it exits 1; log the failure
+   rather than fetching a translation. The tv/web_embedded/android player
+   clients bypass the bot check; the subtitle endpoint rate-limits (429) — sleep
+   15s+ between videos. Deliver the transcript to the user.
 3. **Ticket.** One issue per video in the project repo: link, channel, word
    count, the regeneration command, what the video is, why it matters to this
    project, and a mining checklist:

@@ -42,7 +42,16 @@ template/   Skeleton for a new chronology project: zero-dependency compiler,
             tokens, AGENTS.md skeleton, example data.
 tools/      new-project.sh     instantiate the template with a project accent
             yt-transcript.sh   YouTube captions -> clean transcript (the
-                               incantation that works from sandboxes)
+                               incantation that works from sandboxes); fetches
+                               the DETECTED source track, and treats its LANG
+                               argument as an assertion to check, not a track
+                               to fetch
+            pick-source-track.py  which caption track is the ORIGINAL: the
+                               timedtext URL of a YouTube auto-translation
+                               carries `tlang` and the source track does not,
+                               so a language code is never the test (the
+                               archive vaulted a machine translation of a
+                               machine transcription twice before this existed)
             vtt2txt.py         VTT -> deduplicated plain text
             mine-prep.py       transcript -> compact candidate sheet
                                (dated claims, ASR-unreliable proper nouns,
