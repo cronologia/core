@@ -92,6 +92,12 @@ test('classifyStatus treats 403/429/5xx as inconclusive, real 4xx as dead', () =
   assert.equal(classifyStatus(408), 'inconclusive');
   assert.equal(classifyStatus(500), 'inconclusive');
   assert.equal(classifyStatus(503), 'inconclusive');
+  // 405/501 refuse the METHOD, not the resource. check-links already retries
+  // them with GET, so classifying them dead contradicted its own probe logic —
+  // and it did: a live, readable article was reported DEAD 405 because the
+  // origin rejects HEAD from a non-browser client (cronologia/olavo#9).
+  assert.equal(classifyStatus(405), 'inconclusive');
+  assert.equal(classifyStatus(501), 'inconclusive');
   assert.equal(classifyStatus(404), 'dead');
   assert.equal(classifyStatus(410), 'dead');
   assert.equal(classifyStatus(0), 'inconclusive'); // network error / timeout

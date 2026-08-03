@@ -167,6 +167,10 @@ function isSoftRedirect({ redirected, expectedTitle, actualTitle, threshold = 0.
  * Map an HTTP status to a link verdict.
  *   2xx            -> 'ok'
  *   403 / 429      -> 'inconclusive' (bot-blocked / rate-limited, per the ticket)
+ *   405 / 501      -> 'inconclusive' (the METHOD was refused, which says nothing
+ *                    about whether the resource exists — this file already
+ *                    treats both as "HEAD blocked" and retries with GET, so
+ *                    calling them dead contradicted its own probe logic)
  *   408 / 5xx      -> 'inconclusive' (transient server-side)
  *   other 4xx      -> 'dead'
  *   0 / falsy      -> 'inconclusive' (never reached — network error/timeout)
@@ -175,6 +179,7 @@ function classifyStatus(status) {
   if (!status) return 'inconclusive';
   if (status >= 200 && status < 300) return 'ok';
   if (status === 403 || status === 429 || status === 408) return 'inconclusive';
+  if (status === 405 || status === 501) return 'inconclusive';
   if (status >= 500) return 'inconclusive';
   if (status >= 400) return 'dead';
   if (status >= 300) return 'ok'; // a final 3xx (redirects are followed) — treat as reachable

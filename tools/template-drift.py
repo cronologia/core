@@ -86,6 +86,7 @@ REPOS = (
     "tfp",
     "tl",
     "fsp",
+    "olavo",
 )
 
 ADOPT_OPEN = re.compile(r"^\s*//\s*>>>\s*ADOPT:\s*(.+?)\s*$")
