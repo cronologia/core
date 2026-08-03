@@ -1658,6 +1658,167 @@ class TestTemplateDrift(unittest.TestCase):
             self.assertEqual(self.td.main([]), 0)
 
 
+TIMEDTEXT = "https://www.youtube.com/api/timedtext?v=VID&lang=%s&fmt=vtt%s"
+
+
+def track(lang, tlang=None, kind="asr", ext="vtt"):
+    """One yt-dlp caption format. A tlang parameter marks an auto-translation."""
+    tail = "&kind=" + kind if kind else ""
+    if tlang:
+        tail += "&tlang=" + tlang
+    return {"ext": ext, "url": TIMEDTEXT % (lang, tail)}
+
+
+class TestPickSourceTrack(unittest.TestCase):
+    """Which caption track is the ORIGINAL - the tlang test, not the language
+    code. Fetching by language code is how a machine translation of a machine
+    transcription gets vaulted as a source (archive#39, then the True Outspeak
+    repeat). No network: every fixture is inline."""
+
+    def setUp(self):
+        self.pst = load("pick-source-track.py", "pick_source_track")
+
+    def run_main(self, data, argv=None):
+        """Drive main() with fixture JSON on stdin; return (exit code, stdout)."""
+        saved = sys.stdin
+        sys.stdin = io.StringIO(json.dumps(data))
+        try:
+            with silent() as out:
+                code = self.pst.main(argv or [])
+        finally:
+            sys.stdin = saved
+        return code, out.getvalue()
+
+    # --- 1. a translation is detected and rejected ---
+    def test_an_auto_translation_is_rejected_however_it_is_listed(self):
+        """The True Outspeak shape: `en` listed FIRST, but tlang=en over lang=pt."""
+        data = {"automatic_captions": {
+            "en": [track("pt", tlang="en")],
+            "pt": [track("pt")],
+            "es": [track("pt", tlang="es")],
+        }}
+        self.assertEqual(self.pst.source_track(data)[:2], ("pt", "asr"))
+
+    def test_a_translation_is_rejected_even_when_it_is_the_only_english(self):
+        code, out = self.run_main({"automatic_captions": {
+            "en": [track("pt", tlang="en")], "pt": [track("pt")]}})
+        self.assertEqual(code, 0)
+        self.assertTrue(out.startswith("pt\tasr\t"))
+        self.assertNotIn("tlang", out)
+
+    def test_every_track_being_a_translation_is_not_a_source(self):
+        data = {"automatic_captions": {
+            "en": [track("pt", tlang="en")], "es": [track("pt", tlang="es")]}}
+        self.assertIsNone(self.pst.source_track(data))
+
+    # --- 2. the source track is selected ---
+    def test_the_source_track_is_printed_as_lang_kind_url(self):
+        code, out = self.run_main({"automatic_captions": {"pt": [track("pt")]}})
+        self.assertEqual(code, 0)
+        lang, kind, url = out.strip().split("\t")
+        self.assertEqual((lang, kind), ("pt", "asr"))
+        self.assertIn("lang=pt", url)
+
+    def test_the_listing_language_is_used_when_the_url_carries_no_lang(self):
+        data = {"automatic_captions": {
+            "pt": [{"ext": "vtt", "url": "https://example.invalid/t.vtt"}]}}
+        self.assertEqual(self.pst.source_track(data)[0], "pt")
+
+    def test_non_vtt_formats_are_ignored(self):
+        data = {"automatic_captions": {"pt": [track("pt", ext="srv3"),
+                                              track("pt", ext="json3")]}}
+        self.assertIsNone(self.pst.source_track(data))
+
+    # --- 3. a human subtitle beats ASR ---
+    def test_manual_subtitles_are_preferred_over_automatic_captions(self):
+        data = {"subtitles": {"pt": [track("pt", kind=None)]},
+                "automatic_captions": {"pt": [track("pt")]}}
+        lang, kind, _ = self.pst.source_track(data)
+        self.assertEqual((lang, kind), ("pt", "manual"))
+
+    def test_a_translated_manual_track_does_not_beat_the_asr_source(self):
+        """A `tlang` subtitle is still a translation - the ASR original wins."""
+        data = {"subtitles": {"en": [track("pt", tlang="en", kind=None)]},
+                "automatic_captions": {"pt": [track("pt")]}}
+        self.assertEqual(self.pst.source_track(data)[:2], ("pt", "asr"))
+
+    # --- 4. no track identifiable -> exit 1, never a guess ---
+    def test_no_captions_at_all_exits_1(self):
+        code, out = self.run_main({"id": "VID", "automatic_captions": {},
+                                   "subtitles": {}})
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+
+    def test_only_translations_exits_1(self):
+        code, out = self.run_main({"automatic_captions": {
+            "en": [track("pt", tlang="en")], "es": [track("pt", tlang="es")]}})
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+
+    def test_junk_on_stdin_exits_1(self):
+        saved = sys.stdin
+        sys.stdin = io.StringIO("<!doctype html>")
+        try:
+            with silent() as out:
+                code = self.pst.main([])
+        finally:
+            sys.stdin = saved
+        self.assertEqual(code, 1)
+        self.assertEqual(out.getvalue(), "")
+
+    # --- 5. --expect is an assertion, not a request ---
+    def test_expecting_a_language_the_source_is_not_exits_2(self):
+        code, out = self.run_main(
+            {"automatic_captions": {"en": [track("pt", tlang="en")],
+                                    "pt": [track("pt")]}}, ["--expect", "en"])
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+
+    def test_expecting_the_detected_source_passes(self):
+        code, out = self.run_main({"automatic_captions": {"pt": [track("pt")]}},
+                                  ["--expect", "pt"])
+        self.assertEqual(code, 0)
+        self.assertTrue(out.startswith("pt\t"))
+
+    def test_auto_and_empty_accept_whatever_is_detected(self):
+        for expect in ("auto", ""):
+            code, _ = self.run_main(
+                {"automatic_captions": {"pt": [track("pt")]}},
+                ["--expect", expect])
+            self.assertEqual(code, 0, expect)
+
+    def test_a_base_subtag_matches_a_regional_source(self):
+        code, out = self.run_main(
+            {"automatic_captions": {"pt-BR": [track("pt-BR")]}},
+            ["--expect", "pt"])
+        self.assertEqual(code, 0)
+        self.assertTrue(out.startswith("pt-BR\t"))
+
+
+class TestYtTranscriptWiring(unittest.TestCase):
+    """yt-transcript.sh must DETECT the track, not fetch the argument."""
+
+    def setUp(self):
+        with open(os.path.join(HERE, "yt-transcript.sh"), encoding="utf-8") as fh:
+            self.source = fh.read()
+
+    def test_the_picker_is_invoked(self):
+        self.assertIn("pick-source-track.py", self.source)
+
+    def test_the_language_argument_is_never_fetched_directly(self):
+        """The regression this rewiring exists for: --sub-langs "$LANG"."""
+        self.assertNotIn('--sub-langs "$LANG"', self.source)
+        self.assertIn('--sub-langs "$SRC"', self.source)
+
+    def test_a_mismatched_assertion_aborts_the_script(self):
+        self.assertIn("--expect", self.source)
+        self.assertIn('[ "$RC" -eq 0 ] || exit "$RC"', self.source)
+
+    def test_it_stays_within_yt_dlp_python3_curl(self):
+        for forbidden in ("jq ", "wget ", "pip install", "npm "):
+            self.assertNotIn(forbidden, self.source, forbidden)
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
@@ -1665,7 +1826,8 @@ class TestReadOnly(unittest.TestCase):
         for filename in ("mine-prep.py", "dataset-query.py",
                          "unverified-report.py", "xref.py", "sync-skills.py",
                          "build-keywords.py", "normalise-entities.py",
-                         "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py", "template-drift.py"):
+                         "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py",
+                         "template-drift.py", "pick-source-track.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)

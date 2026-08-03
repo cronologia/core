@@ -7,7 +7,7 @@ architectural — keep it.
 |---|---|---|
 | language | **zero-dependency Node** | **Python 3, stdlib only** |
 | lives in | `template/scripts/` and each project's `scripts/` | `core/tools/` |
-| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py`, `normalise-entities.py`, `cof-xref.py`, `cof-graph.py` |
+| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py`, `normalise-entities.py`, `cof-xref.py`, `cof-graph.py`, `pick-source-track.py` |
 | runs | in `build.js`, `node --test`, GitHub Actions — the build is **network-free** | on an agent's machine, on demand |
 | writes | `docs/`, `data/archives.json`, link-health reports | **nothing in `data/`** |
 
@@ -25,7 +25,7 @@ No pip installs: Python 3 standard library only, same discipline as the
 zero-dependency Node side.
 
 ```
-python3 -m unittest discover -s tools -p 'test_*.py' -v     # 126 tests, no network
+python3 -m unittest discover -s tools -p 'test_*.py' -v     # 190 tests, no network
 ```
 
 Repo arguments accept a bare name (`fsspx`, `tariqa`, `perennialism`, `rcc`,
@@ -611,6 +611,56 @@ family currently passes.
 
 [core#12]: https://github.com/cronologia/core/issues/12
 
+## `pick-source-track.py` — which caption track is the original?
+
+```
+yt-dlp -J --skip-download URL | python3 tools/pick-source-track.py [--expect pt]
+pt	asr	https://www.youtube.com/api/timedtext?...&lang=pt
+```
+
+YouTube serves **one** machine-transcribed (ASR) track, in the language of the
+audio, plus auto-translations of it into every language it supports. The
+difference is structural, not nominal: a translation's timedtext URL carries a
+`tlang` parameter and the source track carries none. The language code tells you
+nothing about which is which, and the order YouTube lists the tracks in tells you
+less.
+
+Fetching by language code is therefore how a machine translation of a machine
+transcription gets vaulted as if it were an original source. The archive
+recorded that failure once (`cronologia/archive` #39 and its ADR-0002), **and a
+written warning did not prevent the repeat**: the True Outspeak intake found
+`en` listed first for a programme whose audio is Portuguese, and three episodes
+were captured as fluent English — "Boa noite, amigo" arriving as "Goodnight
+friend" — before anyone noticed. This script is the code that the prose could
+not be, and it lives here rather than in the archive because every project that
+mines video hits the same trap.
+
+- A **human-made subtitle wins** over ASR when one exists: it transcribes the
+  audio and is never an auto-translation. A subtitle that *does* carry `tlang`
+  is still a translation and loses to the ASR original.
+- **No source track identifiable → exit 1**, printing nothing. Either the video
+  has no VTT captions or every track is a translation. Record the failure; the
+  one thing the tool will not do is guess.
+- `--expect LANG` is an **assertion, not a request**. It states the language the
+  caller believes the audio is in and exits 2 when detection disagrees, instead
+  of fetching what was asked for. Base subtags match, so `--expect pt` accepts a
+  detected `pt-BR`.
+
+### `yt-transcript.sh` consumes it
+
+```
+tools/yt-transcript.sh VIDEO_ID [LANG|auto] OUT.txt "Header line"
+```
+
+The transcript script no longer fetches the language you name. It pulls the
+metadata once, asks the picker which track is the source, passes your `LANG`
+through as `--expect`, and aborts if the two disagree. Omit `LANG` (or pass
+`auto`) to accept the detected source — note that the old default was a literal
+`pt`, so callers relying on the default now get the *video's* language instead
+of a guessed one. The timedtext URL is already in the metadata, so it is curled
+directly and the rate-limited yt-dlp subtitle download stays as a fallback.
+Dependencies remain yt-dlp, python3 and curl.
+
 ## `sync-skills.py` — vendor the skills into a project
 
 ```
@@ -652,6 +702,7 @@ its own repo and commits the result (one repo, one committer — see
 
 - `new-project.sh` — instantiate `template/` with a project accent.
 - `yt-transcript.sh` — YouTube captions → clean transcript (the incantation that
-  works from sandboxes).
+  works from sandboxes). Fetches the **detected source track**, never a language
+  code — see `pick-source-track.py` above.
 - `vtt2txt.py` — VTT → deduplicated plain text; the precedent for Python
   analysis tooling here.

@@ -61,6 +61,14 @@ tools/       Agent-side analysis tooling + the project instantiator.
              cof-entity-aliases.json — committed data, not code: the human
              merge decisions (reason + source + verifiable evidence quote) the
              three tools share. See tools/README.md.
+             Video intake:
+             pick-source-track   which caption track is the ORIGINAL. YouTube
+                                 auto-translations carry `tlang` on the
+                                 timedtext URL and the source track does not,
+                                 so a language code is never the test; exits 1
+                                 rather than guess. yt-transcript.sh fetches
+                                 what it detects and treats its LANG argument
+                                 as an assertion (exit 2 on mismatch).
 adr/         Why core is built this way (ADR-0001..0005).
 ```
 
