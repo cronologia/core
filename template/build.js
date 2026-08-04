@@ -103,6 +103,14 @@ const UI = {
     factFlagTitle: 'Not yet verified against a primary source',
     footer: 'Compiled static site generated from <code>data/chronology.json</code> by <code>build.js</code>. Open data — corrections welcome via pull request.\n      Part of the Cronologia project family.',
     refsIntro: (n, a) => `${n} sources${a ? ` · ${a} with an Internet Archive fallback` : ''}. Sources span the\n      spectrum of perspectives by design; contested claims are attributed to their authors.`,
+    orgFounded: 'Founded',
+    // Reference kinds are a CLOSED vocabulary, so they live here with the rest
+    // of the chrome rather than in the translation caches.
+    refTypes: {
+      news: 'news', academic: 'academic', archive: 'archive', official: 'official',
+      encyclopedia: 'encyclopedia', web: 'web', corpus: 'corpus', database: 'database',
+      video: 'video', index: 'index', book: 'book', report: 'report', legal: 'legal',
+    },
     disclaimer: null,
   },
   es: {
@@ -147,6 +155,12 @@ const UI = {
     factFlagTitle: 'Aún no verificado con una fuente primaria',
     footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
     refsIntro: (n, a) => `${n} fuentes${a ? ` · ${a} con copia en Internet Archive` : ''}. Las fuentes abarcan el\n      espectro de perspectivas de forma deliberada; las afirmaciones controvertidas se atribuyen a sus autores.`,
+    orgFounded: 'Fundada en',
+    refTypes: {
+      news: 'prensa', academic: 'académico', archive: 'archivo', official: 'oficial',
+      encyclopedia: 'enciclopedia', web: 'web', corpus: 'corpus', database: 'base de datos',
+      video: 'video', index: 'índice', book: 'libro', report: 'informe', legal: 'jurídico',
+    },
     disclaimer: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
   },
   pt: {
@@ -191,6 +205,12 @@ const UI = {
     factFlagTitle: 'Ainda não verificado com uma fonte primária',
     footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
     refsIntro: (n, a) => `${n} fontes${a ? ` · ${a} com cópia no Internet Archive` : ''}. As fontes abrangem o\n      espectro de perspectivas de forma deliberada; afirmações controversas são atribuídas aos seus autores.`,
+    orgFounded: 'Fundada em',
+    refTypes: {
+      news: 'imprensa', academic: 'acadêmico', archive: 'arquivo', official: 'oficial',
+      encyclopedia: 'enciclopédia', web: 'web', corpus: 'corpus', database: 'base de dados',
+      video: 'vídeo', index: 'índice', book: 'livro', report: 'relatório', legal: 'jurídico',
+    },
     disclaimer: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
   },
 };
@@ -219,25 +239,39 @@ function translator(dict) {
 
 /**
  * Deep-copy `data` with every translatable prose field replaced by its
- * translation (fallback: English), and meta.language set to `lang`. The whole
- * `references` array is passed through verbatim (bibliographic data). With an
+ * translation (fallback: English), and meta.language set to `lang`. With an
  * empty dictionary (English) the values are unchanged, so the render stays
  * byte-identical to a pre-i18n build.
+ *
+ * `references` is bibliographic and passes through verbatim — EXCEPT for
+ * `publisherNote`. The wholesale skip this replaced was right about titles,
+ * publishers, URLs and dates and wrong about one field: a reference NAMES its
+ * source in `publisher` and CHARACTERISES it in `publisherNote` ("left-wing
+ * outlet — critical perspective", "live URL bot-blocked, verified via Wayback
+ * availability"). The second is the project writing in its own voice — it is
+ * the half that makes "sources span the spectrum" legible — and skipping the
+ * whole array left it in English on every localized page.
+ *
+ * An allowlist rather than a boolean: a new key inside a reference stays
+ * untranslated by default, which is the safe direction for citation data.
  */
+const REFERENCE_TRANSLATABLE = new Set(['publisherNote']);
+
 function localizeData(data, dict, lang) {
   const t = translator(dict);
-  const walk = (val, key) => {
-    if (key === 'references') return val; // never translate bibliographic entries
-    if (Array.isArray(val)) return val.map((v) => walk(v, key));
+  const walk = (val, key, inRefs) => {
+    const keys = inRefs ? REFERENCE_TRANSLATABLE : TRANSLATABLE_KEYS;
+    const refs = inRefs || key === 'references';
+    if (Array.isArray(val)) return val.map((v) => walk(v, key, refs));
     if (val && typeof val === 'object') {
       const out = {};
-      for (const k of Object.keys(val)) out[k] = walk(val[k], k);
+      for (const k of Object.keys(val)) out[k] = walk(val[k], k, refs);
       return out;
     }
-    if (typeof val === 'string' && TRANSLATABLE_KEYS.has(key)) return t(val);
+    if (typeof val === 'string' && keys.has(key)) return t(val);
     return val;
   };
-  const copy = walk(data, null);
+  const copy = walk(data, null, false);
   copy.meta = Object.assign({}, copy.meta, { language: lang });
   // `place` IS translated prose (the chronology's Place column reads in the
   // page's language), but the gazetteer behind the places map is keyed on the
@@ -1511,8 +1545,11 @@ function renderFigureCard(fig, refNumById) {
       </div>`;
 }
 
-function renderOrgCard(org, refNumById) {
-  const meta = [org.founded ? `Founded ${org.founded}` : null, org.place].filter(Boolean).map(esc).join(' · ');
+function renderOrgCard(org, refNumById, ui) {
+  // 'Founded' is chrome. Hardcoded here it rendered in English on the es and
+  // pt pages, beside a place name that HAD been translated.
+  const foundedLabel = (ui && ui.orgFounded) || 'Founded';
+  const meta = [org.founded ? `${foundedLabel} ${org.founded}` : null, org.place].filter(Boolean).map(esc).join(' · ');
   return `      <div class="related-card">
         <h3>${esc(org.name)}</h3>
         ${meta ? `<p class="related-meta">${meta}</p>` : ''}
@@ -1522,14 +1559,26 @@ function renderOrgCard(org, refNumById) {
       </div>`;
 }
 
-function renderReference(r, n, archives) {
+/** A reference line: the citation, then the project's own note about it.
+ *
+ * `publisher` NAMES the source and is bibliographic — verbatim in every
+ * locale. `publisherNote` CHARACTERISES it and is the project's own prose, so
+ * it translates. They render reassembled, so a repo that has not split them
+ * yet is unaffected and the English page never changes.
+ */
+function renderReference(r, n, archives, ui) {
   const snap = archives[r.url];
   const archived = snap && snap.archiveUrl
     ? ` · <a class="archive-link" href="${esc(snap.archiveUrl)}" rel="noopener noreferrer" target="_blank">🗄 archived${snap.timestamp ? ` ${esc(formatArchiveTs(snap.timestamp))}` : ''}</a>`
     : '';
+  const pub = r.publisherNote ? `${r.publisher} (${r.publisherNote})` : r.publisher;
+  // `type` is a CLOSED vocabulary, not prose: it belongs in the UI table with
+  // the rest of the chrome, so a new type is a code change that surfaces as a
+  // missing label rather than a silent English word on a Portuguese page.
+  const type = (ui && ui.refTypes && ui.refTypes[r.type]) || r.type;
   return `        <li id="ref-${n}">
           <a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.title)}</a>${archived}
-          <span class="ref-meta">${esc(r.publisher)} · ${esc(r.type)}</span>
+          <span class="ref-meta">${esc(pub)} · ${esc(type)}</span>
         </li>`;
 }
 
@@ -1763,7 +1812,7 @@ ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
     <section id="organizations">
       <h2>${esc(ui.organizationsHeading)}</h2>
       <div class="party-grid">
-${(organizations || []).map((o) => renderOrgCard(o, refNumById)).join('\n')}
+${(organizations || []).map((o) => renderOrgCard(o, refNumById, ui)).join('\n')}
       </div>
     </section>
 
@@ -1779,7 +1828,7 @@ ${disambigCards}
       <h2>${esc(ui.referencesHeading)}</h2>
       <p class="section-intro">${ui.refsIntro(references.length, archivedRefs)}</p>
       <ol class="references">
-${references.map((r, i) => renderReference(r, i + 1, archives)).join('\n')}
+${references.map((r, i) => renderReference(r, i + 1, archives, ui)).join('\n')}
       </ol>
     </section>
   </main>
