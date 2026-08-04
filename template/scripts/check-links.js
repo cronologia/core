@@ -407,6 +407,47 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Every reference array in the dataset, flattened.
+ *
+ * This used to read `data.references` and nothing else, which was right while
+ * a dataset had one flat citation list. `olavo` broke that: its philosopher
+ * pages carry their own `philosophers.references[]`, so 70 of its 160
+ * references were invisible here — and the run still printed "Done: 90
+ * references, N with a snapshot", which reads as full coverage of a set it had
+ * silently defined as the subset it could see. A link report that
+ * under-reports its own scope is worse than one that fails loudly: the header
+ * prints "Checked N reference URL(s)", and N reads as all of them.
+ *
+ * A repo with extra arrays names them in the ADOPT block below.
+ */
+function collectReferences(data) {
+  const arrays = [data.references];
+  // >>> ADOPT: extra-reference-arrays
+  // Additional reference arrays this dataset carries, beyond the top-level one.
+  // `olavo` is the worked example:
+  //
+  //   arrays.push(data.philosophers && data.philosophers.references);
+  //
+  // Nothing here is needed by a dataset with a single list: an absent key
+  // contributes nothing and the run is unchanged (ADR-0001).
+  // <<< ADOPT
+  const seen = new Set();
+  const out = [];
+  for (const arr of arrays) {
+    if (!Array.isArray(arr)) continue;
+    for (const ref of arr) {
+      // Dedupe by URL: the same source may legitimately be cited from two
+      // arrays, and saving it twice wastes a Save Page Now slot against the
+      // per-run cap.
+      if (!ref || !ref.url || seen.has(ref.url)) continue;
+      seen.add(ref.url);
+      out.push(ref);
+    }
+  }
+  return out;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   let data;
@@ -416,7 +457,7 @@ async function main() {
     console.error(`check-links: cannot read ${DATA_FILE} — ${e.message}`);
     process.exit(1);
   }
-  const references = (Array.isArray(data.references) ? data.references : []).filter((r) => r && typeof r.url === 'string' && /^https?:\/\//.test(r.url));
+  const references = collectReferences(data).filter((r) => /^https?:\/\//.test(r.url));
   // >>> ADOPT: project-fallback
   // Fallback name when meta.title is absent.
   const project = args.project || (data.meta && data.meta.title) || 'Cronologia project';
