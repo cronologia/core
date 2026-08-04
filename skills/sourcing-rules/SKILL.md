@@ -59,9 +59,30 @@ the five rules above apply to the taxonomy itself:
   the visible statement that the lanes are an editorial reading; any UI that
   renders lanes must render it.
 
+## Absence is a claim, and needs its own evidence
+
 Before searching a corpus or a source for a name, read the project's
 `KEYWORDS.md`: the naming variants and the terms known to return nothing live
 there, and it is a finding aid — listing a term is not asserting it.
+
+- **Verify every zero before reporting it.** A zero is a claim about the
+  corpus, and most false zeros are produced by the search rather than by the
+  source: an accented string matched with a wildcard, a phrase broken across a
+  hard-wrapped line, a glob that covered one file extension of two.
+- **Pair every zero with a positive control.** A sweep reporting "PSB: 0" is
+  credible only alongside "PSDB: 82" from the same corpus by the same method.
+- **A positive control proves the SEARCH worked. It does not prove the CORPUS
+  is entire.** For an absence claim the control must test the property the
+  claim depends on. Legibility is not completeness. A term found in all
+  nineteen files says the reader can read them; it says nothing about whether
+  each file is the whole document — and a corpus that was 20% of itself,
+  every document truncated at page one, answered "never" to a question whose
+  real answer was 2013. Where the corpus is derived from binaries, the
+  property is asserted by a test beside it, not by a probe: see
+  `core/adr/0006-derived-corpora-ship-an-integrity-test.md`.
+- **Say which was checked.** When a finding rests on an absence, write down the
+  corpus, the method, the control, and what established completeness. An
+  unqualified "never says X" is not publishable.
 
 Operationally: after any data edit run `node scripts/validate-data.js`,
 `node --test`, `node build.js`, and commit the regenerated `docs/` in the same
