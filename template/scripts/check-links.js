@@ -280,7 +280,14 @@ async function checkReference(ref, userAgent) {
   let r = await httpRequest(url, { method: 'HEAD', userAgent, wantBody: false });
 
   // Fall back to a ranged GET when HEAD is unsupported/blocked or errored.
-  const headBlocked = !r.ok || [403, 405, 429, 501].includes(r.status);
+  //
+  // 404 is in this list, which looks wrong and is not. Some servers route HEAD
+  // through a different handler and answer 404 for a page that GET serves in
+  // full: `revistarosa.com` returns HEAD 404 and GET 200 with 66 KB of article.
+  // Taking the HEAD status at face value published that URL as DEAD in a report
+  // headed "ARCHIVE NOW", for a page that was never gone. One extra ranged GET
+  // is cheap; a false death notice is not, because someone acts on it.
+  const headBlocked = !r.ok || [403, 404, 405, 429, 501].includes(r.status);
   if (headBlocked) {
     await throttle();
     const g = await httpRequest(url, { method: 'GET', range: true, userAgent, wantBody: true });
