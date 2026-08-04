@@ -57,6 +57,19 @@ to the visitor's locale. See `adrs/0001-multilingual.md` and `cronologia/core#9`
 - Localization is **data-level** (a key-based walk in `build.js`), so every
   renderer — chronology, genealogy, charts, glossary links — is covered.
 - **Never translated:** reference titles/publishers, proper names, URLs, dates, ids.
+- **Subtrees where the general rule misfires get their own allowlist.**
+  `TRANSLATABLE_KEYS` decides the dataset at large; `SUBTREE_TRANSLATABLE` in
+  `build.js` maps a subtree's key to the keys that are prose *inside* it, and
+  the walk resolves it as it descends (nearest enclosing subtree wins, and it
+  is sticky). `references` ships: bibliography passes through verbatim except
+  `publisherNote`, which is the project's own voice. A repo whose dataset has
+  another such subtree adds one entry in the `subtree-allowlists` ADOPT block —
+  in `olavo`, a bibliography where `note`/`sourceNote`/`label`/`blurb`/`role`/
+  `when` are prose and `title` is a book's name and must not be translated.
+  `test/i18n-completeness.test.js` parses that map and MIRRORS the walk; its
+  last test drives `localizeData` with a marking dictionary and asserts the two
+  select exactly the same strings, so the audit cannot drift from the compiler
+  in either direction.
 - Each page emits localized `<title>`/description/OG/Twitter, a self canonical,
   `hreflang` (en/es/pt + x-default) and JSON-LD; the build also writes
   `sitemap.xml` (with hreflang alternates) and `robots.txt`.
@@ -233,3 +246,13 @@ AND has no snapshot** is marked `priorityArchive` — top of the queue for
 <Adapt the subject-specific rules here: the project's disambiguations, its
 contested terrain, its primary sources. Keep the five core rules from the
 sourcing-rules skill verbatim in spirit.>
+
+**If this project derives a searchable corpus** from PDFs, captions or scans,
+it ships a test beside the corpus asserting its SHAPE — nothing ending
+mid-sentence, more than one content unit per source document, a size floor and
+no runt files, no glyph doubling, and the field the corpus was built to mine
+present on every record. A corpus that is silently 20% of itself answers
+"never" to questions whose answer is not never; a positive control proves the
+search worked, not that the corpus is entire. See
+`core/adr/0006-derived-corpora-ship-an-integrity-test.md` and the reference
+implementation in `cronologia/fsp` → `test/declaration-corpus.test.js`.

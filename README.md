@@ -24,6 +24,10 @@ family — who consumes what, and the standing project boundaries), and
 - [`adr/0005-when-a-subject-becomes-its-own-repo.md`](adr/0005-when-a-subject-becomes-its-own-repo.md)
   — the five-dimension test for when a subject graduates from a section to its
   own project repo; an owner decision, recorded as an ADR.
+- [`adr/0006-derived-corpora-ship-an-integrity-test.md`](adr/0006-derived-corpora-ship-an-integrity-test.md)
+  — a corpus derived from binaries ships a test asserting its shape
+  (truncation, doubling, size floor, the mined field), because an absence
+  claim is only as good as the corpus behind it.
 
 ```
 template/   Skeleton for a new chronology project: zero-dependency compiler,
@@ -92,7 +96,8 @@ skills/     Claude skills encoding the working method (canonical copies;
 adr/        Core's own decisions (0001 renderer contract, 0002 vendored
             pinned copies, 0003 preservation/link-health split, 0004
             Python tooling vs the Node build, 0005 when a subject
-            becomes its own repo).
+            becomes its own repo, 0006 a derived corpus ships an
+            integrity test).
 ```
 
 ## Starting a new project
