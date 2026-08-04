@@ -31,9 +31,17 @@
  *
  * The walk deliberately MIRRORS build.js's `localizeData` rather than
  * approximating it: the key sets are parsed out of build.js, and the
- * references allowlist and the array-inherits-the-parent-key rule are
- * reproduced exactly. A test that checked a different set of strings than the
- * compiler translates would pass while the page was wrong.
+ * per-subtree allowlists and the array-inherits-the-parent-key rule are
+ * reproduced exactly. A test that approximates the compiler is wrong in BOTH
+ * directions — it passes while the page renders English, and it fails while the
+ * page is right. Both have happened. In `olavo` the bibliography landed with
+ * its own allowlist in build.js while this walk still had the old two-branch
+ * version, so the suite demanded a Spanish translation for the Portuguese title
+ * *O Jardim das Aflições*, which the compiler correctly leaves alone.
+ *
+ * So the mirror is not left to care: the last test in this file drives
+ * `localizeData` itself with a marking dictionary and asserts it moved exactly
+ * the strings the walk here selects.
  *
  * ADOPT points: the dataset filename, and the locales the repo publishes.
  */
@@ -83,7 +91,9 @@ const LANGS = publishedLocales();
 
 /** Parse a `new Set([...])` literal out of build.js.
  *
- * Parsed rather than exported because requiring build.js runs the whole build.
+ * Read out of the source rather than imported so that the audit fails LOUDLY on
+ * a rename or a deletion, naming the declaration it could not find, instead of
+ * quietly walking with an empty set and reporting a fully translated site.
  * Comments are stripped FIRST: an apostrophe inside one ("the lane's
  * grounding") desynchronizes quote pairing and silently drops every key after
  * it — which is exactly how an early version of this audit reported 8 missing
@@ -100,21 +110,58 @@ function parseSet(name, min) {
   return new Set(keys);
 }
 
-/** Every string build.js would route through the dictionaries. */
+/** The per-subtree allowlists, parsed out of build.js's SUBTREE_TRANSLATABLE.
+ *
+ * A map from a subtree's key to the keys that are prose INSIDE it, because the
+ * exceptions multiply: `references` first, then a bibliography where `title` is
+ * a book's name and must not be translated. As booleans threaded through the
+ * walk each new exception touched every call site; as entries in a map they
+ * cost one line and this parser stays the same.
+ *
+ * Every entry beyond `references` is OPTIONAL by construction — a repo with no
+ * bibliography declares no `works` allowlist, the walk never narrows there, and
+ * a dataset with no such key builds byte-identically (core adr/0001).
+ *
+ * Comments are stripped BEFORE parsing: the ADOPT block inside the map carries
+ * a commented example entry, and an example a repo has not adopted must not be
+ * read as one it has.
+ */
+function parseSubtreeSets() {
+  const src = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
+  const parts = src.split('const SUBTREE_TRANSLATABLE = {');
+  assert.strictEqual(parts.length, 2, 'build.js does not declare SUBTREE_TRANSLATABLE');
+  const body = parts[1].split(/^};/m)[0];
+  const code = body.replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  const map = {};
+  for (const m of code.matchAll(/([A-Za-z_$][\w$]*)\s*:\s*new Set\(\[([^\]]*)\]\)/g)) {
+    map[m[1]] = new Set((m[2].match(/'([^']+)'/g) || []).map((s) => s.slice(1, -1)));
+  }
+  assert.ok(
+    map.references && map.references.size,
+    'failed to parse SUBTREE_TRANSLATABLE out of build.js');
+  return map;
+}
+
+/** Every string build.js would route through the dictionaries.
+ *
+ * Line for line the walk in `localizeData`, including the rule that resolves
+ * the allowlist: the nearest enclosing declared subtree wins and is sticky.
+ */
 function translatableStrings() {
   const KEYS = parseSet('TRANSLATABLE_KEYS', 10);
-  const REF_KEYS = parseSet('REFERENCE_TRANSLATABLE', 1);
+  const SUBTREES = parseSubtreeSets();
   const out = [];
-  const walk = (val, key, inRefs) => {
-    const keys = inRefs ? REF_KEYS : KEYS;
-    const refs = inRefs || key === 'references';
-    if (Array.isArray(val)) return val.forEach((v) => walk(v, key, refs));
+  const walk = (val, key, subtree) => {
+    const here = Object.prototype.hasOwnProperty.call(SUBTREES, key) ? key : subtree;
+    const keys = SUBTREES[here] || KEYS;
+    if (Array.isArray(val)) return val.forEach((v) => walk(v, key, here));
     if (val && typeof val === 'object') {
-      return Object.keys(val).forEach((k) => walk(val[k], k, refs));
+      return Object.keys(val).forEach((k) => walk(val[k], k, here));
     }
     if (typeof val === 'string' && keys.has(key)) out.push(val);
   };
-  walk(data, null, false);
+  walk(data, null, null);
   return [...new Set(out)];
 }
 
@@ -186,4 +233,49 @@ test('references: publisherNote carries the prose, publisher the citation', () =
       `If it NAMES the source (an imprint, a parent publisher, the presenters), add the id ` +
       `to PUBLISHER_BRACKET_OK with that reason.`);
   }
+});
+
+/* The mirror, asserted rather than intended.
+ *
+ * Everything above trusts that the walk in this file selects the same strings
+ * `localizeData` translates. That trust is exactly what broke when the walk and
+ * the compiler drifted, so it is checked directly: translate the dataset with a
+ * dictionary that MARKS every string, then read back which ones the compiler
+ * actually moved. Marking per string (rather than one sentinel for all)
+ * preserves the identity of each, so the two sets are comparable.
+ *
+ * Any divergence — a new subtree allowlist in build.js, a boolean smuggled back
+ * into the walk, a rule reproduced slightly differently here — surfaces as a
+ * named list of strings instead of as a mistranslated page.
+ */
+test('this walk selects exactly the strings localizeData translates', () => {
+  const { localizeData } = require('../build.js');
+  // NUL: legal in a JSON string and present in no real one, so a marked value
+  // cannot collide with dataset prose. (build.js only builds when run directly,
+  // so requiring it here compiles nothing.)
+  const MARK = '\u0000';
+  const dict = {};
+  for (const s of allStrings()) dict[s] = MARK + s;
+  const localized = localizeData(data, dict, 'en');
+
+  const moved = new Set();
+  const collect = (v) => {
+    if (Array.isArray(v)) return v.forEach(collect);
+    if (v && typeof v === 'object') return Object.values(v).forEach(collect);
+    if (typeof v === 'string' && v.startsWith(MARK)) moved.add(v.slice(MARK.length));
+  };
+  collect(localized);
+
+  const selected = new Set(translatableStrings());
+  // Two empty sets agree about nothing. A dataset that routes no string at all
+  // through the dictionaries would make this test vacuous rather than green.
+  assert.ok(selected.size, 'no translatable strings found — this comparison would be vacuous');
+  const onlyCompiler = [...moved].filter((s) => !selected.has(s)).sort();
+  const onlyTest = [...selected].filter((s) => !moved.has(s)).sort();
+  assert.deepStrictEqual(
+    { onlyCompiler, onlyTest }, { onlyCompiler: [], onlyTest: [] },
+    `this file no longer mirrors localizeData. onlyCompiler = strings the build ` +
+    `translates and this audit ignores (they will render untranslated and nothing ` +
+    `else would say so); onlyTest = strings this audit demands translations for ` +
+    `that the build never translates (a Spanish "translation" of a book title).`);
 });

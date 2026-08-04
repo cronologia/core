@@ -289,6 +289,7 @@
       "title": "<survey title — the external estimate>",
       "url": "https://example.org/survey",
       "publisher": "<independent survey organization>",
+      "publisherNote": "<what this source is, in the project's own voice — a perspective label, or why a dead link was accepted. Prose, and translated; the publisher above is a name, and is not.>",
       "type": "survey"
     }
   ]

@@ -47,9 +47,10 @@ const OG_LOCALE = { en: 'en_US', es: 'es_ES', pt: 'pt_BR' };
 // and hreflang stay complete.
 const ROUTES = [''];
 
-// Data fields whose string values are prose to translate. Reference titles/
-// publishers, proper names, URLs, ids, dates and numbers are NOT here, and the
-// whole `references` array is skipped, so bibliographic data is passed verbatim.
+// Data fields whose string values are prose to translate. Proper names, URLs,
+// ids, dates and numbers are NOT here. This is the GENERAL rule; subtrees where
+// it misfires (`references`, and whatever a repo adds) carry their own narrower
+// allowlist in SUBTREE_TRANSLATABLE below.
 const TRANSLATABLE_KEYS = new Set([
   'title', 'subtitle', 'description', 'dataQualityNote', 'label', 'value', 'text',
   'place', 'role', 'country', 'notes', 'note', 'heading', 'navLabel', 'summary',
@@ -243,35 +244,63 @@ function translator(dict) {
  * empty dictionary (English) the values are unchanged, so the render stays
  * byte-identical to a pre-i18n build.
  *
- * `references` is bibliographic and passes through verbatim — EXCEPT for
- * `publisherNote`. The wholesale skip this replaced was right about titles,
- * publishers, URLs and dates and wrong about one field: a reference NAMES its
- * source in `publisher` and CHARACTERISES it in `publisherNote` ("left-wing
- * outlet — critical perspective", "live URL bot-blocked, verified via Wayback
- * availability"). The second is the project writing in its own voice — it is
- * the half that makes "sources span the spectrum" legible — and skipping the
- * whole array left it in English on every localized page.
+ * Most of the dataset is prose and `TRANSLATABLE_KEYS` decides it. A few
+ * SUBTREES are not: inside them the same key means something else, and the
+ * general rule is wrong there. Those get their own, narrower allowlist —
+ * declared below as a map from the subtree's key to the keys that are prose
+ * inside it, so a third exception is one more entry rather than one more
+ * boolean threaded through the walk.
  *
- * An allowlist rather than a boolean: a new key inside a reference stays
+ * `references` is the shipped one. It is bibliographic and passes through
+ * verbatim — EXCEPT for `publisherNote`. The wholesale skip this replaced was
+ * right about titles, publishers, URLs and dates and wrong about one field: a
+ * reference NAMES its source in `publisher` and CHARACTERISES it in
+ * `publisherNote` ("left-wing outlet — critical perspective", "live URL
+ * bot-blocked, verified via Wayback availability"). The second is the project
+ * writing in its own voice — it is the half that makes "sources span the
+ * spectrum" legible — and skipping the whole array left it in English on every
+ * localized page.
+ *
+ * An allowlist rather than a boolean: a new key inside a special subtree stays
  * untranslated by default, which is the safe direction for citation data.
  */
-const REFERENCE_TRANSLATABLE = new Set(['publisherNote']);
+const SUBTREE_TRANSLATABLE = {
+  references: new Set(['publisherNote']),
+  // >>> ADOPT: subtree-allowlists  (subtrees of this repo's dataset that are not prose)
+  // A repo whose dataset carries subtrees where the general rule misfires adds
+  // them here. `olavo`'s bibliography is the worked example:
+  //
+  //   works: new Set(['note', 'sourceNote', 'label', 'blurb', 'role', 'when']),
+  //
+  // `title` is deliberately ABSENT from that one — a book's title is its name,
+  // and the general walk would have sent thirty Portuguese titles through the
+  // dictionaries. `when` is deliberately PRESENT: it reads as a run of years
+  // but is written as a sentence, so it would otherwise sit in English on every
+  // localized page. Nothing here is needed by a dataset without the key: with
+  // no `works` in the data the entry never matches and the build is unchanged.
+  // <<< ADOPT
+};
 
 function localizeData(data, dict, lang) {
   const t = translator(dict);
-  const walk = (val, key, inRefs) => {
-    const keys = inRefs ? REFERENCE_TRANSLATABLE : TRANSLATABLE_KEYS;
-    const refs = inRefs || key === 'references';
-    if (Array.isArray(val)) return val.map((v) => walk(v, key, refs));
+  // `subtree` is the special subtree this value sits inside, resolved as the
+  // walk descends: the nearest enclosing one wins, and it is sticky, so every
+  // descendant of `references` is bibliographic until a deeper entry says
+  // otherwise. `hasOwnProperty` rather than a plain lookup because a dataset
+  // key called "constructor" would otherwise resolve to Object's.
+  const walk = (val, key, subtree) => {
+    const here = Object.prototype.hasOwnProperty.call(SUBTREE_TRANSLATABLE, key) ? key : subtree;
+    const keys = SUBTREE_TRANSLATABLE[here] || TRANSLATABLE_KEYS;
+    if (Array.isArray(val)) return val.map((v) => walk(v, key, here));
     if (val && typeof val === 'object') {
       const out = {};
-      for (const k of Object.keys(val)) out[k] = walk(val[k], k, refs);
+      for (const k of Object.keys(val)) out[k] = walk(val[k], k, here);
       return out;
     }
     if (typeof val === 'string' && keys.has(key)) return t(val);
     return val;
   };
-  const copy = walk(data, null, false);
+  const copy = walk(data, null, null);
   copy.meta = Object.assign({}, copy.meta, { language: lang });
   // `place` IS translated prose (the chronology's Place column reads in the
   // page's language), but the gazetteer behind the places map is keyed on the
