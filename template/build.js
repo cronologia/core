@@ -1565,20 +1565,32 @@ function renderOrgCard(org, refNumById, ui) {
  * locale. `publisherNote` CHARACTERISES it and is the project's own prose, so
  * it translates. They render reassembled, so a repo that has not split them
  * yet is unaffected and the English page never changes.
+ *
+ * Rendering follows LENGTH. A stance note of a few words reads well in
+ * brackets after the citation. Some are 150 words of source criticism — how
+ * far the source can be trusted, what was and was not consulted — and that is
+ * not a parenthesis, it is a paragraph. Over NOTE_INLINE_MAX it gets its own
+ * line under the reference.
  */
 function renderReference(r, n, archives, ui) {
   const snap = archives[r.url];
   const archived = snap && snap.archiveUrl
     ? ` · <a class="archive-link" href="${esc(snap.archiveUrl)}" rel="noopener noreferrer" target="_blank">🗄 archived${snap.timestamp ? ` ${esc(formatArchiveTs(snap.timestamp))}` : ''}</a>`
     : '';
-  const pub = r.publisherNote ? `${r.publisher} (${r.publisherNote})` : r.publisher;
+  const NOTE_INLINE_MAX = 110;
+  const note = r.publisherNote || '';
+  const inline = note && note.length <= NOTE_INLINE_MAX;
+  const pub = inline ? `${r.publisher} (${note})` : r.publisher;
+  const noteLine = note && !inline
+    ? `\n          <span class="ref-note">${esc(note)}</span>`
+    : '';
   // `type` is a CLOSED vocabulary, not prose: it belongs in the UI table with
   // the rest of the chrome, so a new type is a code change that surfaces as a
   // missing label rather than a silent English word on a Portuguese page.
   const type = (ui && ui.refTypes && ui.refTypes[r.type]) || r.type;
   return `        <li id="ref-${n}">
           <a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.title)}</a>${archived}
-          <span class="ref-meta">${esc(pub)} · ${esc(type)}</span>
+          <span class="ref-meta">${esc(pub)} · ${esc(type)}</span>${noteLine}
         </li>`;
 }
 

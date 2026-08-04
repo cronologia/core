@@ -115,6 +115,9 @@ ol.references li { margin-bottom: .6rem; }
 ol.references a { color: var(--accent); text-decoration: none; font-weight: 600; }
 ol.references a:hover { text-decoration: underline; }
 .ref-meta { display: block; color: var(--muted); font-size: .8rem; }
+/* A source-criticism note too long for parentheses gets its own line, so the
+   reference list stays scannable. See renderReference/NOTE_INLINE_MAX. */
+.ref-note { display: block; margin-top: .2rem; font-size: .84rem; opacity: .82; font-style: italic; }
 .archive-link { color: var(--muted); font-weight: 600; text-decoration: none; }
 .archive-link:hover { color: var(--accent); text-decoration: underline; }
 
