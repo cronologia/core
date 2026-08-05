@@ -252,3 +252,81 @@ test('approval ladder: localization translates the prose and leaves the enum alo
   // And the localized data must still render, which is the failure this guards.
   assert.ok(renderApprovalLadder(out.approvalLadder, new Map([['d', 1]]), UI.es));
 });
+
+/* `adjacent` — the eighth ladder status (core#68). An imprimatur, a feast, a
+ * coronation or a canonization is a real dated Church act about a DIFFERENT
+ * object. Before this existed the only honest-ish home was `favourable`, which
+ * rendered a green "concluded in favour" beside acts that authenticated
+ * nothing. */
+test('approval ladder: `adjacent` exists, is cited like a verdict, and is never `favourable`', () => {
+  assert.ok(STATUS_GLYPH.adjacent, 'adjacent needs a glyph');
+  assert.notEqual(STATUS_GLYPH.adjacent, STATUS_GLYPH.favourable);
+  for (const lang of ['en', 'es', 'pt']) {
+    const set = UI[lang].ladderStatus;
+    assert.ok(set.adjacent, `${lang} has no adjacent label`);
+    assert.notEqual(set.adjacent, set.favourable, `${lang} must not equate adjacent with favourable`);
+  }
+  // It asserts something about an act, so it carries the same evidence burden.
+  assert.throws(
+    () => ladderRungs({ stages: [{ label: 'Rome — a feast', status: 'adjacent' }] }),
+    /no sources and no.*noDocument/s);
+  assert.ok(ladderRungs({ stages: [{ label: 'Rome — a feast', status: 'adjacent', sources: ['d'] }] }));
+});
+
+test('approval ladder: an adjacent rung renders its own class, not the favourable one', () => {
+  const html = renderApprovalLadder(
+    { stages: [{ label: 'Leo XIII institutes the feast', status: 'adjacent', sources: ['decree'] }] },
+    NUMS, UI.en);
+  assert.match(html, /al-adjacent/);
+  assert.doesNotMatch(html, /al-favourable/);
+  assert.match(html, /not a ruling on the apparition/);
+});
+
+/* `dateNote` (core#73). It was in every dataset, in TRANSLATABLE_KEYS nowhere,
+ * and in no renderer — about eighty caveats written and shown to no one. The
+ * two halves are tested separately because either alone still hides it: render
+ * without translating and es/pt get English; translate without rendering and
+ * nobody sees anything. */
+const { renderEventRow } = require('../build.js');
+
+test('dateNote renders beneath the event it qualifies', () => {
+  const ev = { year: 1879, date: '1879', title: 'Basilica consecrated',
+    dateNote: 'The sources disagree: April in one, August in another.', sources: [] };
+  const html = renderEventRow(ev, new Map(), UI.en);
+  assert.match(html, /date-note/);
+  assert.match(html, /The sources disagree/);
+  // Absent dateNote must change nothing.
+  assert.doesNotMatch(renderEventRow({ year: 1879, title: 'x' }, new Map(), UI.en), /date-note/);
+});
+
+test('dateNote is translatable, or it renders in English on every localized page', () => {
+  const dict = { 'The sources disagree.': 'Las fuentes discrepan.' };
+  const out = localizeData(
+    { events: [{ year: 1879, title: 'x', dateNote: 'The sources disagree.' }] }, dict, 'es');
+  assert.equal(out.events[0].dateNote, 'Las fuentes discrepan.',
+    'dateNote must be in TRANSLATABLE_KEYS — rendering it untranslated just moves the bug');
+});
+
+/* Out-of-vocabulary reference types (core#74). The closed vocabulary falls back
+ * to the raw value, which puts an English word on a localized page — the exact
+ * thing the fallback line's own comment forbids. Every repo in the family has
+ * offenders, so this reports rather than throws for now; the test pins that the
+ * report actually happens, because a warning nobody emits is the same as none. */
+const { renderReference, UNKNOWN_REF_TYPES } = require('../build.js');
+
+test('an unknown reference type is collected for reporting, not swallowed', () => {
+  UNKNOWN_REF_TYPES.clear();
+  const ref = (type) => ({ id: 'x', title: 'T', url: 'https://e.org', publisher: 'P', type });
+  renderReference(ref('official'), 1, {}, UI.es);
+  assert.equal(UNKNOWN_REF_TYPES.size, 0, 'a known type must not be reported');
+
+  renderReference(ref('primary'), 2, {}, UI.es);
+  renderReference(ref('devotional'), 3, {}, UI.es);
+  renderReference(ref('primary'), 4, {}, UI.es);
+  assert.deepEqual([...UNKNOWN_REF_TYPES].sort(), ['devotional', 'primary'],
+    'every distinct offender is named, and named once');
+
+  // And the defect itself: the raw English word does reach the Spanish page.
+  assert.match(renderReference(ref('devotional'), 5, {}, UI.es), /devotional/);
+  UNKNOWN_REF_TYPES.clear();
+});

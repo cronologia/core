@@ -444,6 +444,16 @@ figure.swimlanes figcaption { font-size: .78rem; color: var(--muted); margin-top
   .sw-bases summary { display: none; }
 }
 
+/* `dateNote` — prose about the dating, beneath the event it qualifies.
+ *
+ * Muted and smaller than the event text, because it is apparatus rather than
+ * content; a block rather than inline, because it is frequently a sentence
+ * about which sources disagree and it must not read as part of the event. It
+ * renders at all only as of core#73 — roughly eighty of these were written into
+ * the family's datasets and shown to nobody. */
+.date-note { display: block; margin-top: .3rem; font-size: .82rem; line-height: 1.5; color: var(--muted); border-left: 2px solid var(--line); padding-left: .55rem; }
+@media print { .date-note { border-left-color: #999; } }
+
 /* Approval ladder — the Church-judgment rungs at the top of an apparition page.
  *
  * Colour is CONFIRMATION here, never the channel: every rung also carries its
@@ -481,6 +491,13 @@ figure.approval-ladder { margin: 0 0 1.4rem; }
 .al-pending .al-status { color: #255a73; }
 /* Both absences stay grey — neither is a finding about the case. They are told
  * apart by their words, which is the only place the difference actually lives. */
+/* `adjacent` — a real Church act about a DIFFERENT object (a feast, a cult, a
+ * person's sanctity). Its own colour, and the one requirement is that it is not
+ * green: rendered as a favourable verdict it tells a skimming reader the
+ * apparition was approved, which is the opposite of what the act decided. */
+.al-adjacent { border-left-color: #6b4f8e; }
+.al-adjacent .al-status { color: #55407a; }
+
 .al-not-found, .al-not-reached { border-left-color: var(--line); }
 .al-not-found .al-status, .al-not-reached .al-status { color: var(--muted); font-weight: 500; }
 
