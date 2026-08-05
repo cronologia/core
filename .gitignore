@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Derived full-text index over the archive vault (tools/corpus-index.py build).
+# Rebuilt in ~12s from the transcripts, which are the source of record.
+tools/corpus.db
