@@ -80,3 +80,51 @@ test('localizeData translates whitelisted prose, sets lang, and never touches re
   const en = localizeData(data, {}, 'en');
   assert.equal(JSON.stringify(en.events), JSON.stringify(data.events));
 });
+
+/* The translation disclaimer states how a locale's strings were actually made.
+ *
+ * This is a provenance claim on the public page, so it is pinned here: the
+ * template used to hardcode "machine translation" for es/pt, and every repo in
+ * the 2026-08-05 bootstrap wave shipped that sentence over prose no machine had
+ * touched. See cronologia/core#64. */
+const { disclaimerFor, UI } = require('../build.js');
+
+test('disclaimerFor: English carries no translation note', () => {
+  assert.equal(disclaimerFor({}, UI.en), null);
+  assert.equal(disclaimerFor({ humanReviewed: true }, UI.en), null);
+});
+
+test('disclaimerFor: a human-reviewed cache says so, in both locales', () => {
+  for (const lang of ['es', 'pt']) {
+    assert.equal(disclaimerFor({ humanReviewed: true }, UI[lang]), UI[lang].disclaimers.reviewed);
+  }
+});
+
+test('disclaimerFor: only translate.js provenance claims machine translation', () => {
+  const byBackend = { generatedBy: 'scripts/translate.js via TRANSLATE_ENDPOINT' };
+  assert.equal(disclaimerFor(byBackend, UI.es), UI.es.disclaimers.machine);
+  assert.match(UI.es.disclaimers.machine, /autom/);
+});
+
+test('disclaimerFor: authored is the default, and unknown provenance is NOT machine', () => {
+  // The wrong way to be wrong is to disclaim prose a person stands behind, so
+  // anything that does not name the backend falls to `authored`.
+  for (const meta of [
+    {},
+    null,
+    undefined,
+    { generatedBy: 'hand-authored by the assistant during the bootstrap' },
+    { generatedBy: 'unknown — record its real origin here' },
+    { humanReviewed: false },
+  ]) {
+    assert.equal(disclaimerFor(meta, UI.pt), UI.pt.disclaimers.authored, JSON.stringify(meta));
+  }
+});
+
+test('disclaimerFor: humanReviewed wins over a machine generatedBy, and only `true` counts', () => {
+  const both = { humanReviewed: true, generatedBy: 'scripts/translate.js via TRANSLATE_ENDPOINT' };
+  assert.equal(disclaimerFor(both, UI.es), UI.es.disclaimers.reviewed);
+  // A truthy non-true value (a name, a date) must not be read as "reviewed".
+  const sloppy = { humanReviewed: 'yes, by DJ' };
+  assert.equal(disclaimerFor(sloppy, UI.es), UI.es.disclaimers.authored);
+});
