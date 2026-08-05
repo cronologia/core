@@ -151,6 +151,7 @@ const UI = {
       pending: 'Under way',
       adjacent: 'Church act on a related matter — not a ruling on the apparition',
     },
+    ladderDetails: 'Step by step, with the documents',
     // English is the authoritative text, so it never carries a translation note.
     disclaimers: null,
   },
@@ -216,6 +217,7 @@ const UI = {
       pending: 'En curso',
       adjacent: 'Acto de la Iglesia sobre una materia relacionada — no una resolución sobre la aparición',
     },
+    ladderDetails: 'Paso a paso, con los documentos',
     disclaimers: {
       machine: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
       authored: 'Traducción del inglés escrita por el asistente, sin revisión humana; la página en inglés es la versión de referencia.',
@@ -284,6 +286,7 @@ const UI = {
       pending: 'Em curso',
       adjacent: 'Ato da Igreja sobre matéria relacionada — não uma decisão sobre a aparição',
     },
+    ladderDetails: 'Passo a passo, com os documentos',
     disclaimers: {
       machine: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
       authored: 'Tradução do inglês escrita pelo assistente, sem revisão humana; a página em inglês é a versão de referência.',
@@ -1282,24 +1285,46 @@ function renderApprovalLadder(ladder, refNumById, ui) {
   const rungs = ladderRungs(ladder);
   if (!rungs) return '';
   const t = ui || UI.en;
+  const uid = (i) => `al-rung-${i + 1}`;
 
-  const items = rungs.map((st, i) => {
+  // THE CASCADE. Each node carries only what a reader scanning the chart needs
+  // — which authority, when, and the status in words — and links to its panel.
+  // The step offset is a CSS custom property rather than a class per depth, so
+  // a case with nine rungs needs no new CSS.
+  const nodes = rungs.map((st, i) => {
     const statusLabel = (t.ladderStatus && t.ladderStatus[st.status]) || st.status;
-    const glyph = STATUS_GLYPH[st.status];
     const when = st.when ? `<span class="al-when">${esc(st.when)}</span>` : '';
+    return `          <li class="al-node al-${esc(st.status)}" style="--al-step:${i}">
+            <a href="#${uid(i)}" class="al-node-link">
+              <span class="al-num" aria-hidden="true">${i + 1}</span>
+              <span class="al-node-body">
+                <span class="al-node-label">${esc(st.label)}</span>${when}
+                <span class="al-node-status"><span class="al-glyph" aria-hidden="true">${STATUS_GLYPH[st.status]}</span>${esc(statusLabel)}</span>
+              </span>
+            </a>
+          </li>`;
+  }).join('\n');
+
+  // THE PANELS. Full prose and citations. In static HTML these are plain
+  // sections stacked inside the disclosure — no `role="tab"` anywhere, because
+  // without the script this is not a tab widget and saying so would be a lie
+  // told to a screen reader. The script adds the roles when it makes it true.
+  const panels = rungs.map((st, i) => {
+    const statusLabel = (t.ladderStatus && t.ladderStatus[st.status]) || st.status;
     const who = st.who ? `<p class="al-who">${esc(st.who)}</p>` : '';
     const outcome = st.outcome ? `<p class="al-outcome">${esc(st.outcome)}</p>` : '';
     const note = st.noDocument ? `<p class="al-nodoc">${esc(st.noDocument)}</p>` : '';
     const cites = renderCites(st.sources, refNumById);
-    return `          <li class="al-rung al-${esc(st.status)}">
-            <span class="al-step" aria-hidden="true">${i + 1}</span>
-            <div class="al-body">
-              <h3 class="al-label">${esc(st.label)}${when}</h3>
-              <p class="al-status"><span class="al-glyph" aria-hidden="true">${glyph}</span>${esc(statusLabel)}</p>
-${who}${outcome}${note}              <p class="al-cites">${cites}</p>
-            </div>
-          </li>`;
+    return `          <section id="${uid(i)}" class="al-panel al-${esc(st.status)}">
+            <h3 class="al-panel-title">${esc(st.label)}${st.when ? ` <span class="al-when">${esc(st.when)}</span>` : ''}</h3>
+            <p class="al-status"><span class="al-glyph" aria-hidden="true">${STATUS_GLYPH[st.status]}</span>${esc(statusLabel)}</p>
+${who}${outcome}${note}            <p class="al-cites">${cites}</p>
+          </section>`;
   }).join('\n');
+
+  const tabs = rungs.map((st, i) =>
+    `            <button type="button" class="al-tab" data-al-panel="${uid(i)}">` +
+    `<span class="al-glyph" aria-hidden="true">${STATUS_GLYPH[st.status]}</span>${esc(st.label)}</button>`).join('\n');
 
   const heading = ladder.heading || t.ladderHeading;
   const intro = ladder.note || t.ladderIntro;
@@ -1307,11 +1332,66 @@ ${who}${outcome}${note}              <p class="al-cites">${cites}</p>
       <h2>${esc(heading)}</h2>
       <p class="section-intro">${esc(intro)}</p>
       <figure class="approval-ladder">
-        <ol class="al-track">
-${items}
+        <div class="viz-scroll">
+        <ol class="al-cascade">
+${nodes}
         </ol>
+        </div>
         <figcaption>${esc(ladder.caption || t.ladderCaption)}</figcaption>
       </figure>
+      <details class="al-details">
+        <summary>${esc(t.ladderDetails)}</summary>
+        <div class="al-tablist" hidden aria-label="${esc(t.ladderHeading)}">
+${tabs}
+        </div>
+        <div class="al-panels">
+${panels}
+        </div>
+      </details>
+      <script>(function () {
+        var s = document.currentScript.closest('section');
+        var det = s.querySelector('.al-details');
+        var list = s.querySelector('.al-tablist');
+        var tabs = [].slice.call(s.querySelectorAll('.al-tab'));
+        var panels = [].slice.call(s.querySelectorAll('.al-panel'));
+        if (!det || !tabs.length || tabs.length !== panels.length) return;
+        list.hidden = false;
+        list.setAttribute('role', 'tablist');
+        function select(id, focus) {
+          tabs.forEach(function (b, i) {
+            var on = b.getAttribute('data-al-panel') === id;
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+            b.setAttribute('tabindex', on ? '0' : '-1');
+            panels[i].hidden = !on;
+            if (on && focus) b.focus();
+          });
+        }
+        tabs.forEach(function (b, i) {
+          b.setAttribute('role', 'tab');
+          b.id = b.getAttribute('data-al-panel') + '-tab';
+          panels[i].setAttribute('role', 'tabpanel');
+          panels[i].setAttribute('aria-labelledby', b.id);
+          panels[i].tabIndex = 0;
+          b.addEventListener('click', function () { select(b.getAttribute('data-al-panel'), false); });
+          b.addEventListener('keydown', function (e) {
+            var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+            if (!d) return;
+            e.preventDefault();
+            var n = (i + d + tabs.length) % tabs.length;
+            select(tabs[n].getAttribute('data-al-panel'), true);
+          });
+        });
+        // A cascade node opens the disclosure and selects its panel, instead of
+        // jumping the page to a fragment inside a collapsed <details>.
+        [].slice.call(s.querySelectorAll('.al-node-link')).forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            e.preventDefault();
+            det.open = true;
+            select(a.getAttribute('href').slice(1), true);
+          });
+        });
+        select(tabs[0].getAttribute('data-al-panel'), false);
+      })();</script>
     </section>
 
 `;

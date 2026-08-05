@@ -386,6 +386,7 @@ figure.places-map figcaption { font-size: .78rem; color: var(--muted); margin-to
 @media print {
   #map .atlas-map { break-inside: avoid; page-break-inside: avoid; }
   .latam-c, .atlas-swatch { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 
 /* ---------------------------------------------------------------------------
    Swimlanes — the thread-lane figure (core#23).
@@ -461,47 +462,91 @@ figure.swimlanes figcaption { font-size: .78rem; color: var(--muted); margin-top
  * colour-blind reading unchanged. The left border is the coloured element
  * because a border cannot be mistaken for a filled "badge" that summarises the
  * case — there is no such summary, by design. */
-figure.approval-ladder { margin: 0 0 1.4rem; }
-.al-track { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
-@media (min-width: 760px) {
-  /* Side by side, so the escalation reads left to right as a sequence. */
-  .al-track { grid-auto-flow: column; grid-auto-columns: 1fr; }
-}
-.al-rung { display: flex; gap: .7rem; background: var(--card, #fff); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; padding: .8rem .9rem; }
-.al-step { flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 999px; background: var(--line); color: var(--muted); font-size: .8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.al-body { min-width: 0; }
-.al-label { font-size: .95rem; margin: .1rem 0 .3rem; line-height: 1.3; }
-.al-when { display: block; font-size: .78rem; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
-.al-status { font-size: .82rem; font-weight: 600; margin: 0 0 .35rem; }
+figure.approval-ladder { margin: 0 0 1rem; }
+
+/* THE CASCADE. Each rung steps further right than the last, so the escalation
+ * — parish, then bishop, then Rome — is legible as a shape before a word is
+ * read. The indent is driven by --al-step, set per node, so a case with nine
+ * rungs needs no new CSS and a case with two does not look broken.
+ *
+ * Colour is confirmation only: every node also carries its status in words and
+ * a glyph, and the left border is the coloured element because a filled badge
+ * would read as a verdict on the case as a whole — which this chart never
+ * renders. */
+.al-cascade { list-style: none; margin: 0; padding: .2rem 0 0; min-width: 20rem; }
+.al-node { margin: 0 0 .45rem; padding-left: calc(var(--al-step, 0) * 1.5rem); position: relative; }
+.al-node-link { display: flex; gap: .6rem; align-items: flex-start; text-decoration: none; color: inherit;
+  background: var(--card, #fff); border: 1px solid var(--line); border-left: 4px solid var(--muted);
+  border-radius: 6px; padding: .55rem .75rem; }
+.al-node-link:hover, .al-node-link:focus-visible { border-color: var(--ref, #666); background: var(--surface, #fafafa); }
+/* The connector: a short elbow from the previous node's baseline. Drawn with a
+ * border on a pseudo-element so it costs no markup and disappears in print. */
+.al-node + .al-node::before { content: ''; position: absolute; left: calc(var(--al-step, 0) * 1.5rem - .75rem);
+  top: -.45rem; width: .75rem; height: 1.2rem; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  border-bottom-left-radius: 4px; }
+.al-num { flex: 0 0 auto; width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--line);
+  color: var(--muted); font-size: .75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.al-node-body { min-width: 0; }
+.al-node-label { display: block; font-weight: 600; font-size: .9rem; line-height: 1.3; }
+.al-node .al-when { display: inline-block; font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.al-node-status { display: block; font-size: .8rem; font-weight: 600; margin-top: .15rem; }
 .al-glyph { display: inline-block; min-width: 1.1em; font-weight: 700; }
-.al-who, .al-outcome, .al-nodoc { font-size: .82rem; line-height: 1.5; margin: 0 0 .35rem; }
+
+/* THE DETAILS. Collapsed by default: the cascade is the summary, and the prose
+ * and citations are one click away. Without JavaScript this is a disclosure
+ * containing every panel stacked — which is also the print form. The script
+ * turns it into tabs and only then adds the tab ARIA roles, because claiming a
+ * tab widget that does not exist misleads a screen reader. */
+.al-details { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 1.4rem; background: var(--surface, #fafafa); }
+.al-details > summary { cursor: pointer; padding: .6rem .9rem; font-size: .88rem; font-weight: 600; color: var(--ink); }
+.al-details[open] > summary { border-bottom: 1px solid var(--line); }
+.al-tablist { display: flex; flex-wrap: wrap; gap: .3rem; padding: .6rem .9rem 0; }
+.al-tab { font: inherit; font-size: .8rem; cursor: pointer; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: .25rem .7rem; }
+.al-tab[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.al-panels { padding: .8rem .9rem .9rem; }
+.al-panel { border-left: 4px solid var(--muted); padding-left: .8rem; }
+.al-panel + .al-panel { margin-top: 1rem; }
+.al-panel-title { font-size: .95rem; margin: 0 0 .3rem; }
+.al-status { font-size: .82rem; font-weight: 600; margin: 0 0 .4rem; }
+.al-who, .al-outcome, .al-nodoc { font-size: .85rem; line-height: 1.55; margin: 0 0 .4rem; }
 .al-who { color: var(--muted); }
 .al-nodoc { color: var(--muted); font-style: italic; }
 .al-cites { margin: 0; font-size: .78rem; }
 
-.al-favourable { border-left-color: #2f7d4f; }
-.al-favourable .al-status { color: #24603c; }
-.al-negative { border-left-color: #9c3848; }
-.al-negative .al-status { color: #85303d; }
-.al-inconclusive { border-left-color: #8a6a16; }
-.al-inconclusive .al-status { color: #6f5512; }
-.al-reported-undocumented { border-left-color: #8a6a16; }
-.al-reported-undocumented .al-status { color: #6f5512; }
-.al-pending { border-left-color: #2e6f8e; }
-.al-pending .al-status { color: #255a73; }
+.al-favourable .al-node-link, .al-panel.al-favourable { border-left-color: #2f7d4f; }
+.al-favourable .al-node-status, .al-favourable .al-status { color: #24603c; }
+.al-negative .al-node-link, .al-panel.al-negative { border-left-color: #9c3848; }
+.al-negative .al-node-status, .al-negative .al-status { color: #85303d; }
+.al-inconclusive .al-node-link, .al-panel.al-inconclusive,
+.al-reported-undocumented .al-node-link, .al-panel.al-reported-undocumented { border-left-color: #8a6a16; }
+.al-inconclusive .al-node-status, .al-inconclusive .al-status,
+.al-reported-undocumented .al-node-status, .al-reported-undocumented .al-status { color: #6f5512; }
+.al-pending .al-node-link, .al-panel.al-pending { border-left-color: #2e6f8e; }
+.al-pending .al-node-status, .al-pending .al-status { color: #255a73; }
+/* `adjacent` — an act about a DIFFERENT object. Its own colour, and above all
+ * not green: rendered as a favourable verdict it tells a skimming reader the
+ * apparition was approved, which is the opposite of what such acts decide. */
+.al-adjacent .al-node-link, .al-panel.al-adjacent { border-left-color: #6b4f8e; }
+.al-adjacent .al-node-status, .al-adjacent .al-status { color: #55407a; }
 /* Both absences stay grey — neither is a finding about the case. They are told
- * apart by their words, which is the only place the difference actually lives. */
-/* `adjacent` — a real Church act about a DIFFERENT object (a feast, a cult, a
- * person's sanctity). Its own colour, and the one requirement is that it is not
- * green: rendered as a favourable verdict it tells a skimming reader the
- * apparition was approved, which is the opposite of what the act decided. */
-.al-adjacent { border-left-color: #6b4f8e; }
-.al-adjacent .al-status { color: #55407a; }
+ * apart by their words, which is the only place the difference lives. */
+.al-not-found .al-node-link, .al-panel.al-not-found,
+.al-not-reached .al-node-link, .al-panel.al-not-reached { border-left-color: var(--line); }
+.al-not-found .al-node-status, .al-not-found .al-status,
+.al-not-reached .al-node-status, .al-not-reached .al-status { color: var(--muted); font-weight: 500; }
 
-.al-not-found, .al-not-reached { border-left-color: var(--line); }
-.al-not-found .al-status, .al-not-reached .al-status { color: var(--muted); font-weight: 500; }
+@media (max-width: 560px) {
+  /* The indent buys nothing on a narrow screen and costs the label its width. */
+  .al-node { padding-left: 0; }
+  .al-node + .al-node::before { display: none; }
+}
 
 @media print {
-  figure.approval-ladder { break-inside: avoid; page-break-inside: avoid; }
-  .al-track { grid-auto-flow: row; }
+  figure.approval-ladder, .al-node, .al-panel { break-inside: avoid; page-break-inside: avoid; }
+  /* On paper there is nothing to click, so the disclosure is opened, the tab
+   * strip removed, and every panel shown — the summary AND the evidence. */
+  .al-details > summary, .al-tablist { display: none; }
+  .al-details, .al-details > *, .al-panels, .al-panel { display: block !important; }
+  .al-panel[hidden] { display: block !important; }
 }

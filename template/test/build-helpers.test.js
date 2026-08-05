@@ -206,8 +206,11 @@ test('approval ladder: never emits an overall verdict for the case', () => {
   ), NUMS, UI.en);
   assert.match(html, /al-favourable/);
   assert.match(html, /al-negative/);
-  // Two rungs, two verdicts, no roll-up element.
-  assert.equal((html.match(/al-rung/g) || []).length, 2);
+  // Two rungs, two verdicts, no roll-up element. Each rung appears twice by
+  // design — once as a cascade node, once as a details panel — so count the
+  // nodes, which are the summary a skimming reader actually sees.
+  assert.equal((html.match(/class="al-node /g) || []).length, 2);
+  assert.equal((html.match(/class="al-panel /g) || []).length, 2);
   assert.doesNotMatch(html, /al-verdict|al-overall|al-summary/);
 });
 
@@ -348,5 +351,53 @@ test('refTypes: every declared type has a label in all three locales', () => {
   for (const k of ['primary', 'devotional', 'institutional']) {
     assert.equal(UI.en.refTypes[k], undefined,
       `"${k}" is a perspective or a primacy claim, not a kind of document (core#74)`);
+  }
+});
+
+/* The cascade + tabbed-details redesign. The properties worth pinning are the
+ * ones that only break for SOME readers, and so never show up in casual use:
+ * the no-JS baseline, the honesty of the ARIA, and print. */
+test('approval ladder: every rung appears in both the cascade and the details', () => {
+  const html = renderApprovalLadder(ladder(
+    rung({ label: 'Diocesan inquiry', status: 'favourable', when: '1862' }),
+    rung({ label: 'Rome', status: 'not-found', noDocument: 'Searched AAS.' }),
+  ), NUMS, UI.en);
+  // Node → panel wiring: each node links to an id that exists.
+  const hrefs = [...html.matchAll(/class="al-node-link"[^>]*|href="#(al-rung-\d+)"/g)]
+    .map((m) => m[1]).filter(Boolean);
+  assert.equal(hrefs.length, 2);
+  for (const id of hrefs) assert.ok(html.includes(`id="${id}"`), `${id} has no panel`);
+});
+
+test('approval ladder: the no-JS baseline shows the evidence, not just the summary', () => {
+  const html = renderApprovalLadder(ladder(
+    rung({ label: 'Bishop', status: 'favourable', outcome: 'Declared worthy of belief.', sources: ['decree'] }),
+  ), NUMS, UI.en);
+  // The prose and the citation live in the panel, and the panel is in the
+  // document — inside a <details>, not behind a script. A reader with no JS
+  // opens the disclosure and sees everything.
+  assert.match(html, /<details class="al-details">/);
+  assert.match(html, /Declared worthy of belief\./);
+  assert.match(html, /#ref-1/);
+  // The tab strip is the enhancement, and starts hidden so it cannot render as
+  // dead buttons for a reader whose script never runs.
+  assert.match(html, /class="al-tablist" hidden/);
+});
+
+test('approval ladder: static HTML claims no tab roles it has not built', () => {
+  const html = renderApprovalLadder(ladder(rung({})), NUMS, UI.en);
+  // Emitting role="tab"/"tabpanel" before the script wires them up would
+  // promise a screen reader a widget that does not work.
+  assert.doesNotMatch(html, /role="tab"/);
+  assert.doesNotMatch(html, /role="tabpanel"/);
+  assert.doesNotMatch(html, /role="tablist"/);
+  assert.match(html, /document\.currentScript/, 'the enhancement script must ship');
+});
+
+test('approval ladder: the details summary is localized', () => {
+  for (const lang of ['en', 'es', 'pt']) {
+    assert.ok(UI[lang].ladderDetails, `${lang} has no ladderDetails string`);
+    assert.match(renderApprovalLadder(ladder(rung({})), NUMS, UI[lang]),
+      new RegExp(UI[lang].ladderDetails.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
