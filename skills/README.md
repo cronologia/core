@@ -14,6 +14,7 @@ imperative prose. Load `sourcing-rules` first; the rest assume it.
 | `mine-video` | a video link arrives: transcript → mining ticket → verified data |
 | `dossier-research` | working a person-dossier ticket |
 | `net-access` | a fetch returns 403/406/429 or a reset — the access ladder, and the rule against routing around the proxy |
+| `corpus-search` | before answering "does he ever say X", and before reporting that anything is absent from a transcript corpus |
 | `data-edit` | any change to `data/*.json`: query → edit → validate/test/build → commit data with regenerated `docs/` |
 | `ingest-report` | turning research reports posted on tickets into dataset entries |
 | `adopt-template` | pulling a renderer, script or workflow from `core/template/` into a project |
