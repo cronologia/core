@@ -265,6 +265,52 @@ class TestHonesty(VaultFixture):
         self.assertIn('revisao_pendente', self.search('Foro'))
 
 
+class TestCoverage(VaultFixture):
+    """archive#37: a file can be present, legible, and missing its last third."""
+
+    def setUp(self):
+        super().setUp()
+        os.makedirs(os.path.join(self.tmp, 'webcaptures'), exist_ok=True)
+        self.write('webcaptures/cof-audio-durations.json', json.dumps({'aulas': {
+            '1': {'estimatedCoverage': 0.98},     # COF001 — whole
+            '2': {'estimatedCoverage': 0.34},     # COF002 — abandoned mid-stream
+        }}))
+
+    def test_incomplete_files_are_named_with_every_search(self):
+        self.build()
+        out = self.search('Fílon')
+        self.assertIn('caveat:', out)
+        self.assertIn('COF002', out)
+        self.assertIn('archive#37', out)
+
+    def test_a_zero_says_the_corpus_is_not_entire(self):
+        """The whole point. A zero over a truncated corpus is not an absence."""
+        self.build()
+        out = self.search('zoroastrismo')
+        self.assertIn('hits  : 0', out)
+        self.assertIn('INCOMPLETE', out.upper())
+        self.assertIn('positional', out)
+        self.assertIn('may not be quoted as a', out)
+
+    def test_a_hit_from_an_incomplete_file_is_marked(self):
+        self.build()
+        out = self.search('Foro')          # lives in COF002, coverage 0.34
+        self.assertIn('INCOMPLETE 34%', out)
+
+    def test_a_hit_from_a_whole_file_is_not_marked(self):
+        self.build()
+        out = self.search('Fílon')         # lives in COF001, coverage 0.98
+        self.assertNotIn('INCOMPLETE', out.split('caveat:')[-1].split('hits')[-1])
+
+    def test_no_coverage_data_means_no_false_reassurance(self):
+        """Absent measurements must not render as 'complete'."""
+        os.remove(os.path.join(self.tmp, 'webcaptures', 'cof-audio-durations.json'))
+        self.build()
+        out = self.search('zoroastrismo')
+        self.assertNotIn('caveat:', out)
+        self.assertIn('not evidence of absence', out)
+
+
 class TestFilters(VaultFixture):
 
     def test_collection_filter_narrows_and_says_so(self):
