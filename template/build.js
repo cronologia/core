@@ -66,6 +66,12 @@ const TRANSLATABLE_KEYS = new Set([
   // Lane bases are prose and RENDER on the page (renderSwimlanes publishes each
   // lane's grounding), so they are translated like any other visible prose.
   'basis', 'intro',
+  // `dateNote` is prose ABOUT the dating — which sources disagree, what a date
+  // still rests on. It was carried in every dataset in the family and rendered
+  // NOWHERE, so roughly eighty caveats were written, and invisible to every
+  // reader. olavo hit this and fixed it locally; this is that fix, upstreamed
+  // (core#73). Translatable because it is prose, and it now renders.
+  'dateNote',
 ]);
 
 // Interface strings the compiler emits itself (everything not sourced from data).
@@ -131,6 +137,7 @@ const UI = {
       'not-found': 'No record found that this step took place',
       'not-reached': 'The case did not reach this step',
       pending: 'Under way',
+      adjacent: 'Church act on a related matter — not a ruling on the apparition',
     },
     // English is the authoritative text, so it never carries a translation note.
     disclaimers: null,
@@ -194,6 +201,7 @@ const UI = {
       'not-found': 'No consta que este paso se diera',
       'not-reached': 'El caso no llegó a este paso',
       pending: 'En curso',
+      adjacent: 'Acto de la Iglesia sobre una materia relacionada — no una resolución sobre la aparición',
     },
     disclaimers: {
       machine: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
@@ -260,6 +268,7 @@ const UI = {
       'not-found': 'Não há registo de que este passo tenha ocorrido',
       'not-reached': 'O caso não chegou a este passo',
       pending: 'Em curso',
+      adjacent: 'Ato da Igreja sobre matéria relacionada — não uma decisão sobre a aparição',
     },
     disclaimers: {
       machine: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
@@ -1219,6 +1228,12 @@ const STATUS_GLYPH = {
   'not-found': '·',
   'not-reached': '·',
   pending: '…',
+  // A real, dated, citable Church act about something ELSE — a cult, a feast, a
+  // person's sanctity, a publication. Its own glyph and its own colour, and
+  // deliberately NOT green: an imprimatur, a coronation or a canonization
+  // rendered as "concluded in favour" tells a skimming reader the apparition was
+  // approved, which is the precise opposite of what those acts decide.
+  adjacent: '◆',
 };
 
 /** The rungs, validated. Throws on anything that would render a bare claim. */
@@ -1785,16 +1800,26 @@ ${script}    </section>
 `;
 }
 
+/** Out-of-vocabulary `references[].type` values seen this build (core#74). */
+const UNKNOWN_REF_TYPES = new Set();
+
 function renderEventRow(ev, refNumById, ui) {
   const flag = ev.dateVerified === false
     ? ` <span class="flag" title="${esc((ui || UI.en).flagTitle)}">?</span>`
     : '';
   const text = ev.text ? ` <span class="muted">— ${renderText(ev.text)}</span>` : '';
+  // `dateNote` is the prose about the dating: which sources disagree, what a
+  // date still rests on. The `?` flag says a date is unverified; this says WHY,
+  // and who disagrees. It was carried in the data and rendered nowhere, so the
+  // weaker half of the caveat was the only half a reader ever saw (core#73).
+  const dateNote = ev.dateNote
+    ? `<span class="date-note">${renderText(ev.dateNote)}</span>`
+    : '';
   return `        <tr>
           <td class="year">${esc(ev.year)}</td>
           <td>${esc(ev.date || '')}${flag}</td>
           <td>${esc(ev.place || '')}</td>
-          <td><strong>${esc(ev.title)}</strong>${text}${renderCites(ev.sources, refNumById)}</td>
+          <td><strong>${esc(ev.title)}</strong>${text}${renderCites(ev.sources, refNumById)}${dateNote}</td>
         </tr>`;
 }
 
@@ -1850,6 +1875,15 @@ function renderReference(r, n, archives, ui) {
   // `type` is a CLOSED vocabulary, not prose: it belongs in the UI table with
   // the rest of the chrome, so a new type is a code change that surfaces as a
   // missing label rather than a silent English word on a Portuguese page.
+  // The vocabulary is closed, and an unknown type falls through to the raw
+  // English word on a localized page -- which is exactly what the comment above
+  // says must not happen. Every repo in the family currently has offenders
+  // (core#74), so this REPORTS rather than throws: making it fatal today would
+  // take twelve sites red at once. Once the vocabulary question is settled and
+  // the datasets migrated, this becomes the throw the comment always implied.
+  if (ui && ui.refTypes && r.type && !Object.prototype.hasOwnProperty.call(ui.refTypes, r.type)) {
+    UNKNOWN_REF_TYPES.add(r.type);
+  }
   const type = (ui && ui.refTypes && ui.refTypes[r.type]) || r.type;
   return `        <li id="ref-${n}">
           <a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.title)}</a>${archived}
@@ -2147,6 +2181,18 @@ function main() {
     `${data.events.length} events, ${data.figures.length} figures, ` +
     `${data.references.length} references, ${archivedRefs} with archive fallback.`
   );
+  // Named, not counted, and ALL of them: a report that says "3 problems" sends
+  // you looking, and one that says which three is actionable in the same run.
+  // See core#74 -- the publisher check's one-at-a-time reporting is the
+  // anti-pattern this avoids.
+  if (UNKNOWN_REF_TYPES.size) {
+    console.warn(
+      `WARNING: ${UNKNOWN_REF_TYPES.size} reference type(s) are outside the closed refTypes ` +
+      `vocabulary and render as raw English on every localized page: ` +
+      `${[...UNKNOWN_REF_TYPES].sort().map((t) => JSON.stringify(t)).join(', ')}. ` +
+      `Retype them, or move the characterisation into publisherNote, which IS translated (core#74).`
+    );
+  }
 }
 
 // Run the build only when invoked directly; when required (tests) just expose
@@ -2165,6 +2211,7 @@ module.exports = {
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   loadPlaces, loadWorld,
   renderPage,
-  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH, siteBase, translator, localizeData,
+  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,
+  renderEventRow, UNKNOWN_REF_TYPES, renderReference, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
 };
