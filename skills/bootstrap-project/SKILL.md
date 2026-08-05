@@ -42,9 +42,12 @@ The proven sequence (used for fsspx and tl):
    chromium) and eyeball it.
 5. **Publish.** Create the GitHub repo EMPTY; push `main` as the first branch;
    only then enable Pages (Source: GitHub Actions) — the github-pages
-   environment pins its allowed branch to the default branch at enable time —
-   and set the Actions variable `ENABLE_PAGES=true`. The workflow deploys on
-   push to main and supports manual dispatch.
+   environment pins its allowed branch to the default branch at enable time.
+   That is the whole of it; there is no second switch. The workflow deploys on
+   push to main and supports manual dispatch. (There used to be an
+   `ENABLE_PAGES` Actions variable as well. It was removed: with Pages on and
+   the variable unset, runs reported success while the deploy silently skipped,
+   and eight repos shipped green checks over sites serving 404.)
 6. **Ticket the follow-up.** Open: a deep-investigation epic (every flagged
    date as a checkbox, subject-specific threads, porting the preservation
    pipeline), per-figure dossier tickets, and a project-chats ticket. Link the
