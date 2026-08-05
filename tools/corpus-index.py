@@ -151,6 +151,41 @@ def collections():
     ]
 
 
+def load_coverage():
+    """Per-aula transcript-vs-audio coverage, where the vault has measured it.
+
+    archive#37 is the reason this is here. Twenty-one COF transcripts are
+    incomplete: fifteen break off mid-stream (as low as 0.34 of their audio) and
+    six sign off normally while covering under 0.60 — COF513 ends with a proper
+    closing formula over 18.5% of its lecture.
+
+    The consequence is stated in that ticket and is the whole point: "a measured
+    zero search hit in the missing tail of these files is meaningless." An index
+    that counts FILES and reports a confident scope is measuring the wrong
+    thing, because a file can be present, legible, and missing its last third.
+    """
+    path = os.path.join(ROOT, 'webcaptures', 'cof-audio-durations.json')
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding='utf-8') as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for key, rec in (data.get('aulas') or {}).items():
+        cov = rec.get('estimatedCoverage')
+        if isinstance(cov, (int, float)):
+            out['COF%03d' % int(key)] = float(cov)
+    return out
+
+
+# Below this, a transcript is treated as materially incomplete. archive#37 uses
+# 0.75 for the abandoned-mid-stream set; the same threshold is used here so the
+# tool and the ticket cannot drift apart into two different definitions.
+COVERAGE_FLOOR = 0.75
+
+
 def load_index(path):
     """Pull per-document metadata out of a collection's index.json.
 
@@ -333,13 +368,14 @@ def build(db_path):
             rowid INTEGER PRIMARY KEY,
             collection TEXT, subject TEXT, doc_id TEXT, title TEXT,
             date TEXT, date_verified INTEGER, review TEXT, series TEXT,
-            url TEXT, path TEXT, chars INTEGER);
+            url TEXT, path TEXT, chars INTEGER, coverage REAL);
         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
         CREATE VIRTUAL TABLE chunks USING fts5(
             body, doc UNINDEXED, offset UNINDEXED,
             tokenize='unicode61 remove_diacritics 2');
     """)
 
+    coverage = load_coverage()
     totals = []
     doc_rowid = 0
     chunk_count = 0
@@ -361,12 +397,13 @@ def build(db_path):
             except OSError:
                 continue
             doc_rowid += 1
+            doc_id = m.get('doc_id') or os.path.splitext(base)[0]
             con.execute(
-                'INSERT INTO docs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-                (doc_rowid, col['name'], col['subject'],
-                 m.get('doc_id') or os.path.splitext(base)[0], m.get('title'),
+                'INSERT INTO docs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (doc_rowid, col['name'], col['subject'], doc_id, m.get('title'),
                  m.get('date'), m.get('date_verified') or 0, m.get('review'),
-                 m.get('series'), m.get('url'), path, len(text)))
+                 m.get('series'), m.get('url'), path, len(text),
+                 coverage.get(doc_id)))
             for off, piece in chunks(text):
                 con.execute('INSERT INTO chunks(body, doc, offset) VALUES (?,?,?)',
                             (piece, doc_rowid, off))
@@ -399,6 +436,33 @@ def scope_line(con):
         ', '.join('%s (%d)' % (c[0], c[2]) for c in cols))
 
 
+def incomplete(con, collection=None):
+    """Files known to hold less than their audio, worst first.
+
+    A file counts as searched whether or not it is whole, so the scope line
+    alone overstates what was actually looked at. This is the correction, and
+    it is printed with every zero.
+    """
+    sql = ('SELECT doc_id, coverage FROM docs WHERE coverage IS NOT NULL '
+           'AND coverage < ? ')
+    args = [COVERAGE_FLOOR]
+    if collection:
+        sql += 'AND collection = ? '
+        args.append(collection)
+    sql += 'ORDER BY coverage'
+    return con.execute(sql, args).fetchall()
+
+
+def coverage_line(con, collection=None):
+    rows = incomplete(con, collection)
+    if not rows:
+        return None
+    worst = ', '.join('%s %.0f%%' % (d, c * 100) for d, c in rows[:5])
+    more = '' if len(rows) <= 5 else ', +%d more' % (len(rows) - 5)
+    return ('%d indexed file(s) hold less than %.0f%% of their audio '
+            '(archive#37) — worst: %s%s' % (len(rows), COVERAGE_FLOOR * 100, worst, more))
+
+
 def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False):
     if not os.path.exists(db_path):
         sys.exit('No index at %s — run: corpus-index.py build' % db_path)
@@ -410,7 +474,7 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
         fts, notes = expand(query, load_variants())
 
     sql = ("SELECT d.collection, d.doc_id, d.date, d.date_verified, d.review, "
-           "       c.offset, snippet(chunks, 0, '[', ']', ' … ', 18), d.path "
+           "       c.offset, snippet(chunks, 0, '[', ']', ' … ', 18), d.coverage "
            "FROM chunks c JOIN docs d ON d.rowid = c.doc "
            "WHERE chunks MATCH ? ")
     args = [fts]
@@ -433,6 +497,9 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
     for canon, vs in notes:
         print('expand: %s -> %s' % (canon, ', '.join(vs)))
     print('scope : %s' % scope_line(con))
+    cov = coverage_line(con, collection)
+    if cov:
+        print('caveat: %s' % cov)
     if collection:
         print('filter: collection = %s' % collection)
     if reviewed:
@@ -441,18 +508,29 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
 
     if not rows:
         # A zero here is a real finding only if the reader knows what was looked
-        # at and how. Both are printed above; this line says the rest.
-        print('  No lexical match. That is not evidence of absence: this index')
-        print('  matches WORDS, and the corpus mangles names and paraphrases')
-        print('  titles. Try the CLAIM rather than the NAME.')
+        # at and how. Both are printed above; these lines say the rest.
+        print('  No lexical match. That is not evidence of absence, for two')
+        print('  separate reasons.')
+        print('  1. This index matches WORDS, and the corpus mangles names and')
+        print('     paraphrases titles. Try the CLAIM rather than the NAME.')
+        n = len(incomplete(con, collection))
+        if n:
+            print('  2. %d of the files just searched are INCOMPLETE (above).' % n)
+            print('     Fifteen of them break off mid-lecture, so their gap is')
+            print('     positional: a term spoken in the missing tail cannot')
+            print('     appear here at all. This zero was measured over a')
+            print('     corpus that is not entire, and may not be quoted as a')
+            print('     corpus-wide absence without saying so.')
         return
 
-    for col, doc, date, dv, review, off, snip, path in rows:
+    for col, doc, date, dv, review, off, snip, cov in rows:
         stamp = date or 'undated'
         if date and not dv:
             stamp += ' (unverified)'
         flag = review or '—'
-        print('  %s / %s  [%s · %s · @%d]' % (col, doc, stamp, flag, off))
+        short = '' if cov is None or cov >= COVERAGE_FLOOR else \
+            ' · INCOMPLETE %.0f%%' % (cov * 100)
+        print('  %s / %s  [%s · %s · @%d%s]' % (col, doc, stamp, flag, off, short))
         print('      %s\n' % snip.replace('\n', ' '))
 
 
