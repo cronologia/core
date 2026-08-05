@@ -174,7 +174,10 @@ def load_coverage():
         return {}
     out = {}
     for key, rec in (data.get('aulas') or {}).items():
-        cov = rec.get('estimatedCoverage')
+        # Prefer the loop-corrected figure where it exists: the raw estimate
+        # counts recogniser loops as content, so it is optimistic exactly for
+        # the files where honesty matters most.
+        cov = rec.get('estimatedCoverageExLoops', rec.get('estimatedCoverage'))
         if isinstance(cov, (int, float)):
             out['COF%03d' % int(key)] = float(cov)
     return out
@@ -349,6 +352,35 @@ def normalise(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 
+def dedup_runs(text, keep=3):
+    """Collapse runs of identical consecutive sentences to at most `keep`.
+
+    31 vault transcripts carry recogniser loops -- up to 355 consecutive copies
+    of one sentence, emitted over silence or dead air (the measurement lives in
+    archive/webcaptures/cof-audio-durations.json, loopRuns). The vault files
+    stay as captured (archive ADR-0004); this index is DERIVED, so the junk is
+    dropped here instead, at read time.
+
+    Collapsing to three rather than one is deliberate: a speaker genuinely
+    saying "Obrigado. Obrigado. Obrigado." survives verbatim, and any phrase
+    remains findable -- what dies is only the frequency inflation, where a
+    search over this corpus counted 355 hits of a sentence nobody said 355
+    times.
+    """
+    sents = re.split(r'(?<=[.!?])\s+', text)
+    out = []
+    run = 0
+    for sent in sents:
+        if out and sent == out[-1]:
+            run += 1
+            if run >= keep:
+                continue
+        else:
+            run = 0
+        out.append(sent)
+    return ' '.join(out)
+
+
 def chunks(text):
     step = CHUNK_CHARS - CHUNK_OVERLAP
     for start in range(0, max(len(text), 1), step):
@@ -393,7 +425,7 @@ def build(db_path):
             m = meta.get(base, {})
             try:
                 with open(path, encoding='utf-8', errors='ignore') as fh:
-                    text = normalise(fh.read())
+                    text = dedup_runs(normalise(fh.read()))
             except OSError:
                 continue
             doc_rowid += 1

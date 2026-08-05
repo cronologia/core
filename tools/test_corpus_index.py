@@ -302,6 +302,16 @@ class TestCoverage(VaultFixture):
         out = self.search('Fílon')         # lives in COF001, coverage 0.98
         self.assertNotIn('INCOMPLETE', out.split('caveat:')[-1].split('hits')[-1])
 
+    def test_loop_corrected_coverage_wins_when_present(self):
+        """estimatedCoverage counts junk as content; ExLoops is the honest one."""
+        self.write('webcaptures/cof-audio-durations.json', json.dumps({'aulas': {
+            '2': {'estimatedCoverage': 0.48, 'estimatedCoverageExLoops': 0.41},
+        }}))
+        self.build()
+        out = self.search('Fílon')
+        self.assertIn('COF002 41%', out)
+        self.assertNotIn('COF002 48%', out)
+
     def test_no_coverage_data_means_no_false_reassurance(self):
         """Absent measurements must not render as 'complete'."""
         os.remove(os.path.join(self.tmp, 'webcaptures', 'cof-audio-durations.json'))
@@ -385,6 +395,29 @@ class TestUnits(unittest.TestCase):
 
     def test_load_index_of_a_missing_file_is_empty(self):
         self.assertEqual(self.mod.load_index('/nonexistent/i.json'), {})
+
+    def test_dedup_collapses_a_machine_loop_but_keeps_the_phrase(self):
+        """355 consecutive copies of one sentence are indexed as three.
+
+        The phrase must stay findable -- dropping it entirely would turn a
+        recogniser defect into a false absence, which is the exact class of
+        error this tool exists to prevent. What dies is the frequency count.
+        """
+        text = 'Antes disso ele falou de Kant. ' + 'Você não pode. ' * 355 + 'Depois continuou a aula.'
+        out = self.mod.dedup_runs(self.mod.normalise(text))
+        self.assertEqual(out.count('Você não pode.'), 3)
+        self.assertIn('Antes disso ele falou de Kant.', out)
+        self.assertIn('Depois continuou a aula.', out)
+
+    def test_dedup_leaves_genuine_repetition_alone(self):
+        """Up to three identical sentences in a row is speech, not a loop."""
+        text = 'Obrigado. Obrigado. Obrigado. E boa noite a todos.'
+        self.assertEqual(self.mod.dedup_runs(self.mod.normalise(text)),
+                         self.mod.normalise(text))
+
+    def test_dedup_does_not_touch_nonadjacent_repeats(self):
+        text = 'É isso. Mas há mais. É isso. Mas há mais. É isso.'
+        self.assertEqual(self.mod.dedup_runs(text), text)
 
     def test_expand_leaves_unknown_terms_alone(self):
         fts, notes = self.mod.expand('Aristóteles', {})
