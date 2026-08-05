@@ -28,8 +28,16 @@ const OUT_DIR = path.join(ROOT, 'docs');
 
 /* ---------------------------------------------------------------------------
  * Multi-language (i18n) + SEO. English is authoritative and hand-written; es/pt
- * are machine-translated from committed caches (data/i18n/<lang>.json, generated
- * by scripts/translate.js — never hand-edit) and carry a visible disclaimer.
+ * are served from committed caches (data/i18n/<lang>.json) and carry a visible
+ * disclaimer saying HOW they were produced.
+ *
+ * Those caches are usually AUTHORED, not machine-translated — see the header of
+ * scripts/translate.js, where authoring is the primary path and the backend is
+ * a convenience. So the disclaimer is derived from each cache's own `_meta`
+ * rather than hardcoded: a page that announces "machine translation" over
+ * hand-authored prose is a false provenance claim, and provenance is the thing
+ * these datasets exist to keep straight. `_meta.generatedBy` and
+ * `_meta.humanReviewed` decide which of the three sentences a locale gets.
  *
  * The language is a path segment AFTER the project (/<repo>/{en,es,pt}/…) because
  * GitHub Pages serves each repo under https://<org>.github.io/<repo>/. Content is
@@ -112,7 +120,8 @@ const UI = {
       encyclopedia: 'encyclopedia', web: 'web', corpus: 'corpus', database: 'database',
       video: 'video', index: 'index', book: 'book', report: 'report', legal: 'legal',
     },
-    disclaimer: null,
+    // English is the authoritative text, so it never carries a translation note.
+    disclaimers: null,
   },
   es: {
     about: 'Acerca de', chronology: 'Cronología', figures: 'Figuras clave',
@@ -162,7 +171,11 @@ const UI = {
       encyclopedia: 'enciclopedia', web: 'web', corpus: 'corpus', database: 'base de datos',
       video: 'video', index: 'índice', book: 'libro', report: 'informe', legal: 'jurídico',
     },
-    disclaimer: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
+    disclaimers: {
+      machine: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
+      authored: 'Traducción del inglés escrita por el asistente, sin revisión humana; la página en inglés es la versión de referencia.',
+      reviewed: 'Traducción del inglés revisada por una persona; la página en inglés es la versión de referencia.',
+    },
   },
   pt: {
     about: 'Sobre', chronology: 'Cronologia', figures: 'Figuras-chave',
@@ -212,7 +225,11 @@ const UI = {
       encyclopedia: 'enciclopédia', web: 'web', corpus: 'corpus', database: 'base de dados',
       video: 'vídeo', index: 'índice', book: 'livro', report: 'relatório', legal: 'jurídico',
     },
-    disclaimer: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
+    disclaimers: {
+      machine: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
+      authored: 'Tradução do inglês escrita pelo assistente, sem revisão humana; a página em inglês é a versão de referência.',
+      reviewed: 'Tradução do inglês revisada por uma pessoa; a página em inglês é a versão de referência.',
+    },
   },
 };
 
@@ -225,6 +242,42 @@ function loadDict(lang) {
   } catch {
     return {};
   }
+}
+
+/** Load a locale cache's `_meta` (provenance), or {} when there is no cache. */
+function loadDictMeta(lang) {
+  if (lang === 'en') return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${lang}.json`), 'utf8'));
+    return (parsed && parsed._meta) || {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Which translation disclaimer a locale gets, decided by the cache's OWN `_meta`.
+ *
+ * Three honest states, and the page states whichever is true:
+ *   reviewed  — `_meta.humanReviewed === true`
+ *   machine   — `_meta.generatedBy` names scripts/translate.js (the only thing
+ *               that actually calls a translation backend)
+ *   authored  — anything else: written by hand or by an assistant, unreviewed
+ *
+ * `authored` is the default on purpose. An unset or unrecognized `generatedBy`
+ * means nobody recorded a machine doing it, and claiming machine translation
+ * over hand-written prose is the wrong way to be wrong: it invites a reader to
+ * discount prose a person stands behind. The reverse error (calling machine
+ * output "authored") is prevented by translate.js, which stamps `generatedBy`
+ * whenever it fills a cache from a backend.
+ */
+function disclaimerFor(meta, ui) {
+  const set = ui && ui.disclaimers;
+  if (!set) return null;
+  if (!meta) return set.authored;
+  if (meta.humanReviewed === true) return set.reviewed;
+  if (typeof meta.generatedBy === 'string' && /translate\.js/.test(meta.generatedBy)) return set.machine;
+  return set.authored;
 }
 
 /** Normalize a public base URL to exactly one trailing slash. */
@@ -1730,6 +1783,7 @@ function renderPage(data, archives, opts = {}) {
   const { meta, facts, events, figures, organizations, disambiguation, references } = data;
   const lang = opts.lang || (meta && meta.language) || 'en';
   const ui = UI[lang] || UI.en;
+  const disclaimer = disclaimerFor(loadDictMeta(lang), ui);
   const base = opts.base || siteBase(meta);
   const route = opts.route || '';
   // `episcopalLineage` is the original fsspx key, kept as an alias.
@@ -1806,7 +1860,7 @@ ${seoHead(meta, base, route, lang)}
       <p class="lead">${esc(meta.description)}</p>
       <p class="updated">${esc(ui.lastUpdated)} ${esc(meta.lastUpdated)}</p>${renderVizChips(meta.vizChips)}
     </div>
-  </header>${ui.disclaimer ? `\n  <div class="i18n-disclaimer" role="note">🌐 ${esc(ui.disclaimer)}</div>` : ''}
+  </header>${disclaimer ? `\n  <div class="i18n-disclaimer" role="note">🌐 ${esc(disclaimer)}</div>` : ''}
 
   <nav class="site-nav">
     <div class="wrap">
@@ -1929,6 +1983,6 @@ module.exports = {
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   loadPlaces, loadWorld,
   renderPage,
-  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, siteBase, translator, localizeData,
+  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
 };
