@@ -43,5 +43,8 @@ jobs:
         working-directory: template
         run: node build.js
 
-      - name: Tools — test suite
-        run: python3 tools/test_tools.py
+      # Discovery rather than a named file: test_tools.py was the only suite
+      # here until corpus-index arrived with its own, and naming them one by
+      # one is how the second suite silently stops being run.
+      - name: Tools — test suites
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
