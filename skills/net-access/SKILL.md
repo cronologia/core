@@ -22,7 +22,10 @@ connection. That is not a workaround, it is the one prohibited move.
      `press.vatican.va` — all header artifacts, not blocks.
    - *Country gating*: refuses by client-IP country regardless of UA —
      Cloudflare "Attention Required" 403 or a connection reset. Known:
-     `forodesaopaulo.org` (US blocked, BR allowed). No UA fixes this.
+     `forodesaopaulo.org` (US blocked; Brazil confirmed working by owner
+     test — other Latin American exits are untested but worth trying first
+     when more convenient; a new working exit goes in ADR-0002's register).
+     No UA fixes this.
    - *Login-walled*: **302 → a login page** for any anonymous client, and
      usually **no Wayback snapshot** (crawlers can't reach it either). Known:
      `facebook.com/story.php`. Nothing technical fixes this — go to rung 5.
@@ -46,7 +49,8 @@ connection. That is not a workaround, it is the one prohibited move.
 5. **Out-of-band capture, then vault — a routine procedure, not a last resort.**
    When no session-reachable path exists (country-gated, login-walled, or
    Wayback-uncapturable), whoever *does* have the access captures it outside
-   the session: the owner's own device — a BR VPN exit for FSP, a logged-in
+   the session: the owner's own device — a Latin American VPN exit for FSP
+   (Brazil is the tested one; any exit the site serves works), a logged-in
    browser for a Facebook post — or a CI runner. The artifact is committed to
    `cronologia/archive` under `webcaptures/` with a manifest entry, and the
    session consumes the vaulted copy. **Ask the owner** rather than assuming
