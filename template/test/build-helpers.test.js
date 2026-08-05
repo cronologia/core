@@ -330,3 +330,23 @@ test('an unknown reference type is collected for reporting, not swallowed', () =
   assert.match(renderReference(ref('devotional'), 5, {}, UI.es), /devotional/);
   UNKNOWN_REF_TYPES.clear();
 });
+
+test('refTypes: every declared type has a label in all three locales', () => {
+  // The vocabulary and its translations drift apart silently — a type added to
+  // en and forgotten in pt renders the English word on the Portuguese page,
+  // which is the very defect core#74 is about.
+  const en = Object.keys(UI.en.refTypes);
+  for (const lang of ['es', 'pt']) {
+    assert.deepEqual(Object.keys(UI[lang].refTypes).sort(), en.slice().sort(),
+      `${lang} refTypes must cover exactly the same set as en`);
+    for (const k of en) assert.ok(UI[lang].refTypes[k], `${lang} has no label for "${k}"`);
+  }
+  // The two added in core#74 are kinds of document, and must be present.
+  for (const k of ['testimony', 'analysis']) assert.ok(UI.en.refTypes[k], `${k} missing`);
+  // These are axes, not kinds, and must NOT be in the vocabulary — they belong
+  // in publisherNote. Adding them would re-open the bug.
+  for (const k of ['primary', 'devotional', 'institutional']) {
+    assert.equal(UI.en.refTypes[k], undefined,
+      `"${k}" is a perspective or a primacy claim, not a kind of document (core#74)`);
+  }
+});

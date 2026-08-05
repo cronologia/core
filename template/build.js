@@ -121,10 +121,22 @@ const UI = {
     orgFounded: 'Founded',
     // Reference kinds are a CLOSED vocabulary, so they live here with the rest
     // of the chrome rather than in the translation caches.
+    //
+    // `type` is the KIND OF DOCUMENT, and nothing else. Two things that look
+    // like types are not, and putting them here was the single commonest error
+    // across the family (core#74):
+    //   PRIMACY -- `primary` was used 52 times. It is orthogonal: a vatican.va
+    //     decree is `official` AND primary, a diary is `archive` AND primary.
+    //     Say it in `publisherNote`, which is translated.
+    //   PERSPECTIVE -- `devotional`, `institutional`, `official-site`. The
+    //     source's stance is not its medium; `publisherNote` again.
+    // `testimony` and `analysis` ARE kinds and were missing; the sourcing rules
+    // name testimony explicitly as a class with its own corroboration bar.
     refTypes: {
       news: 'news', academic: 'academic', archive: 'archive', official: 'official',
       encyclopedia: 'encyclopedia', web: 'web', corpus: 'corpus', database: 'database',
       video: 'video', index: 'index', book: 'book', report: 'report', legal: 'legal',
+      testimony: 'testimony', analysis: 'analysis',
     },
     ladderHeading: 'How far the case went',
     ladderIntro: 'Each step is a separate judgment by a different authority. The page records what each one did and when, citing the act; it does not add them up into a verdict.',
@@ -189,6 +201,7 @@ const UI = {
       news: 'prensa', academic: 'académico', archive: 'archivo', official: 'oficial',
       encyclopedia: 'enciclopedia', web: 'web', corpus: 'corpus', database: 'base de datos',
       video: 'video', index: 'índice', book: 'libro', report: 'informe', legal: 'jurídico',
+      testimony: 'testimonio', analysis: 'análisis',
     },
     ladderHeading: 'Hasta dónde llegó el caso',
     ladderIntro: 'Cada paso es un juicio distinto de una autoridad distinta. La página registra qué hizo cada una y cuándo, citando el acto; no los suma en un veredicto.',
@@ -256,6 +269,7 @@ const UI = {
       news: 'imprensa', academic: 'acadêmico', archive: 'arquivo', official: 'oficial',
       encyclopedia: 'enciclopédia', web: 'web', corpus: 'corpus', database: 'base de dados',
       video: 'vídeo', index: 'índice', book: 'livro', report: 'relatório', legal: 'jurídico',
+      testimony: 'testemunho', analysis: 'análise',
     },
     ladderHeading: 'Até onde o caso chegou',
     ladderIntro: 'Cada passo é um juízo distinto de uma autoridade distinta. A página regista o que cada uma fez e quando, citando o ato; não os soma num veredicto.',
