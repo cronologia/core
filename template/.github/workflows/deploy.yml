@@ -4,14 +4,21 @@ name: Build & deploy
 # and (on the default branch) deploys docs/ to GitHub Pages.
 #
 # The `build` job (validate + test + build + drift check) always runs and gates
-# every push/PR. The `deploy` job is opt-in: it only runs once GitHub Pages is
-# enabled AND the repo variable ENABLE_PAGES is set to "true". This keeps the
-# default branch green until Pages is turned on, instead of failing on a 404
-# from actions/deploy-pages.
+# every push/PR. The `deploy` job runs on the default branch.
 #
-# To go live:
-#   1. Settings → Pages → Build and deployment → Source: GitHub Actions
-#   2. Settings → Secrets and variables → Actions → Variables → ENABLE_PAGES = true
+# There used to be a second switch here: deploy also required the repo variable
+# ENABLE_PAGES to be "true", so a freshly bootstrapped repo would not show a red
+# default branch before Pages was turned on. It cost more than it saved. With
+# Pages enabled but the variable unset, every run reported SUCCESS while the
+# deploy job and the artifact upload were both skipped -- a green check over a
+# site serving 404. Eight repos in the 2026-08-05 wave sat in exactly that state
+# at once, and nothing on the run page said so.
+#
+# A gate that silently does nothing and calls it success is the failure mode this
+# project refuses everywhere else. If Pages is not enabled, actions/deploy-pages
+# fails loudly and names the problem, which is the informative answer.
+#
+# To go live: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 
 on:
   push:
@@ -57,13 +64,13 @@ jobs:
           echo "docs/ is in sync."
 
       - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
   deploy:
-    if: github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
