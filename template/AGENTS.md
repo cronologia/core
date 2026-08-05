@@ -83,6 +83,40 @@ byte-identical to a build without the feature. Shapes are shown in
 
 - **`meta.vizChips[]`** — header pill links to the visual sections
   (`{ "href": "#lineage", "label": "🌳 Genealogy" }`).
+- **`approvalLadder`** — for reported apparitions and other cases that escalate
+  through named authorities: one rung per authority, rendered **at the top of
+  the page**, above `about`. The canonical shape is local inquiry (parish priest
+  or diocesan investigator) → the bishop's commission and judgment → referral to
+  Rome and its outcome, but the rungs are declared in data, so a case that never
+  left the diocese declares two, and a case Rome ruled on twice about different
+  objects declares two Roman rungs.
+
+  Four rules the renderer enforces, each with a reason:
+
+  1. **No overall verdict is ever rendered**, and adding one is a regression.
+     La Salette is the proof: the apparition was declared worthy of belief in
+     1851 and Mélanie's expanded secrets were condemned in 1915 and 1923.
+     Different judgments about different objects — one badge would have to
+     misreport one of them.
+  2. **`status` is a closed enum** and an unknown value fails the build:
+     `favourable`, `negative`, `inconclusive`, `reported-undocumented`,
+     `not-found`, `not-reached`, `pending`. Note the last three are three
+     different things. `reported-undocumented` is "a ruling is claimed, no
+     document located" (Cimbres, Campinas); `not-found` is "we searched and
+     found no sign this step happened"; `not-reached` is "the case demonstrably
+     did not go here" (Lourdes never needed Rome). Collapsing them lets an
+     unsearched gap read as a settled fact.
+  3. **Every rung is cited or says why it cannot be.** A rung with neither
+     `sources[]` nor a `noDocument` note fails the build, and the two absence
+     statuses require `noDocument` *even with* citations — it must state what
+     was searched.
+  4. **Status is never colour-only.** Each rung carries a word, a glyph and its
+     prose; colour is confirmation.
+
+  Prose fields (`label`, `when`, `who`, `outcome`, `noDocument`, `heading`,
+  `note`, `caption`, `navLabel`) are translated via a subtree allowlist.
+  `status` is deliberately excluded — it is in `TRANSLATABLE_KEYS` as prose for
+  other datasets, and translating it would break the localized build only.
 - **`lineage`** (alias `episcopalLineage`, the original fsspx key) — genealogy
   / lineage trees (`renderLineageSection`). One `trees[]` entry per branch;
   `separate: true` sets a branch apart visually for lines that must NOT be

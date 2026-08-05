@@ -120,6 +120,18 @@ const UI = {
       encyclopedia: 'encyclopedia', web: 'web', corpus: 'corpus', database: 'database',
       video: 'video', index: 'index', book: 'book', report: 'report', legal: 'legal',
     },
+    ladderHeading: 'How far the case went',
+    ladderIntro: 'Each step is a separate judgment by a different authority. The page records what each one did and when, citing the act; it does not add them up into a verdict.',
+    ladderCaption: 'One rung per authority. "No ruling found" is a statement about the evidence, not about the case.',
+    ladderStatus: {
+      favourable: 'Investigated — concluded in favour',
+      negative: 'Investigated — concluded against',
+      inconclusive: 'Investigated — no verdict issued',
+      'reported-undocumented': 'A ruling is reported; no document located',
+      'not-found': 'No record found that this step took place',
+      'not-reached': 'The case did not reach this step',
+      pending: 'Under way',
+    },
     // English is the authoritative text, so it never carries a translation note.
     disclaimers: null,
   },
@@ -170,6 +182,18 @@ const UI = {
       news: 'prensa', academic: 'académico', archive: 'archivo', official: 'oficial',
       encyclopedia: 'enciclopedia', web: 'web', corpus: 'corpus', database: 'base de datos',
       video: 'video', index: 'índice', book: 'libro', report: 'informe', legal: 'jurídico',
+    },
+    ladderHeading: 'Hasta dónde llegó el caso',
+    ladderIntro: 'Cada paso es un juicio distinto de una autoridad distinta. La página registra qué hizo cada una y cuándo, citando el acto; no los suma en un veredicto.',
+    ladderCaption: 'Un escalón por autoridad. «No se ha encontrado resolución» dice algo sobre las fuentes, no sobre el caso.',
+    ladderStatus: {
+      favourable: 'Investigado — resolución favorable',
+      negative: 'Investigado — resolución contraria',
+      inconclusive: 'Investigado — sin veredicto',
+      'reported-undocumented': 'Se refiere una resolución; no se ha localizado el documento',
+      'not-found': 'No consta que este paso se diera',
+      'not-reached': 'El caso no llegó a este paso',
+      pending: 'En curso',
     },
     disclaimers: {
       machine: 'Traducción automática del inglés; la página en inglés es la versión de referencia.',
@@ -225,6 +249,18 @@ const UI = {
       encyclopedia: 'enciclopédia', web: 'web', corpus: 'corpus', database: 'base de dados',
       video: 'vídeo', index: 'índice', book: 'livro', report: 'relatório', legal: 'jurídico',
     },
+    ladderHeading: 'Até onde o caso chegou',
+    ladderIntro: 'Cada passo é um juízo distinto de uma autoridade distinta. A página registra o que cada uma fez e quando, citando o ato; não os soma num veredicto.',
+    ladderCaption: 'Um degrau por autoridade. «Nenhuma decisão localizada» diz algo sobre as fontes, não sobre o caso.',
+    ladderStatus: {
+      favourable: 'Investigado — decisão favorável',
+      negative: 'Investigado — decisão contrária',
+      inconclusive: 'Investigado — sem veredicto',
+      'reported-undocumented': 'Relata-se uma decisão; documento não localizado',
+      'not-found': 'Não há registro de que este passo tenha ocorrido',
+      'not-reached': 'O caso não chegou a este passo',
+      pending: 'Em curso',
+    },
     disclaimers: {
       machine: 'Tradução automática do inglês; a página em inglês é a versão de referência.',
       authored: 'Tradução do inglês escrita pelo assistente, sem revisão humana; a página em inglês é a versão de referência.',
@@ -276,7 +312,12 @@ function disclaimerFor(meta, ui) {
   if (!set) return null;
   if (!meta) return set.authored;
   if (meta.humanReviewed === true) return set.reviewed;
-  if (typeof meta.generatedBy === 'string' && /translate\.js/.test(meta.generatedBy)) return set.machine;
+  // ANCHORED, not a substring search. The caches in this family record their
+  // provenance in prose, and that prose MENTIONS the script in order to deny
+  // it: "hand-authored by the assistant — NOT produced by scripts/translate.js".
+  // A loose /translate\.js/ matches that sentence and reports the exact
+  // opposite of what it says. Only the string translate.js itself writes counts.
+  if (typeof meta.generatedBy === 'string' && /^scripts\/translate\.js\b/.test(meta.generatedBy.trim())) return set.machine;
   return set.authored;
 }
 
@@ -319,6 +360,14 @@ function translator(dict) {
  */
 const SUBTREE_TRANSLATABLE = {
   references: new Set(['publisherNote']),
+  // The approval ladder. `status` is deliberately ABSENT: it is a closed enum
+  // ('favourable', 'not-reached'), the renderer looks it up in STATUS_GLYPH and
+  // in the UI table, and the general walk WOULD have translated it -- `status`
+  // is in TRANSLATABLE_KEYS as prose for other datasets -- turning the value
+  // into "Investigado" and failing the localized build with "unknown status".
+  // Everything a reader actually reads is here instead; the status renders in
+  // the page's language from the UI table, keyed on the untranslated enum.
+  approvalLadder: new Set(['label', 'when', 'who', 'outcome', 'noDocument', 'heading', 'note', 'caption', 'navLabel']),
   // >>> ADOPT: subtree-allowlists  (subtrees of this repo's dataset that are not prose)
   // A repo whose dataset carries subtrees where the general rule misfires adds
   // them here. `olavo`'s bibliography is the worked example:
@@ -1107,6 +1156,138 @@ function layoutChronologySpine(spine, events) {
 }
 
 /** Render the chronology spine, or '' when the data declares none. */
+/* ---------------------------------------------------------------------------
+ * Approval ladder — how far a reported apparition got through Church judgment.
+ *
+ * Driven by the optional top-level `approvalLadder` key of the dataset. It
+ * renders at the TOP of the page, above `about`, because for a reported
+ * apparition the Church's verdict is the first thing a reader wants and the
+ * thing devotional sources most often blur.
+ *
+ * The canonical shape is the escalation the Church actually uses — local
+ * inquiry (parish priest or a diocesan-appointed investigator), then the
+ * bishop's own commission and judgment, then referral to Rome and its outcome —
+ * but the rungs are DECLARED IN DATA, not hardcoded, because real cases do not
+ * all have three. Some never leave the diocese; some reach Rome twice, about
+ * different objects.
+ *
+ * Four properties are deliberate and must survive any redesign.
+ *
+ * 1. THE LADDER NEVER RENDERS AN OVERALL VERDICT. There is no "approved" badge
+ *    for the case as a whole, and adding one would be a regression. La Salette
+ *    is the standing proof: the apparition was declared worthy of belief in
+ *    1851 and Mélanie's expanded secrets were condemned in 1915 and 1923. Those
+ *    are different judgments about different objects, and any single badge
+ *    would have to misreport at least one of them. Each rung speaks only for
+ *    itself, and a case with two Roman acts declares two rungs.
+ *
+ * 2. "NO RULING FOUND" IS NOT "RULED AGAINST", AND NEITHER IS "NEVER WENT
+ *    THERE". The status vocabulary keeps all three apart, because the
+ *    difference between them is the finding in at least two of these datasets:
+ *    Cimbres has no located 1930s-40s diocesan ruling at all, while devotional
+ *    literature asserts a negative one it never produces. A vocabulary that
+ *    made those the same colour would erase the story.
+ *
+ * 3. EVERY RUNG IS CITED, OR SAYS IT CANNOT BE. A rung carrying a status but
+ *    neither `sources` nor an explicit `noDocument` note fails the build. An
+ *    uncited status here is a bare assertion about a Church act, which is the
+ *    exact claim this family refuses to make.
+ *
+ * 4. NO COLOUR-ONLY ENCODING. Every rung carries a text status label and a
+ *    glyph, the outcome prose is always present, and the whole thing degrades
+ *    to a readable ordered list with no CSS. Colour is confirmation, never the
+ *    channel.
+ *
+ * Status vocabulary (`STATUS_GLYPH` below is the closed set):
+ *   favourable            investigated, concluded in favour
+ *   negative              investigated, concluded against
+ *   inconclusive          investigated, no verdict issued or explicitly left open
+ *   reported-undocumented a ruling is REPORTED to exist; no document located
+ *   not-found             searched; nothing indicates this stage happened
+ *   not-reached           positively established that the case did not go here
+ *   pending               under way now
+ *
+ * `not-found` and `not-reached` are both "nothing here" and are deliberately
+ * distinct: the first is a statement about our evidence, the second about the
+ * case. Collapsing them would let an unsearched gap read as a settled fact.
+ */
+const STATUS_GLYPH = {
+  favourable: '✓',
+  negative: '✗',
+  inconclusive: '—',
+  'reported-undocumented': '?',
+  'not-found': '·',
+  'not-reached': '·',
+  pending: '…',
+};
+
+/** The rungs, validated. Throws on anything that would render a bare claim. */
+function ladderRungs(ladder) {
+  if (!ladder || !Array.isArray(ladder.stages) || ladder.stages.length === 0) return null;
+  return ladder.stages.map((st, i) => {
+    const where = `approvalLadder.stages[${i}]`;
+    if (!st || !st.label) throw new Error(`${where}: every rung needs a label`);
+    if (!Object.prototype.hasOwnProperty.call(STATUS_GLYPH, st.status)) {
+      throw new Error(`${where} ("${st.label}"): unknown status ${JSON.stringify(st.status)} — ` +
+        `use one of ${Object.keys(STATUS_GLYPH).join(', ')}`);
+    }
+    const cited = Array.isArray(st.sources) && st.sources.length > 0;
+    // A rung that asserts an outcome must show its work. The two "nothing here"
+    // statuses are exempt from `sources` but NOT from explanation: they still
+    // need `noDocument` prose saying what was searched, or the page would
+    // present an unexamined gap as a finding.
+    const nothingHere = st.status === 'not-found' || st.status === 'not-reached';
+    if (!cited && !st.noDocument) {
+      throw new Error(`${where} ("${st.label}"): status "${st.status}" with no sources and no ` +
+        `noDocument note — cite the act, or say in noDocument what was searched and not found`);
+    }
+    if (nothingHere && !st.noDocument) {
+      throw new Error(`${where} ("${st.label}"): "${st.status}" must carry a noDocument note ` +
+        `stating what was searched`);
+    }
+    return st;
+  });
+}
+
+function renderApprovalLadder(ladder, refNumById, ui) {
+  const rungs = ladderRungs(ladder);
+  if (!rungs) return '';
+  const t = ui || UI.en;
+
+  const items = rungs.map((st, i) => {
+    const statusLabel = (t.ladderStatus && t.ladderStatus[st.status]) || st.status;
+    const glyph = STATUS_GLYPH[st.status];
+    const when = st.when ? `<span class="al-when">${esc(st.when)}</span>` : '';
+    const who = st.who ? `<p class="al-who">${esc(st.who)}</p>` : '';
+    const outcome = st.outcome ? `<p class="al-outcome">${esc(st.outcome)}</p>` : '';
+    const note = st.noDocument ? `<p class="al-nodoc">${esc(st.noDocument)}</p>` : '';
+    const cites = renderCites(st.sources, refNumById);
+    return `          <li class="al-rung al-${esc(st.status)}">
+            <span class="al-step" aria-hidden="true">${i + 1}</span>
+            <div class="al-body">
+              <h3 class="al-label">${esc(st.label)}${when}</h3>
+              <p class="al-status"><span class="al-glyph" aria-hidden="true">${glyph}</span>${esc(statusLabel)}</p>
+${who}${outcome}${note}              <p class="al-cites">${cites}</p>
+            </div>
+          </li>`;
+  }).join('\n');
+
+  const heading = ladder.heading || t.ladderHeading;
+  const intro = ladder.note || t.ladderIntro;
+  return `    <section id="approval-ladder" class="viz">
+      <h2>${esc(heading)}</h2>
+      <p class="section-intro">${esc(intro)}</p>
+      <figure class="approval-ladder">
+        <ol class="al-track">
+${items}
+        </ol>
+        <figcaption>${esc(ladder.caption || t.ladderCaption)}</figcaption>
+      </figure>
+    </section>
+
+`;
+}
+
 function renderChronologySpine(spine, events, ui) {
   const layout = layoutChronologySpine(spine, events);
   if (!layout) return '';
@@ -1805,6 +1986,7 @@ function renderPage(data, archives, opts = {}) {
   const branchTimelineHtml = renderBranchTimeline(branchTimeline, refNumById);
   const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
+  const approvalLadderHtml = renderApprovalLadder(data.approvalLadder, refNumById, ui);
   const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
   const tierMapHtml = renderTierMap(tierMap, refNumById, ui);
   const swimlanesHtml = renderSwimlanes(threads, events, refNumById, ui);
@@ -1865,7 +2047,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${tierMapHtml ? `\n      <a href="#map">${esc((tierMap && tierMap.navLabel) || ui.tierMapHeading)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${approvalLadderHtml ? `\n      <a href="#approval-ladder">${esc((data.approvalLadder && data.approvalLadder.navLabel) || ui.ladderHeading)}</a>` : ''}${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${tierMapHtml ? `\n      <a href="#map">${esc((tierMap && tierMap.navLabel) || ui.tierMapHeading)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -1874,7 +2056,7 @@ ${seoHead(meta, base, route, lang)}
   </nav>
 
   <main class="wrap">
-${chronologySpineHtml}    <section id="about">
+${approvalLadderHtml}${chronologySpineHtml}    <section id="about">
       <h2>${esc(ui.aboutHeading)}</h2>
       <p class="notice">${esc(meta.dataQualityNote)}</p>
       <dl class="facts">
@@ -1983,6 +2165,6 @@ module.exports = {
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   loadPlaces, loadWorld,
   renderPage,
-  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, siteBase, translator, localizeData,
+  LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH, siteBase, translator, localizeData,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
 };
