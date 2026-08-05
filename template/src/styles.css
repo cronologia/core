@@ -443,3 +443,48 @@ figure.swimlanes figcaption { font-size: .78rem; color: var(--muted); margin-top
   .sw-bases { display: block; }
   .sw-bases summary { display: none; }
 }
+
+/* Approval ladder — the Church-judgment rungs at the top of an apparition page.
+ *
+ * Colour is CONFIRMATION here, never the channel: every rung also carries its
+ * status in words and a glyph, so the figure survives greyscale, print, and
+ * colour-blind reading unchanged. The left border is the coloured element
+ * because a border cannot be mistaken for a filled "badge" that summarises the
+ * case — there is no such summary, by design. */
+figure.approval-ladder { margin: 0 0 1.4rem; }
+.al-track { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+@media (min-width: 760px) {
+  /* Side by side, so the escalation reads left to right as a sequence. */
+  .al-track { grid-auto-flow: column; grid-auto-columns: 1fr; }
+}
+.al-rung { display: flex; gap: .7rem; background: var(--card, #fff); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; padding: .8rem .9rem; }
+.al-step { flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 999px; background: var(--line); color: var(--muted); font-size: .8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.al-body { min-width: 0; }
+.al-label { font-size: .95rem; margin: .1rem 0 .3rem; line-height: 1.3; }
+.al-when { display: block; font-size: .78rem; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.al-status { font-size: .82rem; font-weight: 600; margin: 0 0 .35rem; }
+.al-glyph { display: inline-block; min-width: 1.1em; font-weight: 700; }
+.al-who, .al-outcome, .al-nodoc { font-size: .82rem; line-height: 1.5; margin: 0 0 .35rem; }
+.al-who { color: var(--muted); }
+.al-nodoc { color: var(--muted); font-style: italic; }
+.al-cites { margin: 0; font-size: .78rem; }
+
+.al-favourable { border-left-color: #2f7d4f; }
+.al-favourable .al-status { color: #24603c; }
+.al-negative { border-left-color: #9c3848; }
+.al-negative .al-status { color: #85303d; }
+.al-inconclusive { border-left-color: #8a6a16; }
+.al-inconclusive .al-status { color: #6f5512; }
+.al-reported-undocumented { border-left-color: #8a6a16; }
+.al-reported-undocumented .al-status { color: #6f5512; }
+.al-pending { border-left-color: #2e6f8e; }
+.al-pending .al-status { color: #255a73; }
+/* Both absences stay grey — neither is a finding about the case. They are told
+ * apart by their words, which is the only place the difference actually lives. */
+.al-not-found, .al-not-reached { border-left-color: var(--line); }
+.al-not-found .al-status, .al-not-reached .al-status { color: var(--muted); font-weight: 500; }
+
+@media print {
+  figure.approval-ladder { break-inside: avoid; page-break-inside: avoid; }
+  .al-track { grid-auto-flow: row; }
+}

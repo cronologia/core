@@ -114,6 +114,9 @@ test('disclaimerFor: authored is the default, and unknown provenance is NOT mach
     null,
     undefined,
     { generatedBy: 'hand-authored by the assistant during the bootstrap' },
+    // The provenance prose these repos actually write NAMES the script in order
+    // to deny it. A substring match reports the exact opposite of the sentence.
+    { generatedBy: 'hand-authored by the assistant (Claude) during the 2026-08-05 bootstrap — NOT produced by scripts/translate.js' },
     { generatedBy: 'unknown — record its real origin here' },
     { humanReviewed: false },
   ]) {
@@ -127,4 +130,125 @@ test('disclaimerFor: humanReviewed wins over a machine generatedBy, and only `tr
   // A truthy non-true value (a name, a date) must not be read as "reviewed".
   const sloppy = { humanReviewed: 'yes, by DJ' };
   assert.equal(disclaimerFor(sloppy, UI.es), UI.es.disclaimers.authored);
+});
+
+/* The approval ladder — how far a reported apparition got through Church judgment.
+ *
+ * The rules under test are the ones that keep the chart from laundering
+ * uncertainty: an unknown status is a build failure, an uncited rung is a build
+ * failure, and the three kinds of "nothing here" stay apart. See the renderer's
+ * header for why each matters. */
+const { renderApprovalLadder, ladderRungs, STATUS_GLYPH } = require('../build.js');
+
+const NUMS = new Map([['decree', 1], ['news', 2]]);
+const rung = (o) => Object.assign({ label: 'Diocesan inquiry', status: 'favourable', sources: ['decree'] }, o);
+const ladder = (...stages) => ({ stages });
+
+test('approval ladder: absent, empty or stage-less data renders nothing', () => {
+  assert.equal(renderApprovalLadder(undefined, NUMS, UI.en), '');
+  assert.equal(renderApprovalLadder({}, NUMS, UI.en), '');
+  assert.equal(renderApprovalLadder({ stages: [] }, NUMS, UI.en), '');
+});
+
+test('approval ladder: an unknown status fails the build, and names the legal set', () => {
+  assert.throws(
+    () => ladderRungs(ladder(rung({ status: 'approved' }))),
+    /unknown status "approved".*favourable/s);
+  // A missing status is just as wrong as a wrong one.
+  assert.throws(() => ladderRungs(ladder(rung({ status: undefined }))), /unknown status/);
+  assert.throws(() => ladderRungs(ladder({ status: 'favourable' })), /needs a label/);
+});
+
+test('approval ladder: a rung with an outcome but no citation fails the build', () => {
+  for (const status of ['favourable', 'negative', 'inconclusive', 'reported-undocumented', 'pending']) {
+    assert.throws(
+      () => ladderRungs(ladder({ label: 'Rome', status })),
+      /no sources and no.*noDocument/s, `status ${status} must require evidence`);
+    // Either a citation OR an explicit "what was searched" note satisfies it.
+    assert.ok(ladderRungs(ladder({ label: 'Rome', status, sources: ['decree'] })));
+    assert.ok(ladderRungs(ladder({ label: 'Rome', status, noDocument: 'Searched the AAS index; nothing.' })));
+  }
+});
+
+test('approval ladder: the two "nothing here" statuses must say what was searched', () => {
+  for (const status of ['not-found', 'not-reached']) {
+    // Citations alone do NOT excuse them — a bare absence is the claim at issue.
+    assert.throws(
+      () => ladderRungs(ladder({ label: 'Rome', status, sources: ['decree'] })),
+      /must carry a noDocument note/);
+    assert.ok(ladderRungs(ladder({ label: 'Rome', status, noDocument: 'Searched the AAS 1930–1950.' })));
+  }
+});
+
+test('approval ladder: "not found" and "not reached" stay distinguishable in the output', () => {
+  // Same glyph is fine; the same RENDERED CLAIM is not. One is about our
+  // evidence, the other about the case, and a reader must be able to tell.
+  const notFound = renderApprovalLadder(
+    ladder({ label: 'Rome', status: 'not-found', noDocument: 'x' }), NUMS, UI.en);
+  const notReached = renderApprovalLadder(
+    ladder({ label: 'Rome', status: 'not-reached', noDocument: 'x' }), NUMS, UI.en);
+  assert.match(notFound, /al-not-found/);
+  assert.match(notReached, /al-not-reached/);
+  assert.notEqual(
+    UI.en.ladderStatus['not-found'], UI.en.ladderStatus['not-reached']);
+  for (const lang of ['es', 'pt']) {
+    assert.notEqual(UI[lang].ladderStatus['not-found'], UI[lang].ladderStatus['not-reached'],
+      `${lang} must not collapse the two absences`);
+  }
+});
+
+test('approval ladder: never emits an overall verdict for the case', () => {
+  // La Salette: apparition approved 1851, expanded secrets condemned 1915.
+  // Any single summary badge would have to misreport one of them.
+  const html = renderApprovalLadder(ladder(
+    rung({ label: 'Bishop of Grenoble', status: 'favourable', when: '1851' }),
+    rung({ label: 'Holy Office (the secrets)', status: 'negative', when: '1915', sources: ['decree'] }),
+  ), NUMS, UI.en);
+  assert.match(html, /al-favourable/);
+  assert.match(html, /al-negative/);
+  // Two rungs, two verdicts, no roll-up element.
+  assert.equal((html.match(/al-rung/g) || []).length, 2);
+  assert.doesNotMatch(html, /al-verdict|al-overall|al-summary/);
+});
+
+test('approval ladder: status is carried as text, never by colour alone', () => {
+  const html = renderApprovalLadder(ladder(rung({ status: 'negative', sources: ['decree'] })), NUMS, UI.en);
+  assert.match(html, /Investigated — concluded against/);
+  assert.match(html, /al-glyph[^>]*>✗/);
+  assert.match(html, /#ref-1/);           // the act is linked, not just asserted
+});
+
+test('approval ladder: every status has a glyph and a label in all three locales', () => {
+  for (const status of Object.keys(STATUS_GLYPH)) {
+    assert.ok(STATUS_GLYPH[status], `${status} has no glyph`);
+    for (const lang of ['en', 'es', 'pt']) {
+      assert.ok(UI[lang].ladderStatus[status], `${lang} has no label for ${status}`);
+    }
+  }
+});
+
+test('approval ladder: localization translates the prose and leaves the enum alone', () => {
+  // `status` is in TRANSLATABLE_KEYS for other datasets. Without the subtree
+  // allowlist the walk translates 'favourable' into the dictionary's value and
+  // the localized build then dies on "unknown status" — a bug that would only
+  // ever have appeared on the es/pt pages, never on the English one.
+  const data = {
+    approvalLadder: {
+      stages: [{ label: 'Diocesan inquiry', status: 'favourable', who: 'The bishop', outcome: 'Approved.', sources: ['d'] }],
+    },
+  };
+  const dict = {
+    'Diocesan inquiry': 'Investigación diocesana',
+    'The bishop': 'El obispo',
+    'Approved.': 'Aprobada.',
+    favourable: 'NO — this must never be applied',
+  };
+  const out = localizeData(data, dict, 'es');
+  const rung = out.approvalLadder.stages[0];
+  assert.equal(rung.status, 'favourable', 'the enum must survive localization verbatim');
+  assert.equal(rung.label, 'Investigación diocesana');
+  assert.equal(rung.who, 'El obispo');
+  assert.equal(rung.outcome, 'Aprobada.');
+  // And the localized data must still render, which is the failure this guards.
+  assert.ok(renderApprovalLadder(out.approvalLadder, new Map([['d', 1]]), UI.es));
 });
