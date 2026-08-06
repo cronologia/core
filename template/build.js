@@ -409,16 +409,58 @@ const SUBTREE_TRANSLATABLE = {
   // <<< ADOPT
 };
 
+/**
+ * Which key set applies to a value, given the special subtree it sits inside.
+ *
+ * `subtree` is the nearest enclosing entry of SUBTREE_TRANSLATABLE, and it is
+ * sticky: every descendant of `references` is bibliographic until a deeper
+ * entry says otherwise. `hasOwnProperty` rather than a plain lookup because a
+ * dataset key called "constructor" would otherwise resolve to Object's.
+ *
+ * Returns `[subtreeHere, keySet]` so both walks resolve it identically.
+ */
+function keysFor(key, subtree) {
+  const here = Object.prototype.hasOwnProperty.call(SUBTREE_TRANSLATABLE, key) ? key : subtree;
+  return [here, SUBTREE_TRANSLATABLE[here] || TRANSLATABLE_KEYS];
+}
+
+/**
+ * Every string this build would send through the dictionaries, in walk order,
+ * deduplicated.
+ *
+ * This exists so `scripts/translate.js` can stop mirroring the rules by hand.
+ * Hand-mirroring drifted in BOTH directions at once and each direction lied:
+ * translate.js skipped the whole `references` array, so it under-counted by
+ * every `publisherNote` the pages actually render; and it applied the general
+ * key set to `approvalLadder`, so it counted `status` — a closed enum — and
+ * would have instructed a backend to translate `not-found` into `no
+ * encontrado`, which fails the localized build outright. A coverage number is
+ * worth having only if it measures the set the renderer uses, so both now come
+ * from the same place, and a test pins them to the same answer.
+ */
+function collectTranslatable(data) {
+  const out = [];
+  const seen = new Set();
+  const walk = (val, key, subtree) => {
+    const [here, keys] = keysFor(key, subtree);
+    if (Array.isArray(val)) { val.forEach((v) => walk(v, key, here)); return; }
+    if (val && typeof val === 'object') {
+      for (const k of Object.keys(val)) walk(val[k], k, here);
+      return;
+    }
+    if (typeof val === 'string' && val.trim() && keys.has(key) && !seen.has(val)) {
+      seen.add(val);
+      out.push(val);
+    }
+  };
+  walk(data, null, null);
+  return out;
+}
+
 function localizeData(data, dict, lang) {
   const t = translator(dict);
-  // `subtree` is the special subtree this value sits inside, resolved as the
-  // walk descends: the nearest enclosing one wins, and it is sticky, so every
-  // descendant of `references` is bibliographic until a deeper entry says
-  // otherwise. `hasOwnProperty` rather than a plain lookup because a dataset
-  // key called "constructor" would otherwise resolve to Object's.
   const walk = (val, key, subtree) => {
-    const here = Object.prototype.hasOwnProperty.call(SUBTREE_TRANSLATABLE, key) ? key : subtree;
-    const keys = SUBTREE_TRANSLATABLE[here] || TRANSLATABLE_KEYS;
+    const [here, keys] = keysFor(key, subtree);
     if (Array.isArray(val)) return val.map((v) => walk(v, key, here));
     if (val && typeof val === 'object') {
       const out = {};
@@ -2307,5 +2349,6 @@ module.exports = {
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,
   renderEventRow, UNKNOWN_REF_TYPES, renderReference, siteBase, translator, localizeData,
+  TRANSLATABLE_KEYS, SUBTREE_TRANSLATABLE, keysFor, collectTranslatable,
   alternates, seoHead, langSwitcher, renderRootStub, renderSitemap, renderRobots,
 };
