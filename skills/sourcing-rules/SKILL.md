@@ -84,6 +84,37 @@ there, and it is a finding aid — listing a term is not asserting it.
   corpus, the method, the control, and what established completeness. An
   unqualified "never says X" is not publishable.
 
+## An approval is an act about an object
+
+Applies to every repo with an `approvalLadder`. The full reasoning, the
+citations and the four worked counterexamples are in
+`core/adr/0007-approval-is-an-act-about-an-object.md`; the working rules are:
+
+- **Name the object before choosing the status.** A rung records one
+  authority's act about one thing, at one date, citing the document. The first
+  review question on any rung is "about *what*?", not "favourable or not?".
+- **Honours are not findings.** Coronations, feasts, basilicas, indulgences,
+  patronages, faculties, imprimaturs and papal consecrations regulate or honour
+  worship — they presuppose the devotion rather than adjudicating the event, and
+  they get `adjacent` with the object named in the label. The Church grants the
+  same acts to devotions with no apparition behind them at all.
+- **A judgment about a person is its own rung.** A seer's canonization judges
+  holiness of life, not what they reported seeing.
+- **`not-found` is about the evidence reached; `not-reached` is a claim about
+  the case** and needs positive evidence the case was never referred.
+- **Where a bishop ruled on the apparition, say so and quote him.** This is not
+  a policy of withholding approval. It is a policy of locating it.
+- **Suspect any "the pope approved it" claim, and go to the document.** Four
+  were checked in one session and all four were real papal acts describing
+  something else — two coronations, a basilica elevation, and a bishop's
+  pronouncement credited to Pius IX. The relabelling only runs one way.
+
+The Church states the distinction itself: DDF, *Norms for Proceeding in the
+Discernment of Alleged Supernatural Phenomena* (17 May 2024), art. 23 — "as a
+rule, neither the Diocesan Bishop, nor the Episcopal Conferences, nor the
+Dicastery will declare that these phenomena are of supernatural origin". Cite
+it as `ddf-norms-2024`.
+
 Operationally: after any data edit run `node scripts/validate-data.js`,
 `node --test`, `node build.js`, and commit the regenerated `docs/` in the same
 change. Never hand-edit generated files.

@@ -28,6 +28,20 @@ family — who consumes what, and the standing project boundaries), and
   — a corpus derived from binaries ships a test asserting its shape
   (truncation, doubling, size floor, the mined field), because an absence
   claim is only as good as the corpus behind it.
+- [`adr/0007-approval-is-an-act-about-an-object.md`](adr/0007-approval-is-an-act-about-an-object.md)
+  — an approval-ladder rung records one authority's act about one object at one
+  date; a coronation, a feast or a basilica is never promoted into a finding
+  about an apparition. The Church's own rule (DDF norms, 17 May 2024, art. 23),
+  and the four papal "approvals" that turned out to be something else.
+- [`adr/0008-shared-logic-is-imported-not-mirrored.md`](adr/0008-shared-logic-is-imported-not-mirrored.md)
+  — where two call sites must agree on a rule, one owns it and the other
+  imports it; a comment saying "must mirror" is a deferred defect. Plus the
+  corollary: a template change is a breaking change for every repo it does not
+  reach.
+- [`adr/0009-published-state-is-verified-by-content.md`](adr/0009-published-state-is-verified-by-content.md)
+  — merged, built and served are three claims, each with its own success
+  signal; the only proof work shipped is fetching the page and matching the
+  change.
 
 ```
 template/   Skeleton for a new chronology project: zero-dependency compiler,
