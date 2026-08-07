@@ -45,14 +45,34 @@ GENERATED_NOTE = ("GENERATED — vendored copies of cronologia/core skills/. "
                   "Do not edit here; edit in cronologia/core and re-run "
                   "core/tools/sync-skills.py. Verify with --check.")
 
-KNOWN_REPOS = ("fsspx", "tariqa", "perennialism", "rcc", "glossary")
-
-
 def family_root():
     env = os.environ.get("CRONOLOGIA_HOME")
     if env:
         return env
     return os.path.dirname(CORE_ROOT)
+
+
+def known_repos():
+    """Sibling checkouts that look like project repos, for the help text.
+
+    Derived, not listed. The hardcoded tuple this replaces named five repos of
+    the twenty-one that exist, having been written when there were five — the
+    mirroring defect core ADR-0008 retires, in miniature.
+    """
+    root = family_root()
+    try:
+        names = sorted(os.listdir(root))
+    except OSError:
+        return []
+    found = []
+    for name in names:
+        path = os.path.join(root, name)
+        if name.startswith(".") or path == CORE_ROOT or not os.path.isdir(path):
+            continue
+        if os.path.isdir(os.path.join(path, "data")) or \
+                os.path.isdir(os.path.join(path, VENDOR_REL)):
+            found.append(name)
+    return found
 
 
 def resolve_repo(name):
@@ -235,7 +255,8 @@ def main(argv=None):
         description="Vendor cronologia/core skills/ into a project's "
                     ".claude/skills/ as a pinned, generated copy.",
         epilog="Repos may be names (%s) or paths. --check writes nothing and "
-               "exits 1 when a target is stale." % ", ".join(KNOWN_REPOS))
+               "exits 1 when a target is stale."
+               % (", ".join(known_repos()) or "none found alongside core"))
     ap.add_argument("repos", nargs="*", help="target repo names or paths")
     ap.add_argument("--check", action="store_true",
                     help="report drift without writing; exit 1 if stale")

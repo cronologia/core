@@ -26,7 +26,15 @@ The proven sequence (used for fsspx and tl):
    public references with exact URLs. Verify primary-source URLs resolve.
    Mark everything the sources disagree on.
 2. **Instantiate the template.** `tools/new-project.sh <dest> <accent colors>`
-   — pick a distinct accent per subject (fsp red, fsspx blue, tl green).
+   — pick a distinct accent per subject (fsp red, fsspx blue, tl green). This
+   also vendors the shared skills into `<dest>/.claude/skills/` and brings in a
+   `deploy.yml` carrying both drift checks. **Confirm both arrived**, with
+   `python3 tools/sync-skills.py <dest> --check` and a grep for
+   `sync-skills.py . --check` in the new `deploy.yml`; the eight repos of
+   2026-08-05 were bootstrapped before either happened, so ADR-0007's rules
+   never reached the apparition repos they were written for (core#85). A repo
+   with no vendored skills is not "clean" — it is outside the mechanism, and an
+   agent opening it gets no sourcing discipline at all.
 3. **Write the data.** `data/chronology.json`: `meta`, `facts[]`, `events[]`,
    `figures[]`, `organizations[]`, `disambiguation.items[]`, `references[]`.
    Every entry cited; uncertain dates flagged. Then `README.md`, `AGENTS.md`,
