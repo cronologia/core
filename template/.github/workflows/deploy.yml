@@ -63,6 +63,26 @@ jobs:
           fi
           echo "docs/ is in sync."
 
+      # Vendored copies drift silently, and the drift is invisible from inside
+      # the repo: headerSafe() was added to the template in cronologia/core#12
+      # and reached exactly one repo, leaving two repos' link-health runs
+      # reporting every reference as inconclusive for months while looking
+      # healthy (cronologia/core#21, #33). The vendored skills have the same
+      # shape — the eight repos bootstrapped 2026-08-05 carried none at all, so
+      # ADR-0007's rules never reached the apparition repos they were written
+      # for (cronologia/core#85).
+      - name: Check out cronologia/core (for the drift checks)
+        uses: actions/checkout@v4
+        with:
+          repository: cronologia/core
+          path: .core-template
+
+      - name: Template drift check
+        run: python3 .core-template/tools/template-drift.py --scripts scripts --label ${{ github.event.repository.name }}
+
+      - name: Vendored skill drift check
+        run: python3 .core-template/tools/sync-skills.py . --check
+
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
