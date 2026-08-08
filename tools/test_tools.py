@@ -1819,6 +1819,162 @@ class TestYtTranscriptWiring(unittest.TestCase):
             self.assertNotIn(forbidden, self.source, forbidden)
 
 
+PORTAL_FIXTURE = """
+<nav>
+  <a href="/en/chronology/">Chronology</a>
+  <a href="/es/">ES</a><a href="/pt/">PT</a>
+  <a href="/celam/en/">CELAM</a>
+  <a href="/tl/en/">TL</a>
+  <a href="/rcc/en/">RCC</a>
+  <a href="https://github.com/cronologia">GitHub</a>
+</nav>
+"""
+
+
+class TestPublishedDrift(unittest.TestCase):
+    """The monitor that notices a site serving older content than its main.
+
+    Everything here runs offline: `fetch` is replaced, so the tests describe the
+    decision rules rather than the state of the internet on the day they run.
+    """
+
+    def setUp(self):
+        self.pd = load("published-drift.py", "published_drift_tool")
+        self.slept = []
+
+    SOURCE_HOST = "raw.githubusercontent.com"
+
+    def stub_fetch(self, table, default=(200, b"same")):
+        """Route URLs to canned (status, body) pairs.
+
+        Keys match on substring, but note that a slug like "/tl/" appears in
+        BOTH the served and the source URL -- key on `SOURCE_HOST` to speak
+        about the source side alone.
+        """
+        def fake(url, timeout=30):
+            for fragment, response in table.items():
+                if fragment in url:
+                    return response
+            return default
+        self.pd.fetch = fake
+
+    def is_source(self, url):
+        return self.SOURCE_HOST in url
+
+    def serve_stale_for(self, slug):
+        """Only `slug`'s SERVED pages lag; every source, and every other site,
+        is current."""
+        def fake(url, timeout=30):
+            if not self.is_source(url) and "/%s/" % slug in url:
+                return (200, b"OLD")
+            return (200, b"same")
+        self.pd.fetch = fake
+
+    def test_the_site_list_comes_from_the_portal_not_a_literal(self):
+        self.stub_fetch({"/en/": (200, PORTAL_FIXTURE.encode("utf-8"))})
+        self.assertEqual(self.pd.discover_slugs(), ["celam", "rcc", "tl"])
+
+    def test_discovery_excludes_the_portals_own_locale_roots(self):
+        self.stub_fetch({"/en/": (200, PORTAL_FIXTURE.encode("utf-8"))})
+        found = self.pd.discover_slugs()
+        for locale in ("en", "es", "pt"):
+            self.assertNotIn(locale, found)
+
+    def test_discovery_reports_nothing_when_the_portal_is_down(self):
+        # An empty list must not read as "no sites are stale".
+        self.stub_fetch({"/en/": (503, b"")})
+        self.assertEqual(self.pd.discover_slugs(), [])
+
+    def test_a_project_maps_to_its_docs_subtree(self):
+        # The org appears once in the raw URL. It was doubled on first write,
+        # which turned every source fetch into a 404 -- reported as unreachable
+        # rather than passing, but wrong either way.
+        targets = dict((label, (served, raw)) for label, served, raw in
+                       self.pd.targets_for("tl"))
+        served, raw = targets["en"]
+        self.assertEqual(served, "https://cronologia.github.io/tl/en/")
+        self.assertEqual(
+            raw, "https://raw.githubusercontent.com/cronologia/tl/main/docs/en/index.html")
+        self.assertEqual(raw.count("cronologia/"), 1)
+
+    def test_the_portal_serves_the_root_and_keeps_pages_outside_docs(self):
+        targets = dict((label, (served, raw)) for label, served, raw in
+                       self.pd.targets_for("cronologia.github.io"))
+        served, raw = targets["pt"]
+        self.assertEqual(served, "https://cronologia.github.io/pt/")
+        self.assertNotIn("/docs/", raw)
+
+    def test_identical_bytes_are_current(self):
+        self.stub_fetch({}, default=(200, b"<html>identical</html>"))
+        result = self.pd.check_target("en", "https://served/", "https://raw/")
+        self.assertEqual(result["verdict"], "current")
+        self.assertFalse(result["stale"])
+
+    def test_differing_bytes_are_stale(self):
+        # The whole point of the tool: this case must fail, not be tolerated.
+        self.stub_fetch({"served": (200, b"OLD"), "raw": (200, b"NEW")})
+        result = self.pd.check_target("en", "https://served/", "https://raw/")
+        self.assertEqual(result["verdict"], "stale")
+        self.assertTrue(result["stale"])
+
+    def test_an_unreachable_page_is_not_silently_healthy(self):
+        for table in ({"served": (404, b"")}, {"raw": (500, b"")}):
+            self.stub_fetch(table)
+            result = self.pd.check_target("en", "https://served/", "https://raw/")
+            self.assertEqual(result["verdict"], "unreachable")
+            self.assertTrue(result["stale"])
+
+    def test_a_deploy_still_in_flight_clears_on_the_recheck(self):
+        """A merge seconds ago is legitimately not served yet."""
+        state = {"n": 0}
+
+        def fake(url, timeout=30):
+            if self.is_source(url):
+                return (200, b"NEW")
+            state["n"] += 1
+            # Stale on the first sweep of three pages, current afterwards.
+            return (200, b"OLD") if state["n"] <= 3 else (200, b"NEW")
+        self.pd.fetch = fake
+        site = self.pd.check_site("tl", grace=90, sleep=self.slept.append)
+        self.assertFalse(site["stale"])
+        self.assertEqual(self.slept, [90])
+        self.assertTrue(all(p.get("rechecked") for p in site["pages"]))
+
+    def test_a_genuinely_frozen_site_survives_the_recheck(self):
+        self.stub_fetch({self.SOURCE_HOST: (200, b"NEW")}, default=(200, b"OLD"))
+        site = self.pd.check_site("tl", grace=90, sleep=self.slept.append)
+        self.assertTrue(site["stale"])
+        self.assertEqual(self.slept, [90])
+
+    def test_a_healthy_site_is_never_delayed(self):
+        self.stub_fetch({}, default=(200, b"same"))
+        site = self.pd.check_site("tl", grace=90, sleep=self.slept.append)
+        self.assertFalse(site["stale"])
+        self.assertEqual(self.slept, [])
+
+    def test_the_summary_names_the_stale_repos(self):
+        self.serve_stale_for("tl")
+        report = self.pd.build_report(["tl", "rcc"], 5, 0)
+        self.assertEqual(report["staleRepos"], ["tl"])
+        self.assertIn("tl", report["summary"])
+        self.assertIn("STALE", self.pd.render(report))
+
+    def test_exit_status_is_one_when_a_site_is_stale(self):
+        self.serve_stale_for("tl")
+        with silent():
+            self.assertEqual(self.pd.main(["--repos", "tl,rcc", "--grace", "0"]), 1)
+
+    def test_exit_status_is_zero_when_every_site_is_current(self):
+        self.stub_fetch({}, default=(200, b"same"))
+        with silent():
+            self.assertEqual(self.pd.main(["--repos", "tl,rcc", "--grace", "0"]), 0)
+
+    def test_an_unreadable_portal_fails_rather_than_reporting_all_clear(self):
+        self.stub_fetch({"/en/": (503, b"")})
+        with silent():
+            self.assertEqual(self.pd.main(["--grace", "0"]), 1)
+
+
 class TestReadOnly(unittest.TestCase):
     """No tool may contain a write to a dataset path."""
 
@@ -1827,7 +1983,8 @@ class TestReadOnly(unittest.TestCase):
                          "unverified-report.py", "xref.py", "sync-skills.py",
                          "build-keywords.py", "normalise-entities.py",
                          "cof-xref.py", "cof-graph.py", "places.py", "cof-dates.py",
-                         "template-drift.py", "pick-source-track.py"):
+                         "template-drift.py", "pick-source-track.py",
+                         "published-drift.py"):
             with open(os.path.join(HERE, filename), encoding="utf-8") as fh:
                 source = fh.read()
             self.assertNotIn("json.dump(data", source, filename)
