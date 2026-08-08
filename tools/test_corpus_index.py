@@ -425,5 +425,79 @@ class TestUnits(unittest.TestCase):
         self.assertIn('Aristóteles', fts)
 
 
+class TestVariantTableParsing(VaultFixture):
+    """Every case here was a real entry in the live map, silently.
+
+    KEYWORDS.md is prose with tables in it, not a data file, so the parser has
+    to be told which tables are variant tables and where a cell stops being
+    data. It was not, and the map filled with junk that expand() then OR-ed
+    into people's queries.
+    """
+
+    def variants(self, markdown):
+        path = os.path.join(self.tmp, 'kw-case.md')
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(markdown)
+        return self.mod.load_variants(paths=[path], aliases='')
+
+    def test_a_table_that_is_not_a_variant_table_is_ignored(self):
+        """A results table comparing grep engines produced a philosopher
+        called 'Engine' whose alias was 'Plat.o'."""
+        v = self.variants(
+            '| Engine | `Plat.o` | `Plat..o` |\n|---|---|---|\n'
+            '| `LC_ALL=C grep` (byte mode) | 0 | 130 |\n'
+            '| UTF-8 grep, and Python on `str` | 130 | **0** |\n')
+        self.assertEqual(v, {})
+
+    def test_backticked_variants_do_not_displace_plain_ones(self):
+        """Adding one backticked variant used to drop every plain variant on
+        the row. Voegelin lost four that way."""
+        v = self.variants(
+            '| Philosopher | Variants seen |\n|---|---|\n'
+            '| Eric Voegelin | Voeglin (11), Vogelin, `Eric Fergin` |\n')
+        self.assertEqual(v['eric voegelin']['variants'],
+                         {'Voeglin', 'Vogelin', 'Eric Fergin'})
+
+    def test_prose_after_an_em_dash_is_not_a_variant(self):
+        v = self.variants(
+            '| Philosopher | Variants seen |\n|---|---|\n'
+            '| Eric Voegelin | Voeglin, Vogelin — COF spells him correctly |\n')
+        self.assertEqual(v['eric voegelin']['variants'], {'Voeglin', 'Vogelin'})
+
+    def test_prose_after_a_semicolon_is_not_a_variant(self):
+        """'multiword "Ortega C"/"Ortega Cela" are in the core alias table'
+        was registered as a name to search for, and hid the real variant."""
+        v = self.variants(
+            '| Philosopher | Variants seen |\n|---|---|\n'
+            '| Ortega y Gasset | Gassett (5); multiword forms live elsewhere |\n')
+        self.assertEqual(v['ortega y gasset']['variants'], {'Gassett'})
+
+    def test_a_parenthesised_annotation_is_not_a_variant(self):
+        """Michel Veber's row says '(correct)' — it is not a mangling."""
+        v = self.variants(
+            '| Actual | Appears in captions as | Why |\n|---|---|---|\n'
+            '| **Michel Veber** | (correct) | Not a mangling. |\n')
+        self.assertEqual(v, {})
+
+    def test_do_not_expand_opts_a_row_out(self):
+        """Stoics transcribed as 'históricos' belongs in the table as a
+        warning, but OR-ing a common word into a query buries the hits."""
+        v = self.variants(
+            '| Actual | Appears in captions as | Why |\n|---|---|---|\n'
+            '| **estóicos** | `históricos` (do not expand) | Systematic. |\n'
+            '| **Husserl** | `Russel` | Reads as Russell. |\n')
+        self.assertNotIn('estoicos', v)
+        self.assertEqual(v['husserl']['variants'], {'Russel'})
+
+    def test_prose_between_two_tables_closes_the_first(self):
+        v = self.variants(
+            '| Philosopher | Variants seen |\n|---|---|\n'
+            '| Nietzsche | Nietsche |\n'
+            '\nSome explanatory prose.\n\n'
+            '| Engine | `Plat.o` | `Plat..o` |\n|---|---|---|\n'
+            '| UTF-8 grep | 130 | **0** |\n')
+        self.assertEqual(set(v), {'nietzsche'})
+
+
 if __name__ == '__main__':
     unittest.main()
