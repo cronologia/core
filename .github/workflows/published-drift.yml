@@ -1,0 +1,58 @@
+name: Published drift
+
+# Does each site actually SERVE what its main branch says it should?
+#
+# Every other gate in this family reports on its own layer: a green check means
+# the runner finished, not that a reader can see the change. ADR-0009 records
+# the manual discipline that follows from that — verify by fetching the page —
+# but a discipline only fires when somebody is looking, and **a repo whose
+# deploy has been failing for a week looks exactly like one with nothing to
+# publish**. `perennialism` sat red from 5 August behind two drift gates with
+# nobody watching a branch nobody reads (core#82, core#83).
+#
+# This is the part that looks when nobody else does. It compares the bytes each
+# site serves against the bytes on its `main`, and fails loudly on a mismatch —
+# catching "merged but not in main", "in main but never built", "built but
+# never served" and "deploy silently skipped" with one comparison.
+#
+# It deliberately does not say WHICH of those happened. The value is noticing.
+#
+# Runs against the live web, so unlike every other workflow here it is not
+# hermetic and can fail for reasons outside the repo. That is priced in: a
+# site being unreachable is a finding, not noise to be suppressed. It uses no
+# token and no api.github.com, so there is nothing to expire or rate-limit.
+
+on:
+  schedule:
+    # 06:00 and 18:00 UTC. The 6 August outage lasted about ten and a half
+    # hours; twice a day means a freeze of that length cannot pass unseen.
+    - cron: '0 6,18 * * *'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated slugs to check (blank = discover from the portal)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Never cancel a run in flight for a newer one: this check is the record that
+# somebody looked, and a cancelled run leaves no answer either way.
+concurrency:
+  group: published-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare every served site against its main branch
+        run: |
+          if [ -n "${{ github.event.inputs.repos }}" ]; then
+            python3 tools/published-drift.py --repos '${{ github.event.inputs.repos }}'
+          else
+            python3 tools/published-drift.py
+          fi

@@ -7,7 +7,7 @@ architectural — keep it.
 |---|---|---|
 | language | **zero-dependency Node** | **Python 3, stdlib only** |
 | lives in | `template/scripts/` and each project's `scripts/` | `core/tools/` |
-| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py`, `normalise-entities.py`, `cof-xref.py`, `cof-graph.py`, `pick-source-track.py` |
+| examples | `validate-data.js`, `archive-refs.js`, `check-links.js`, `sync-glossary-terms.js`, `translate.js` | `vtt2txt.py`, `mine-prep.py`, `dataset-query.py`, `unverified-report.py`, `xref.py`, `sync-skills.py`, `build-keywords.py`, `normalise-entities.py`, `cof-xref.py`, `cof-graph.py`, `pick-source-track.py`, `published-drift.py` |
 | runs | in `build.js`, `node --test`, GitHub Actions — the build is **network-free** | on an agent's machine, on demand |
 | writes | `docs/`, `data/archives.json`, link-health reports | **nothing in `data/`** |
 
@@ -549,6 +549,56 @@ to both and reports which side the sequence supports — currently **4 header, 1
 index, 18 undecided**. *Undecided is a real result and must stay in the output*:
 nothing is promoted to `dateVerified: true` without a third anchor, for which
 the COFemAudio upload record is the obvious candidate.
+
+## `published-drift.py` — is each site SERVING what its `main` says?
+
+`template-drift.py` and `sync-skills.py --check` both ask whether a repo's files
+are right. This asks the only question a reader cares about: **can they see it?**
+
+The delivery path is `commit -> merged into main -> a run built it -> Pages
+served it`, and every layer reports success on its own terms. On 6 August 2026
+all three joints failed separately in one session ([core#83]); ADR-0009 records
+the manual discipline that came out of it. But a discipline only fires when
+somebody looks, and **a repo whose deploy has been failing for a week looks
+exactly like one with nothing to publish** — `perennialism` sat red from 5
+August behind two drift gates, on a branch nobody reads.
+
+One comparison — served bytes against `main`'s `docs/` — catches all of it:
+merged-but-not-in-`main`, in-`main`-but-never-built, built-but-never-served, and
+a deploy silently gated off. It does not say *which*; the value is noticing.
+
+```sh
+python3 tools/published-drift.py               # discover and check every site
+python3 tools/published-drift.py --repos tl,rcc
+python3 tools/published-drift.py --json
+python3 tools/published-drift.py --grace 0     # skip the in-flight re-check
+```
+
+Three things worth knowing:
+
+- **The site list is discovered, not written.** It comes from the portal's own
+  served index. A hardcoded list is the failure this repo keeps retiring
+  ([ADR-0008]), and one that silently omitted a repo would reintroduce the exact
+  blind spot the tool exists to close. The discovered set is always printed.
+- **No `api.github.com`, no token, no rate limit.** Pages serves the deployed
+  `docs/` verbatim, so a current page is byte-identical to its committed source
+  on `raw.githubusercontent.com`. Runs the same from a laptop as from CI.
+- **A mismatch is re-checked after a grace delay** (default 90s) before it is
+  reported, so a run that merely raced an in-flight deploy does not cry wolf. A
+  healthy site is never delayed.
+
+Scheduled twice daily by `.github/workflows/published-drift.yml`; the 6 August
+outage lasted about ten and a half hours, so a freeze of that length cannot pass
+unseen. Unlike every other workflow here it is not hermetic — that is priced in,
+because a site being unreachable is a finding, not noise.
+
+15 tests, all offline (`fetch` is replaced), including that differing bytes are
+reported stale, that an unreachable page is not silently healthy, that a deploy
+still in flight clears on the re-check while a genuinely frozen site does not,
+and that an unreadable portal fails rather than reporting all-clear.
+
+[core#83]: https://github.com/cronologia/core/issues/83
+[ADR-0008]: ../adr/0008-shared-logic-is-imported-not-mirrored.md
 
 ## `template-drift.py` — has a template fix reached the repos that run it?
 
