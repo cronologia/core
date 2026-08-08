@@ -247,6 +247,41 @@ def keyword_paths():
             os.path.join(ROOT, 'KEYWORDS.md'))
 
 
+def parse_variant_cell(raw):
+    """The variants out of one KEYWORDS.md cell, and none of the prose.
+
+    Three ways this cell has gone wrong, all of them silent:
+
+    - Backticks used to WIN outright (`findall(...) or split(...)`), so adding
+      one backticked variant to a row of plain ones dropped every plain one.
+      Voegelin lost four that way. Both forms are read now.
+    - Editors append explanation after an em-dash or a semicolon. That prose was
+      being registered as a variant, which is how 'multiword "Ortega C"/"Ortega
+      Cela" are in the core alias table' became a name to search for — and how
+      the real variant, Gassett, was lost behind it. The cell is cut at the
+      first such mark.
+    - A wholly parenthesised token is an annotation, not a name: '(correct)' was
+      registered as a mangling of Michel Veber.
+
+    A trailing '(do not expand)' opts a row out entirely. Some rows record a
+    substitution onto a COMMON WORD — Stoics transcribed as 'históricos',
+    'pré-socráticos' losing its prefix. Those belong in the table, because a
+    reader needs the warning, but OR-ing them into a query matches every
+    ordinary use of the word and buries the hits it was meant to surface.
+    """
+    if re.search(r'\(\s*do not expand\s*\)', raw, re.I):
+        return []
+    raw = re.split(r'\s+—\s+|;\s+', raw, maxsplit=1)[0]
+    ticked = re.findall(r'`([^`]+)`', raw)
+    plain = re.split(r',\s*', re.sub(r'\*+', '', re.sub(r'`[^`]*`', '', raw)))
+    out = []
+    for v in ticked + plain:
+        v = re.sub(r'\s*\(\d+\)\s*$', '', v).strip().strip(',').strip()
+        if len(v) > 2 and not (v.startswith('(') and v.endswith(')')):
+            out.append(v)
+    return out
+
+
 def load_variants(paths=None, aliases=None):
     """Known ASR manglings, keyed on the accent-folded canonical name.
 
@@ -263,30 +298,48 @@ def load_variants(paths=None, aliases=None):
 
     def add(canon, vs):
         key = strip_accents(canon).lower()
+        keep = [v for v in vs if v and strip_accents(v).lower() != key]
+        if not keep:
+            # No bucket for a row that contributes nothing to expand(). An empty
+            # entry costs nothing at query time but inflates the map's reported
+            # size, which is the number a reader uses to judge its coverage.
+            return
         bucket = variants.setdefault(key, {'canonical': canon, 'variants': set()})
-        for v in vs:
-            if v and strip_accents(v).lower() != key:
-                bucket['variants'].add(v)
+        bucket['variants'].update(keep)
 
     # KEYWORDS.md markdown tables: | Actual | Variants | ... |
+    #
+    # Only tables that DECLARE themselves variant tables are read. The first
+    # version walked every '|' line in the file, so a results table comparing
+    # grep engines contributed a canonical name of 'Engine' with the variant
+    # 'Plat.o', and another row registered the philosopher 'UTF-8 grep, and
+    # Python on `str`' with the variant '130'. Junk in a name map is not inert:
+    # it is silently OR-ed into queries.
     for kw in (paths if paths is not None else keyword_paths()):
         if not os.path.exists(kw):
             continue
+        in_table = False
         with open(kw, encoding='utf-8') as fh:
             for line in fh:
                 if not line.startswith('|'):
+                    in_table = False        # prose or a blank line ends the table
                     continue
                 cells = [c.strip() for c in line.strip().strip('|').split('|')]
-                if len(cells) < 2 or not cells[0] or cells[0].lower() in ('actual', 'philosopher'):
+                if len(cells) < 2 or not cells[0]:
+                    continue
+                head = re.sub(r'\*+', '', cells[0]).strip().lower()
+                if head in ('actual', 'philosopher'):
+                    # A header only opens a variant table if its second column
+                    # says that is what it holds.
+                    label = cells[1].lower()
+                    in_table = 'variant' in label or 'caption' in label
                     continue
                 canon = re.sub(r'\*+', '', cells[0]).strip()
                 if not canon or set(canon) <= set('-: '):
+                    continue                # separator row
+                if not in_table:
                     continue
-                # variants cell: backticked or comma-separated, counts in parens
-                raw = cells[1]
-                vs = re.findall(r'`([^`]+)`', raw) or re.split(r',\s*', re.sub(r'\*+', '', raw))
-                vs = [re.sub(r'\s*\(\d+\)\s*$', '', v).strip() for v in vs]
-                add(canon, [v for v in vs if v and len(v) > 2])
+                add(canon, parse_variant_cell(cells[1]))
         break
 
     # core's committed alias table (multiword proper nouns)
