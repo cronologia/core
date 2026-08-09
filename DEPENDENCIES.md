@@ -14,6 +14,8 @@ the chronology projects are peers that cross-reference and never duplicate.**
    glossary ──[[term-id]] cross-links──>  PROJECT REPOS  <──cross-references──
    (shared terms, depends on nothing)     fsspx  tariqa  perennialism  rcc     (peers)
                                           fsp  tl  celam  grupopuebla  tfp
+                                          olavo + the Marian apparition repos
+                                          (full list below)
                                              ^
         archive ─────────────────────────────┘  shared sources + transcripts
       (private vault; cited, not linked)        (ADR-0001, ADR-0002)
@@ -61,11 +63,14 @@ its proxy (see the `net-access` skill).
 
 ## The project repos are peers
 
-`fsspx`, `tariqa`, `perennialism`, `rcc` — plus, outside this wave's scope,
-`fsp`, `tl`, `celam`, `grupopuebla`, `tfp`. They all consume core, the glossary
-and the archive. **They do not depend on each other, and they never duplicate
-each other's material.** When two projects touch the same person, organization
-or event, one of them owns it and the other cross-links.
+`fsspx`, `tariqa`, `perennialism`, `rcc`, `fsp`, `tl`, `celam`, `grupopuebla`,
+`tfp`, `olavo`, and the Marian apparition chronologies — `fatima`, `lourdes`,
+`guadalupe`, `lasalette`, `gracas`, `lagrimas`, `cimbres`, `santos` (one
+apparition or devotional subject per repo). They all consume core and the
+glossary, and those that cite shared sources consume the archive. **They do
+not depend on each other, and they never duplicate each other's material.**
+When two projects touch the same person, organization or event, one of them
+owns it and the other cross-links.
 
 Standing boundaries, as currently agreed:
 
@@ -74,6 +79,7 @@ Standing boundaries, as currently agreed:
 | `tariqa` vs `perennialism` | **tariqa** = the Maryamiyya **order**: initiations, zawiyas, branch politics, the 1991 Bloomington affair, order-internal ruptures. **perennialism** = the **ideas**: works, journals, reception, the Evola line and its political readings. An event belongs to exactly one of the two; the other links. |
 | `fsspx` ↔ both | **fsspx** = Catholic traditionalism (SSPX, its splits, canonical status). It **cross-links** tariqa and perennialism where a figure or claim touches them — and keeps the three "traditionalisms" apart: Catholic traditionalism ≠ the Guénon–Schuon Traditionalist School ≠ Evola's political Traditionalism. |
 | `rcc` vs `tl` | **rcc** = the Catholic Charismatic Renewal. **CEBs, liberation theology and their sociological framings belong to `tl`**; rcc attributes such framings to their authors and cross-links, rather than arguing them. |
+| `olavo` vs `fsp` / `tariqa` / `perennialism` | **olavo** = the biography, works and the COF-keyed reception layer. Where another project meets him as a *source* (fsp: his Foro de São Paulo claim-set; tariqa: his Traditionalist period; perennialism: the 2011 Carvalho–Dugin debate), the event belongs to the repo whose subject it documents, and the biographical context is a cross-link into olavo, never re-explained in event notes (olavo `context.md`). |
 | any project vs `glossary` | A term that more than one project needs is defined in the glossary and linked with `[[term-id]]`. |
 | any project vs `archive` | A source cited by 2+ projects is vaulted centrally (archive ADR-0001), not copied into each repo. |
 
@@ -108,7 +114,7 @@ not a precedent for splitting a theme out of its parent.
    each other about them — "a member of the order" in one and "never a member" in
    another is a defect in at least one of them. Check with:
    ```
-   python3 core/tools/xref.py --repos fsspx,tariqa,perennialism,rcc
+   python3 core/tools/xref.py --repos fsspx,tariqa,perennialism,rcc,olavo
    ```
    It prints every entity present in 2+ repos with each repo's own line side by
    side, flagging `CONTRADICTION` and `DIFFERS`. Divergence is sometimes
