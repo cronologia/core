@@ -499,5 +499,109 @@ class TestVariantTableParsing(VaultFixture):
         self.assertEqual(set(v), {'nietzsche'})
 
 
+class TestSurnameSuggestion(VaultFixture):
+    """`Voegelin` found 1 where `Eric Voegelin` found 10, and said nothing.
+
+    The tenfold difference was not the defect a reader could see: the tool
+    printed a clean hit count, which in this corpus reads as a measurement of
+    the name rather than as a near-miss. These tests pin the hint, and pin the
+    reasons it suggests instead of expanding.
+    """
+
+    def variants(self, markdown):
+        path = os.path.join(self.tmp, 'kw-sugg.md')
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(markdown)
+        return self.mod.load_variants(paths=[path], aliases='')
+
+    TABLE = ('| Philosopher | Variants seen |\n|---|---|\n'
+             '| Eric Voegelin | Voeglin, Vogelin, Eric Fergin |\n'
+             '| Titus Burckhardt | Tito Bucke |\n'
+             '| Jacob Burckhardt | Jaco Burcardo |\n')
+
+    def test_a_surname_suggests_the_canonical_it_belongs_to(self):
+        v = self.variants(self.TABLE)
+        self.assertEqual([c for c, _ in self.mod.suggest('Voegelin', v)],
+                         ['Eric Voegelin'])
+
+    def test_the_suggestion_carries_the_variants_it_would_have_added(self):
+        v = self.variants(self.TABLE)
+        self.assertEqual(dict(self.mod.suggest('Voegelin', v))['Eric Voegelin'],
+                         ['Eric Fergin', 'Voeglin', 'Vogelin'])
+
+    def test_an_ambiguous_surname_returns_every_candidate(self):
+        """The map keeps Titus and Jacob apart on purpose. Expanding on the
+        surname would silently re-merge them; suggesting shows the ambiguity
+        and resolves nothing."""
+        v = self.variants(self.TABLE)
+        self.assertEqual([c for c, _ in self.mod.suggest('Burckhardt', v)],
+                         ['Jacob Burckhardt', 'Titus Burckhardt'])
+
+    def test_an_exact_canonical_is_not_suggested_to_itself(self):
+        """A proper subset, not any subset — otherwise every successful query
+        also gets told to try itself."""
+        v = self.variants(self.TABLE)
+        self.assertEqual(self.mod.suggest('Eric Voegelin', v), [])
+
+    def test_an_unrelated_query_suggests_nothing(self):
+        v = self.variants(self.TABLE)
+        self.assertEqual(self.mod.suggest('Aristóteles', v), [])
+
+    def test_suggestion_is_accent_insensitive(self):
+        v = self.variants('| Philosopher | Variants seen |\n|---|---|\n'
+                          '| Mário Ferreira dos Santos | Mario Ferreira |\n')
+        self.assertEqual([c for c, _ in self.mod.suggest('mario', v)],
+                         ['Mário Ferreira dos Santos'])
+
+    def test_a_row_with_no_variants_is_never_suggested(self):
+        """Suggesting a canonical that would add nothing is noise."""
+        v = self.variants('| Philosopher | Variants seen |\n|---|---|\n'
+                          '| Eric Voegelin | Eric Voegelin |\n')
+        self.assertEqual(self.mod.suggest('Voegelin', v), [])
+
+
+class TestParentheticalCanonicals(VaultFixture):
+    """'Al-Azhar (the Cairo university)' could never fire: the disambiguating
+    note was inside the lookup key, and nobody types it."""
+
+    def variants(self, markdown):
+        path = os.path.join(self.tmp, 'kw-paren.md')
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(markdown)
+        return self.mod.load_variants(paths=[path], aliases='')
+
+    def test_a_trailing_parenthetical_is_not_part_of_the_key(self):
+        v = self.variants(
+            '| Actual | Appears in captions as |\n|---|---|\n'
+            '| **Al-Azhar** (the Cairo university) | `Universidade de Lázaro` |\n')
+        self.assertIn('al-azhar', v)
+        fts, notes = self.mod.expand('Al-Azhar', v)
+        self.assertIn('Universidade de Lázaro', fts)
+
+    def test_two_rows_differing_only_by_a_parenthetical_merge(self):
+        """'Frithjof Schuon' and 'Frithjof Schuon (again)' were two rows for
+        one man, so half his manglings were unreachable from his name."""
+        v = self.variants(
+            '| Actual | Appears in captions as |\n|---|---|\n'
+            '| **Frithjof Schuon** | `Chuon` |\n'
+            '| **Frithjof Schuon** (again) | `Xuon` |\n')
+        self.assertEqual(set(v), {'frithjof schuon'})
+        self.assertEqual(v['frithjof schuon']['variants'], {'Chuon', 'Xuon'})
+
+    def test_the_undecorated_name_is_the_one_displayed(self):
+        v = self.variants(
+            '| Actual | Appears in captions as |\n|---|---|\n'
+            '| **Frithjof Schuon** (again) | `Xuon` |\n'
+            '| **Frithjof Schuon** | `Chuon` |\n')
+        self.assertEqual(v['frithjof schuon']['canonical'], 'Frithjof Schuon')
+
+    def test_a_canonical_that_is_only_a_parenthetical_keeps_it(self):
+        """Stripping must not collapse a row to the empty key."""
+        v = self.variants(
+            '| Actual | Appears in captions as |\n|---|---|\n'
+            '| (x) | `something` |\n')
+        self.assertNotIn('', v)
+
+
 if __name__ == '__main__':
     unittest.main()
