@@ -559,6 +559,31 @@ class TestSurnameSuggestion(VaultFixture):
                           '| Eric Voegelin | Eric Voegelin |\n')
         self.assertEqual(self.mod.suggest('Voegelin', v), [])
 
+    # One entity, two rows -- the tables key some names by surname and some by
+    # full name. `Lavelle` then expands, looks successful, and still misses the
+    # manglings filed under `Louis Lavelle`; those were the ones a sweep had
+    # already been burned by.
+    SPLIT = ('| Philosopher | Variants seen |\n|---|---|\n'
+             '| Lavelle | lavel, o lavel |\n'
+             '| Louis Lavelle | Lavel, Lavell |\n')
+
+    def test_a_split_entity_is_reported_even_though_the_query_expanded(self):
+        v = self.variants(self.SPLIT)
+        self.assertEqual([c for c, _ in self.mod.suggest('Lavelle', v)],
+                         ['Louis Lavelle'])
+
+    def test_a_split_entity_reports_only_what_the_query_misses(self):
+        """'lavel' is already on the short row; repeating it would read as a
+        second finding rather than the same one."""
+        v = self.variants(self.SPLIT)
+        self.assertEqual(dict(self.mod.suggest('Lavelle', v))['Louis Lavelle'],
+                         ['Lavel', 'Lavell'])
+
+    def test_the_long_form_query_is_told_nothing(self):
+        """Asking for everything must not be nagged about anything."""
+        v = self.variants(self.SPLIT)
+        self.assertEqual(self.mod.suggest('Louis Lavelle', v), [])
+
 
 class TestParentheticalCanonicals(VaultFixture):
     """'Al-Azhar (the Cairo university)' could never fire: the disambiguating

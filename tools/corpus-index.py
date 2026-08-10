@@ -434,13 +434,22 @@ def suggest(query, variants):
     if not q:
         return []
     qs = set(q)
+    # Variants the query already pulls in on its own, so a longer canonical is
+    # only worth mentioning when it adds something. Without this, one entity
+    # split across a short and a long row ('Husserl' and 'Edmund Husserl')
+    # either goes unreported or is reported as a duplicate of itself.
+    own = set()
+    for key, entry in variants.items():
+        if set(key.split()) <= qs:
+            own |= entry['variants']
     hits = []
     for key, entry in variants.items():
-        if not entry['variants']:
-            continue
         toks = set(key.split())
-        if qs < toks:           # proper subset: strictly more to the canonical
-            hits.append((entry['canonical'], sorted(entry['variants'])))
+        if not (qs < toks):     # proper subset: strictly more to the canonical
+            continue
+        extra = sorted(entry['variants'] - own)
+        if extra:
+            hits.append((entry['canonical'], extra))
     return sorted(hits)
 
 
@@ -613,10 +622,12 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
     if fts is None:
         vmap = load_variants()
         fts, notes = expand(query, vmap)
-        if not notes:
-            # Only when nothing expanded. After an expansion the query already
-            # carries the manglings, and a further hint would be noise.
-            tips = suggest(query, vmap)
+        # Run even when an expansion fired. One entity is sometimes split
+        # across two rows -- 'Lavelle' and 'Louis Lavelle' -- and the short
+        # query then expands, looks successful, and still misses the manglings
+        # filed under the long form. suggest() reports only what the query does
+        # not already cover, so a successful search stays quiet.
+        tips = suggest(query, vmap)
 
     sql = ("SELECT d.collection, d.doc_id, d.date, d.date_verified, d.review, "
            "       c.offset, snippet(chunks, 0, '[', ']', ' … ', 18), d.coverage "
@@ -644,8 +655,8 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
     for canon, vs in tips:
         # Printed BEFORE the hit count, so it is read as part of the result
         # rather than as a footnote to a number already believed.
-        print('hint  : no expansion fired. "%s" is in the variant map with %d '
-              'known mangling(s)' % (canon, len(vs)))
+        print('hint  : "%s" is in the variant map with %d further mangling(s) '
+              'this query does NOT cover' % (canon, len(vs)))
         print('        (%s).' % ', '.join(vs))
         print('        Searching that instead may return substantially more; '
               'this count is not a measure of the name.')
