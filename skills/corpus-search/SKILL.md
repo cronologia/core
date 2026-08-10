@@ -62,5 +62,18 @@ no expansion turns `O Profeta da Paz` into `um livro sobre o Islam`. When a
 lexical search comes back empty and you still believe the thing is there,
 rephrase as the claim, or as the argument it sits inside, and search again.
 
+**Expansion matches a whole canonical name, so a surname alone does not fire
+it.** `Eric Voegelin` pulls in five manglings and returns ten hits; `Voegelin`
+returns one. The tool now prints a `hint:` line when your query is part of a
+name it knows — take it, because that hit count is not a measure of the name.
+Where a surname is ambiguous it lists every candidate rather than picking one:
+expanding `Burckhardt` would silently merge Titus with Jacob, and a false hit
+that reads as corroboration is the failure these rules exist to prevent.
+
 New manglings you find go in the project's `KEYWORDS.md`; the tool reads that
 file, so the next search gets them for free.
+
+Record the **collection** any zero was measured in. A mangling is often
+confined to one: `Dugin` returns nothing in `olavo-video` and matches fine in
+the human-corrected COF files, and that zero was once written down as
+corpus-wide — a note that told readers not to bother searching.

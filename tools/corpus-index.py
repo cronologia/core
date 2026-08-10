@@ -282,6 +282,23 @@ def parse_variant_cell(raw):
     return out
 
 
+def canonical_key(canon):
+    """The lookup key for a canonical name.
+
+    A trailing parenthetical in these tables is a note to the human reader --
+    'Al-Azhar (the Cairo university)', 'Roxane (his wife)', 'Frithjof Schuon
+    (again)'. Left in the key it is unmatchable, because nobody types it, so
+    the row's variants could never fire. Stripped, 'Al-Azhar' expands as it
+    should and the duplicate Schuon row merges into the real one.
+
+    Only a TRAILING parenthetical is removed, and only when a usable name is
+    left behind: a canonical that is nothing but a parenthetical keeps it
+    rather than collapsing to the empty key.
+    """
+    base = re.sub(r'\s*\([^)]*\)\s*$', '', canon).strip()
+    return strip_accents(base if len(base) > 2 else canon).lower()
+
+
 def load_variants(paths=None, aliases=None):
     """Known ASR manglings, keyed on the accent-folded canonical name.
 
@@ -297,7 +314,7 @@ def load_variants(paths=None, aliases=None):
     variants = {}
 
     def add(canon, vs):
-        key = strip_accents(canon).lower()
+        key = canonical_key(canon)
         keep = [v for v in vs if v and strip_accents(v).lower() != key]
         if not keep:
             # No bucket for a row that contributes nothing to expand(). An empty
@@ -305,6 +322,11 @@ def load_variants(paths=None, aliases=None):
             # size, which is the number a reader uses to judge its coverage.
             return
         bucket = variants.setdefault(key, {'canonical': canon, 'variants': set()})
+        # Two rows can now land in one bucket ('Frithjof Schuon' and 'Frithjof
+        # Schuon (again)'). Show the undecorated name: the parenthetical is a
+        # note to the table's reader, not part of anybody's query.
+        if '(' in bucket['canonical'] and '(' not in canon:
+            bucket['canonical'] = canon
         bucket['variants'].update(keep)
 
     # KEYWORDS.md markdown tables: | Actual | Variants | ... |
@@ -388,6 +410,38 @@ def expand(query, variants):
         else:
             out.append('"%s"' % t)
     return ' '.join(out), notes
+
+
+def suggest(query, variants):
+    """Canonicals the query is a proper part of, for a 'did you mean' line.
+
+    expand() matches a canonical exactly, so `Voegelin` gets nothing while
+    `Eric Voegelin` gets five manglings OR-ed in -- a tenfold difference in
+    this corpus, and the failing form is the one people type. The defect is
+    not really the missed expansion; it is that the tool printed a confident
+    `hits: 1` and no hint, in a corpus whose central hazard is that a name
+    returning little looks like a finding.
+
+    Suggesting rather than expanding is deliberate. Expanding on a surname
+    would silently re-merge names the map keeps apart on purpose -- Titus and
+    Jacob Burckhardt -- and a false hit that reads as corroboration is the
+    exact failure the vault's rules exist to prevent. A suggestion cannot
+    manufacture a hit; it can only tell the reader where to look. Where a
+    surname really is ambiguous, EVERY candidate is returned, which shows the
+    ambiguity instead of resolving it.
+    """
+    q = [strip_accents(t).lower() for t in re.split(r'\s+', query.strip()) if t]
+    if not q:
+        return []
+    qs = set(q)
+    hits = []
+    for key, entry in variants.items():
+        if not entry['variants']:
+            continue
+        toks = set(key.split())
+        if qs < toks:           # proper subset: strictly more to the canonical
+            hits.append((entry['canonical'], sorted(entry['variants'])))
+    return sorted(hits)
 
 
 # --------------------------------------------------------------------------
@@ -554,9 +608,15 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
     con = sqlite3.connect(db_path)
 
     notes = []
+    tips = []
     fts = query if raw else None
     if fts is None:
-        fts, notes = expand(query, load_variants())
+        vmap = load_variants()
+        fts, notes = expand(query, vmap)
+        if not notes:
+            # Only when nothing expanded. After an expansion the query already
+            # carries the manglings, and a further hint would be noise.
+            tips = suggest(query, vmap)
 
     sql = ("SELECT d.collection, d.doc_id, d.date, d.date_verified, d.review, "
            "       c.offset, snippet(chunks, 0, '[', ']', ' … ', 18), d.coverage "
@@ -581,6 +641,14 @@ def search(db_path, query, collection=None, reviewed=False, limit=10, raw=False)
         print('as    : %s' % fts)
     for canon, vs in notes:
         print('expand: %s -> %s' % (canon, ', '.join(vs)))
+    for canon, vs in tips:
+        # Printed BEFORE the hit count, so it is read as part of the result
+        # rather than as a footnote to a number already believed.
+        print('hint  : no expansion fired. "%s" is in the variant map with %d '
+              'known mangling(s)' % (canon, len(vs)))
+        print('        (%s).' % ', '.join(vs))
+        print('        Searching that instead may return substantially more; '
+              'this count is not a measure of the name.')
     print('scope : %s' % scope_line(con))
     cov = coverage_line(con, collection)
     if cov:
