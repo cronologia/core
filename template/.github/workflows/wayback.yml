@@ -19,6 +19,9 @@ on:
 
 permissions:
   contents: write
+  # Needed to dispatch the deploy workflow below. Without it the rebuilt docs/
+  # sit on main and never reach a reader (see the step's comment).
+  actions: write
 
 concurrency:
   group: wayback
@@ -41,6 +44,7 @@ jobs:
         run: node build.js
 
       - name: Commit updated archives
+        id: commit
         run: |
           if git diff --quiet -- data/archives.json docs/; then
             echo "No archive changes."
@@ -51,3 +55,28 @@ jobs:
           git add data/archives.json docs/
           git commit -m "Wayback: refresh data/archives.json (scheduled preservation run)"
           git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # A push made with GITHUB_TOKEN does NOT trigger other workflows: GitHub
+      # suppresses it so automation cannot set off recursive runs. So the push
+      # above rebuilt docs/ on main and deploy.yml never woke up, and every
+      # weekly run left the SITE one commit behind its own repository -- for
+      # months, invisibly, while this job and the deploy both reported success.
+      # Nineteen of twenty-five sites were stale when published-drift.py was
+      # finally run with --grace 0 (core#98).
+      #
+      # An explicit API dispatch with the same token IS allowed -- the
+      # restriction is on implicit event triggering, not on asking. So ask.
+      - name: Deploy the rebuilt site
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -sS -X POST --fail-with-body \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "deploy.yml dispatched for $GITHUB_REPOSITORY"
+
