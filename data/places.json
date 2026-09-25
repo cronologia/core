@@ -706,6 +706,230 @@
         "Washington",
         "Washington DC"
       ]
+    },
+    {
+      "id": "antioch-antakya",
+      "name": "Antioch (Antakya), Turkey",
+      "kind": "city",
+      "lat": 36.2036546,
+      "lon": 36.1637648,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Antakya, Hatay, Akdeniz Bölgesi, Türkiye (retrieved 2026-09-25)"
+    },
+    {
+      "id": "argenteuil",
+      "name": "Argenteuil, France",
+      "kind": "city",
+      "lat": 48.9479069,
+      "lon": 2.2481797,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Argenteuil, Val-d'Oise, Île-de-France, France métropolitaine, 95100, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "avignon",
+      "name": "Avignon, France",
+      "kind": "city",
+      "lat": 43.9492493,
+      "lon": 4.8059012,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Avignon, Vaucluse, Provence-Alpes-Côte d'Azur, France métropolitaine, 84000, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "bethlehem",
+      "name": "Bethlehem",
+      "kind": "city",
+      "lat": 31.7043681,
+      "lon": 35.2061463,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — بيت لحم, منطقة أ, الضفة الغربية, الأراضي الفلسطينية (retrieved 2026-09-25)",
+      "note": "The top Nominatim hit for \"Bethlehem\" is Bethlehem, Pennsylvania; this entry was re-queried as \"Bethlehem, West Bank\" and confirmed by display_name."
+    },
+    {
+      "id": "non-geo-bithynia",
+      "name": "Bithynia, Turkey",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A Roman province, not a point: Pliny governed it. Renders no pin rather than invent a location."
+    },
+    {
+      "id": "bruges",
+      "name": "Bruges, Belgium",
+      "kind": "city",
+      "lat": 51.2085526,
+      "lon": 3.226772,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Brugge, West-Vlaanderen, Vlaanderen, België / Belgique / Belgien (retrieved 2026-09-25)"
+    },
+    {
+      "id": "caesarea-maritima",
+      "name": "Caesarea Maritima, Israel",
+      "kind": "site",
+      "lat": 32.5018388,
+      "lon": 34.8924472,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — העיר העתיקה קיסריה, מועצה אזורית חוף הכרמל, מחוז חיפה, ישראל (retrieved 2026-09-25)",
+      "note": "The ancient city site (ruins), not the modern town."
+    },
+    {
+      "id": "chambery",
+      "name": "Chambéry, France",
+      "kind": "city",
+      "lat": 45.5662672,
+      "lon": 5.9203636,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Chambéry, Savoie, Auvergne-Rhône-Alpes, France métropolitaine, 73000, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "damascus",
+      "name": "Damascus, Syria",
+      "kind": "city",
+      "lat": 33.5130695,
+      "lon": 36.3095814,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — دمشق, بلدية دمشق القديمة, محافظة دمشق, سوريا (retrieved 2026-09-25)"
+    },
+    {
+      "id": "geneva",
+      "name": "Geneva, Switzerland",
+      "kind": "city",
+      "lat": 46.2017559,
+      "lon": 6.1466014,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Genève, Schweiz/Suisse/Svizzera/Svizra (retrieved 2026-09-25)"
+    },
+    {
+      "id": "genoa",
+      "name": "Genoa, Italy",
+      "kind": "city",
+      "lat": 44.40726,
+      "lon": 8.9338624,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Genova, Liguria, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "horns-of-hattin",
+      "name": "Horns of Hattin, Israel",
+      "kind": "site",
+      "lat": 32.7984915,
+      "lon": 35.4554861,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Karne Hittin (Horns of Hattin) National Park, מועצה אזורית גליל תחתון, ישראל (retrieved 2026-09-25)",
+      "note": "A battlefield, pinned at the national park."
+    },
+    {
+      "id": "jerusalem",
+      "name": "Jerusalem",
+      "kind": "city",
+      "lat": 31.7788472,
+      "lon": 35.2257856,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — ירושלים | القدس, נפת ירושלים, מחוז ירושלים, ישראל (retrieved 2026-09-25)"
+    },
+    {
+      "id": "non-geo-jordan-river",
+      "name": "Jordan River",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A river, and the site of the baptism is itself disputed between rival traditions. Renders no pin rather than choose one. (The top Nominatim hit is the Jordan River in Utah.)"
+    },
+    {
+      "id": "non-geo-judea",
+      "name": "Judea",
+      "kind": "non-geographic",
+      "precision": "none",
+      "note": "A region, not a point. Renders no pin rather than invent a location. (The top Nominatim hit is a suburb of Tauranga, New Zealand.)"
+    },
+    {
+      "id": "lirey",
+      "name": "Lirey, France",
+      "kind": "city",
+      "lat": 48.1561393,
+      "lon": 4.0453491,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Lirey, Troyes, Aube, Grand Est, France métropolitaine, 10320, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "manoppello",
+      "name": "Manoppello, Italy",
+      "kind": "city",
+      "lat": 42.2577795,
+      "lon": 14.0599575,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Manoppello, Pescara, Abruzzo, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "monza",
+      "name": "Monza, Italy",
+      "kind": "city",
+      "lat": 45.5844865,
+      "lon": 9.2749057,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Monza, Monza e della Brianza, Lombardia, 20900, Italia (retrieved 2026-09-25)",
+      "note": "The top hit is the province of Monza e della Brianza; this is the city."
+    },
+    {
+      "id": "oviedo",
+      "name": "Oviedo, Spain",
+      "kind": "city",
+      "lat": 43.3618625,
+      "lon": -5.8483581,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Oviedo / Uviéu, Oviedo, Asturias / Asturies, 33003, España (retrieved 2026-09-25)",
+      "note": "The city entry, not the wider municipality returned first."
+    },
+    {
+      "id": "trier",
+      "name": "Trier, Germany",
+      "kind": "city",
+      "lat": 49.7596208,
+      "lon": 6.6441878,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Trier, Rheinland-Pfalz, Deutschland (retrieved 2026-09-25)"
+    },
+    {
+      "id": "troyes",
+      "name": "Troyes, France",
+      "kind": "city",
+      "lat": 48.2971626,
+      "lon": 4.0746257,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Troyes, Aube, Grand Est, France métropolitaine, 10000, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "tucson",
+      "name": "Tucson, Arizona, USA",
+      "kind": "city",
+      "lat": 32.2228765,
+      "lon": -110.974847,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Tucson, Pima County, Arizona, United States (retrieved 2026-09-25)"
+    },
+    {
+      "id": "turin",
+      "name": "Turin, Italy",
+      "kind": "city",
+      "lat": 45.0677551,
+      "lon": 7.6824892,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Torino, Piemonte, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "vienna",
+      "name": "Vienna, Austria",
+      "kind": "city",
+      "lat": 48.2083537,
+      "lon": 16.3725042,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Wien, Österreich (retrieved 2026-09-25)"
+    },
+    {
+      "id": "zurich",
+      "name": "Zurich, Switzerland",
+      "kind": "city",
+      "lat": 47.3744489,
+      "lon": 8.5410422,
+      "precision": "settlement",
+      "source": "OpenStreetMap Nominatim — Zürich, Bezirk Zürich, Zürich, Schweiz/Suisse/Svizzera/Svizra (retrieved 2026-09-25)"
     }
   ],
   "unresolved": []
