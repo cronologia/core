@@ -381,6 +381,57 @@ if (d.placesMap !== undefined) {
   }
 }
 
+// ---- catalogue (objects, where they are kept, and their images) -----------
+// Unlike an event's place, an item's `site` is the whole point of its map
+// marker, so an unresolved site is an ERROR here. Images are publications:
+// each must carry a licence from the free vocabulary and full attribution,
+// and its file must exist — a missing file ships a broken image.
+if (d.catalogue !== undefined) {
+  const cat = d.catalogue;
+  const at = 'catalogue';
+  if (cat === null || typeof cat !== 'object' || Array.isArray(cat)) {
+    err(`${at} must be an object`);
+  } else if (!isArr(cat.items) || cat.items.length === 0) {
+    err(`${at}.items must be a non-empty array`);
+  } else {
+    let gaz = null;
+    try { gaz = JSON.parse(fs.readFileSync(path.join(ROOT, PLACES_FILE), 'utf8')); } catch (e) {
+      err(`${at} is declared but ${PLACES_FILE} is missing or unreadable (${e.message}). Run: node scripts/sync-places.js`);
+    }
+    const index = gaz ? placeIndex(gaz) : null;
+    const { CATALOGUE_LICENSES } = require('../build.js');
+    const ids = new Set();
+    cat.items.forEach((it, i) => {
+      const iAt = `${at}.items[${i}]`;
+      if (!isStr(it.id) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(it.id)) err(`${iAt}.id must be kebab-case`);
+      else if (ids.has(it.id)) err(`${iAt}.id duplicated: ${it.id}`);
+      else ids.add(it.id);
+      if (!isStr(it.name)) err(`${iAt}.name missing`);
+      if (!isStr(it.site)) err(`${iAt}.site missing (the gazetteer name of the building)`);
+      else if (index) {
+        const { missing } = resolvePlaceString(it.site, index);
+        if (missing.length) err(`${iAt}.site "${it.site}" is not in ${PLACES_FILE}; add it to cronologia/core data/places.json and run scripts/sync-places.js`);
+      }
+      for (const k of ['where', 'object', 'visibility', 'attested', 'dating', 'church']) {
+        if (it[k] !== undefined && !isStr(it[k])) err(`${iAt}.${k} must be a string`);
+      }
+      checkSources(iAt, it.sources, true);
+      if (it.image !== undefined) {
+        const im = it.image; const mAt = `${iAt}.image`;
+        if (!isStr(im.file) || im.file.includes('/') || im.file.includes('..')) err(`${mAt}.file must be a bare filename in src/img/`);
+        else if (!fs.existsSync(path.join(ROOT, 'src', 'img', im.file))) err(`${mAt}.file src/img/${im.file} does not exist`);
+        if (!isStr(im.license) || !CATALOGUE_LICENSES.test(im.license)) {
+          err(`${mAt}.license "${im.license}" is not a free licence this site may publish (Public domain, CC0, CC BY, CC BY-SA)`);
+        }
+        for (const k of ['credit', 'sourceUrl', 'alt']) if (!isStr(im[k])) err(`${mAt}.${k} missing (attribution is required)`);
+        if (isStr(im.sourceUrl) && !/^https:\/\//.test(im.sourceUrl)) err(`${mAt}.sourceUrl must be an https URL`);
+        if (/BY/.test(im.license || '') && !isStr(im.licenseUrl)) err(`${mAt}.licenseUrl missing (CC BY licences require a link to the licence)`);
+        for (const k of ['width', 'height']) if (im[k] !== undefined && !isNum(im[k])) err(`${mAt}.${k} must be a number`);
+      }
+    });
+  }
+}
+
 // ---- map (country tier map — core#3) ---------------------------------------
 if (d.map !== undefined) {
   const m = d.map;

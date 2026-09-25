@@ -91,6 +91,15 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'BCE',
+    catNav: 'Catalogue', catHeading: 'Catalogue',
+    catWhere: 'Kept at', catObject: 'The object', catVisibility: 'When it can be seen',
+    catAttested: 'First attested', catDating: 'Scientific dating', catChurch: 'Acts of Church authorities',
+    catOsm: 'exact location on OpenStreetMap',
+    catNoImage: 'No freely licensed image of this object was located.',
+    catImageLabel: 'Image',
+    catPinLabel: (where, names) => `${where}: ${names}`,
+    catMapCaption: (n, pins) => `${n} object${n === 1 ? '' : 's'} at ${pins} marked location${pins === 1 ? '' : 's'}; numbers match the entries below. Objects kept close together share a marker.`,
+    catNonGeoNote: (n) => `${n} object${n === 1 ? ' has' : 's have'} no fixed location and ${n === 1 ? 'is' : 'are'} not mapped.`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} event${n === 1 ? '' : 's'}${u ? `, ${u} with an unverified date` : ''}`,
     spineCaption: (n, span, u) => `${n} events, ${span}${u ? ` · ${u} with a date not yet verified against a primary source` : ''}. Gaps are shown as explicit breaks, never compressed away.`,
     mapHeading: 'Events on the map', mapNav: 'Map',
@@ -173,6 +182,15 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a. C.',
+    catNav: 'Catálogo', catHeading: 'Catálogo',
+    catWhere: 'Se conserva en', catObject: 'El objeto', catVisibility: 'Cuándo puede verse',
+    catAttested: 'Primera mención', catDating: 'Datación científica', catChurch: 'Actos de las autoridades de la Iglesia',
+    catOsm: 'ubicación exacta en OpenStreetMap',
+    catNoImage: 'No se localizó ninguna imagen de este objeto con licencia libre.',
+    catImageLabel: 'Imagen',
+    catPinLabel: (where, names) => `${where}: ${names}`,
+    catMapCaption: (n, pins) => `${n} objeto${n === 1 ? '' : 's'} en ${pins} ubicación${pins === 1 ? '' : 'es'} marcada${pins === 1 ? '' : 's'}; los números corresponden a las entradas de abajo. Los objetos conservados muy cerca comparten un marcador.`,
+    catNonGeoNote: (n) => `${n} objeto${n === 1 ? ' no tiene' : 's no tienen'} una ubicación fija y no ${n === 1 ? 'se muestra' : 'se muestran'} en el mapa.`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimiento${n === 1 ? '' : 's'}${u ? `, ${u} con fecha no verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimientos, ${span}${u ? ` · ${u} con fecha aún no verificada con una fuente primaria` : ''}. Los vacíos se muestran como cortes explícitos, nunca comprimidos.`,
     mapHeading: 'Acontecimientos en el mapa', mapNav: 'Mapa',
@@ -245,6 +263,15 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a.C.',
+    catNav: 'Catálogo', catHeading: 'Catálogo',
+    catWhere: 'Conservado em', catObject: 'O objeto', catVisibility: 'Quando pode ser visto',
+    catAttested: 'Primeira menção', catDating: 'Datação científica', catChurch: 'Atos das autoridades da Igreja',
+    catOsm: 'localização exata no OpenStreetMap',
+    catNoImage: 'Não foi localizada nenhuma imagem deste objeto com licença livre.',
+    catImageLabel: 'Imagem',
+    catPinLabel: (where, names) => `${where}: ${names}`,
+    catMapCaption: (n, pins) => `${n} objeto${n === 1 ? '' : 's'} em ${pins} localiza${pins === 1 ? 'ção marcada' : 'ções marcadas'}; os números correspondem às entradas abaixo. Objetos conservados muito próximos compartilham um marcador.`,
+    catNonGeoNote: (n) => `${n} objeto${n === 1 ? ' não tem' : 's não têm'} localização fixa e não ${n === 1 ? 'aparece' : 'aparecem'} no mapa.`,
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimento${n === 1 ? '' : 's'}${u ? `, ${u} com data não verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimentos, ${span}${u ? ` · ${u} com data ainda não verificada com uma fonte primária` : ''}. As lacunas são mostradas como cortes explícitos, nunca comprimidas.`,
     mapHeading: 'Acontecimentos no mapa', mapNav: 'Mapa',
@@ -403,6 +430,13 @@ const SUBTREE_TRANSLATABLE = {
   // Everything a reader actually reads is here instead; the status renders in
   // the page's language from the UI table, keyed on the untranslated enum.
   approvalLadder: new Set(['label', 'when', 'who', 'outcome', 'noDocument', 'heading', 'note', 'caption', 'navLabel']),
+  // The object catalogue (renderCatalogue). `site` is deliberately ABSENT: it
+  // is the gazetteer key the pin resolves on, like an event's canonical place,
+  // and a translated site resolves to nothing. So are the image's `file`,
+  // `credit`, `license`, `licenseUrl` and `sourceUrl`: attribution is
+  // bibliography and must read exactly as the licence requires. What a reader
+  // reads as prose is here.
+  catalogue: new Set(['heading', 'navLabel', 'intro', 'note', 'name', 'where', 'object', 'visibility', 'attested', 'dating', 'church', 'alt', 'caption']),
   // >>> ADOPT: subtree-allowlists  (subtrees of this repo's dataset that are not prose)
   // A repo whose dataset carries subtrees where the general rule misfires adds
   // them here. `olavo`'s bibliography is the worked example:
@@ -1980,6 +2014,153 @@ ${script}    </section>
 `;
 }
 
+/* ---------------------------------------------------------------------------
+ * Object catalogue (cronologia/cristo: the relics and where they are kept).
+ *
+ * Driven by the optional top-level `catalogue` key; absent, nothing renders
+ * and the build is byte-identical (ADR-0001):
+ *
+ *   catalogue: {
+ *     heading?, navLabel?, intro?,
+ *     items: [{
+ *       id, name,
+ *       site,                  // gazetteer name/variant of the BUILDING (not translated)
+ *       where,                 // what the reader reads: chapel, building, city
+ *       object?, visibility?, attested?, dating?, church?,   // prose, each optional
+ *       image?: { file, width, height, alt, caption?, credit, license, licenseUrl, sourceUrl },
+ *       sources: [refId, ...],
+ *     }],
+ *   }
+ *
+ * Images live in src/img/ and are copied to docs/img/. Only freely licensed
+ * images belong here, and the validator enforces the licence vocabulary and
+ * the attribution fields: a picture on a public site is a publication.
+ *
+ * The map places each object at its building. Objects whose buildings fall
+ * within a marker's width of each other at the map's scale share one marker
+ * (several relics are kept within a few kilometres in Rome); every card also
+ * links to the building's exact point on OpenStreetMap, which is the precise
+ * answer the marker can only approximate.
+ * ------------------------------------------------------------------------- */
+
+/** Licences a catalogue image may carry: reusable on a public site with attribution. */
+const CATALOGUE_LICENSES = /^(Public domain|CC0( 1\.0)?|CC BY(-SA)? [1-4]\.0( [A-Za-z-]+)?)$/;
+
+function layoutCatalogue(cat, places) {
+  if (!cat || !Array.isArray(cat.items) || cat.items.length === 0) return null;
+  const entries = new Map((((places && places.places) || [])).map((e) => [e.id, e]));
+  const index = placeIndex(places);
+  const items = cat.items.map((it, i) => {
+    const { ids } = resolvePlaceString(it.site || '', index);
+    const geo = ids.map((id) => entries.get(id)).find((e) => e && Number.isFinite(e.lat) && Number.isFinite(e.lon));
+    return { item: it, n: i + 1, geo: geo || null };
+  });
+  const mapped = items.filter((x) => x.geo);
+  if (mapped.length === 0) return { items, pins: [], viewBox: null, nonGeo: items.length };
+
+  const xs = mapped.map((x) => x.geo.lon + 180);
+  const ys = mapped.map((x) => 90 - x.geo.lat);
+  const pad = 4;
+  let minX = Math.min(...xs) - pad; let maxX = Math.max(...xs) + pad;
+  let minY = Math.min(...ys) - pad; let maxY = Math.max(...ys) + pad;
+  const MIN_W = 30; const MIN_H = 18;
+  if (maxX - minX < MIN_W) { const c = (minX + maxX) / 2; minX = c - MIN_W / 2; maxX = c + MIN_W / 2; }
+  if (maxY - minY < MIN_H) { const c = (minY + maxY) / 2; minY = c - MIN_H / 2; maxY = c + MIN_H / 2; }
+  minX = Math.max(0, minX); maxX = Math.min(360, maxX);
+  minY = Math.max(0, minY); maxY = Math.min(180, maxY);
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const vbW = r1(maxX - minX); const vbH = r1(maxY - minY);
+
+  // Cluster greedily, in item order, within about one marker diameter.
+  const radius = vbW / 90;
+  const pins = [];
+  for (const x of mapped) {
+    const px = x.geo.lon + 180; const py = 90 - x.geo.lat;
+    const near = pins.find((p) => Math.hypot(p.cx - px, p.cy - py) < radius * 2.2);
+    if (near) near.members.push(x);
+    else pins.push({ cx: px, cy: py, members: [x] });
+  }
+  for (const p of pins) {
+    p.x = r1(p.members.reduce((a, m) => a + m.geo.lon + 180, 0) / p.members.length);
+    p.y = r1(p.members.reduce((a, m) => a + 90 - m.geo.lat, 0) / p.members.length);
+    p.r = r1(radius * (p.members.length > 1 ? 1.35 : 1));
+    p.fontSize = r1(radius * 1.05);
+  }
+  return {
+    items, pins,
+    viewBox: `${r1(minX)} ${r1(minY)} ${vbW} ${vbH}`,
+    nonGeo: items.length - mapped.length,
+  };
+}
+
+/** A building's exact point on OpenStreetMap (the precise location a marker approximates). */
+function osmLink(geo) {
+  const lat = Math.round(geo.lat * 1e5) / 1e5; const lon = Math.round(geo.lon * 1e5) / 1e5;
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`;
+}
+
+function renderCatalogue(cat, places, world, refNumById, ui) {
+  const layout = layoutCatalogue(cat, places);
+  if (!layout) return '';
+  const t = ui || UI.en;
+  const heading = cat.heading || t.catHeading;
+
+  let mapHtml = '';
+  if (layout.pins.length > 0) {
+    if (!world || typeof world.d !== 'string' || !world.d) {
+      throw new Error('catalogue is declared in the data but src/world-land.json is missing or empty');
+    }
+    const pinMarkup = layout.pins.map((p) => {
+      const first = p.members[0];
+      const label = t.catPinLabel(first.geo.name, p.members.map((m) => `${m.n}. ${m.item.name}`).join('; '));
+      const text = p.members.length > 1 ? p.members.map((m) => m.n).join('·') : String(first.n);
+      const fs_ = p.members.length > 1 ? r1f(p.fontSize * Math.max(0.45, 1.1 / Math.sqrt(p.members.length))) : p.fontSize;
+      return `            <a class="pm-pin cat-pin${p.members.length > 1 ? ' cat-cluster' : ''}" href="#item-${esc(first.item.id)}" aria-label="${esc(label)}"><circle cx="${p.x}" cy="${p.y}" r="${p.r}"/><text x="${p.x}" y="${p.y}" font-size="${fs_}">${esc(text)}</text><title>${esc(label)}</title></a>`;
+    }).join('\n');
+    const captions = [t.catMapCaption(layout.items.length - layout.nonGeo, layout.pins.length)]
+      .concat(layout.nonGeo ? [t.catNonGeoNote(layout.nonGeo)] : []);
+    mapHtml = `      <figure class="places-map cat-map">
+        <div class="viz-scroll">
+          <svg viewBox="${layout.viewBox}" role="img" aria-label="${esc(heading)}" preserveAspectRatio="xMidYMid meet">
+            <path class="pm-land" d="${world.d}" fill-rule="evenodd"/>
+${pinMarkup}
+          </svg>
+        </div>
+        <p class="pm-legend">${esc(t.mapCredit)}</p>
+        <figcaption>${captions.map(esc).join(' ')}</figcaption>
+      </figure>
+`;
+  }
+
+  const row = (label, value) => (value ? `            <dt>${esc(label)}</dt><dd>${renderText(value)}</dd>\n` : '');
+  const cards = layout.items.map(({ item: it, n, geo }) => {
+    const img = it.image;
+    const figure = img && img.file
+      ? `          <figure class="cat-img">
+            <img src="../img/${esc(img.file)}" alt="${esc(img.alt || it.name)}"${img.width ? ` width="${Number(img.width)}"` : ''}${img.height ? ` height="${Number(img.height)}"` : ''} loading="lazy" decoding="async">
+            <figcaption>${img.caption ? `${esc(img.caption)} ` : ''}<span class="cat-credit">${esc(t.catImageLabel)}: <a href="${esc(img.sourceUrl)}" rel="noopener">${esc(img.credit)}</a> · ${img.licenseUrl ? `<a href="${esc(img.licenseUrl)}" rel="license noopener">${esc(img.license)}</a>` : esc(img.license)}</span></figcaption>
+          </figure>\n`
+      : `          <p class="cat-noimg">${esc(t.catNoImage)}</p>\n`;
+    const where = it.where ? `${renderText(it.where)}${geo ? ` · <a href="${esc(osmLink(geo))}" rel="noopener">${esc(t.catOsm)}</a>` : ''}` : '';
+    return `        <article class="cat-item" id="item-${esc(it.id)}">
+${figure}          <h3><span class="cat-num">${n}</span> ${esc(it.name)}</h3>
+          <dl>
+${where ? `            <dt>${esc(t.catWhere)}</dt><dd>${where}</dd>\n` : ''}${row(t.catObject, it.object)}${row(t.catVisibility, it.visibility)}${row(t.catAttested, it.attested)}${row(t.catDating, it.dating)}${row(t.catChurch, it.church)}          </dl>
+          <p class="cat-cites">${renderCites(it.sources, refNumById)}</p>
+        </article>`;
+  }).join('\n');
+
+  return `    <section id="catalogue" class="viz catalogue">
+      <h2>${esc(heading)}</h2>
+${cat.intro ? `      <p class="section-intro">${esc(cat.intro)}</p>\n` : ''}${mapHtml}      <div class="cat-grid">
+${cards}
+      </div>
+    </section>
+
+`;
+}
+const r1f = (v) => Math.round(v * 10) / 10;
+
 /** Out-of-vocabulary `references[].type` values seen this build (core#74). */
 const UNKNOWN_REF_TYPES = new Set();
 
@@ -2202,6 +2383,7 @@ function renderPage(data, archives, opts = {}) {
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
   const approvalLadderHtml = renderApprovalLadder(data.approvalLadder, refNumById, ui);
   const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
+  const catalogueHtml = renderCatalogue(data.catalogue, opts.places, opts.world, refNumById, ui);
   const tierMapHtml = renderTierMap(tierMap, refNumById, ui);
   const swimlanesHtml = renderSwimlanes(threads, events, refNumById, ui);
 
@@ -2261,7 +2443,7 @@ ${seoHead(meta, base, route, lang)}
   <nav class="site-nav">
     <div class="wrap">
       <a href="#about">${esc(ui.about)}</a>
-      <a href="#chronology">${esc(ui.chronology)}</a>${approvalLadderHtml ? `\n      <a href="#approval-ladder">${esc((data.approvalLadder && data.approvalLadder.navLabel) || ui.ladderHeading)}</a>` : ''}${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${tierMapHtml ? `\n      <a href="#map">${esc((tierMap && tierMap.navLabel) || ui.tierMapHeading)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
+      <a href="#chronology">${esc(ui.chronology)}</a>${approvalLadderHtml ? `\n      <a href="#approval-ladder">${esc((data.approvalLadder && data.approvalLadder.navLabel) || ui.ladderHeading)}</a>` : ''}${chronologySpineHtml ? `\n      <a href="#chronology-spine">${esc((chronologySpine && chronologySpine.navLabel) || ui.spineNav)}</a>` : ''}${swimlanesHtml ? `\n      <a href="#threads">${esc((threads && threads.navLabel) || ui.swNav)}</a>` : ''}${placesMapHtml ? `\n      <a href="#places-map">${esc((placesMap && placesMap.navLabel) || ui.mapNav)}</a>` : ''}${catalogueHtml ? `\n      <a href="#catalogue">${esc((data.catalogue && data.catalogue.navLabel) || ui.catNav)}</a>` : ''}${tierMapHtml ? `\n      <a href="#map">${esc((tierMap && tierMap.navLabel) || ui.tierMapHeading)}</a>` : ''}${lineageHtml ? `\n      <a href="#lineage">${esc(lineage.navLabel || 'Genealogy')}</a>` : ''}${branchTimelineHtml ? `\n      <a href="#branch-timeline">${esc(branchTimeline.navLabel || 'Divisions')}</a>` : ''}${numbersChartHtml ? `\n      <a href="#numbers-chart">${esc(numbersChart.navLabel || 'Numbers')}</a>` : ''}
       <a href="#figures">${esc(ui.figures)}</a>
       <a href="#organizations">${esc(ui.organizations)}</a>
       ${disambigCards ? `<a href="#disambiguation">${esc(ui.disambiguation)}</a>` : ''}
@@ -2293,7 +2475,7 @@ ${eventRows}
       </div>
     </section>
 
-${swimlanesHtml}${placesMapHtml}${tierMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
+${swimlanesHtml}${placesMapHtml}${catalogueHtml}${tierMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
 ${figures.map((f) => renderFigureCard(f, refNumById)).join('\n')}
@@ -2352,6 +2534,14 @@ function main() {
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(base, ROUTES));
   fs.writeFileSync(path.join(OUT_DIR, 'robots.txt'), renderRobots(base));
   fs.copyFileSync(path.join(SRC_DIR, 'styles.css'), path.join(OUT_DIR, 'styles.css'));
+  // Catalogue images: only the files the data references, so docs/ carries
+  // nothing the site does not show.
+  const catImages = ((data.catalogue && data.catalogue.items) || [])
+    .map((it) => it.image && it.image.file).filter(Boolean);
+  if (catImages.length) {
+    fs.mkdirSync(path.join(OUT_DIR, 'img'), { recursive: true });
+    for (const f of catImages) fs.copyFileSync(path.join(SRC_DIR, 'img', f), path.join(OUT_DIR, 'img', f));
+  }
   // Disable Jekyll processing on GitHub Pages.
   fs.writeFileSync(path.join(OUT_DIR, '.nojekyll'), '');
 
@@ -2389,6 +2579,7 @@ module.exports = {
   layoutChronologySpine, renderChronologySpine, decadeBucket, decadeColumns, collapseAfterOf,
   layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
+  layoutCatalogue, renderCatalogue, osmLink, CATALOGUE_LICENSES,
   loadPlaces, loadWorld,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,

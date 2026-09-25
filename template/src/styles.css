@@ -550,3 +550,45 @@ figure.approval-ladder { margin: 0 0 1rem; }
   .al-details, .al-details > *, .al-panels, .al-panel { display: block !important; }
   .al-panel[hidden] { display: block !important; }
 }
+
+/* Object catalogue (renderCatalogue): a numbered map of where each object is
+   kept, then one card per object with its image and its record. */
+.cat-pin text {
+  fill: #fff; font-weight: 700; text-anchor: middle; dominant-baseline: central;
+  pointer-events: none; font-family: inherit;
+}
+.cat-cluster circle { fill-opacity: .9; }
+.cat-grid {
+  display: grid; gap: 1rem; margin: 1rem 0 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+.cat-item {
+  background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent);
+  border-radius: 6px; padding: .9rem 1rem; scroll-margin-top: 4rem;
+}
+.cat-item:target { box-shadow: 0 0 0 3px var(--accent-soft); }
+.cat-item h3 { margin: .2rem 0 .5rem; font-size: 1.05rem; line-height: 1.3; }
+.cat-num {
+  display: inline-block; min-width: 1.6em; padding: 0 .35em; margin-right: .25rem;
+  border-radius: 999px; background: var(--accent); color: #fff;
+  font-size: .8rem; text-align: center; vertical-align: .1em;
+}
+.cat-img { margin: 0 0 .6rem; }
+.cat-img img {
+  display: block; width: 100%; height: 220px; object-fit: cover;
+  border-radius: 4px; background: var(--accent-soft);
+}
+.cat-img figcaption { font-size: .72rem; color: var(--muted); margin-top: .3rem; line-height: 1.4; }
+.cat-noimg {
+  font-size: .78rem; color: var(--muted); background: var(--accent-soft);
+  border-radius: 4px; padding: .8rem; margin: 0 0 .6rem; font-style: italic;
+}
+.cat-item dl { margin: 0; font-size: .86rem; line-height: 1.45; }
+.cat-item dt { font-weight: 700; color: var(--accent-dark); margin-top: .45rem; font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }
+.cat-item dd { margin: .1rem 0 0; }
+.cat-cites { font-size: .78rem; margin: .5rem 0 0; }
+@media print {
+  .cat-grid { display: block; }
+  .cat-item { break-inside: avoid; margin-bottom: .8rem; }
+  .cat-img img { height: auto; max-height: 180px; object-fit: contain; }
+}
