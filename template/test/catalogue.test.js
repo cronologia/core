@@ -78,6 +78,13 @@ test('a shared marker names each object with its own building', () => {
   assert.match(html, /1\. True Cross \(Santa Croce in Gerusalemme, Rome\); 2\. Holy Lance \(St Peter&#39;s Basilica, Vatican City\)/);
 });
 
+test('every marker is spelled out in a list linking each object', () => {
+  const html = renderCatalogue(CAT, PLACES, WORLD, REFS, UI.en);
+  assert.match(html, /<summary>Where each object is kept<\/summary>/);
+  assert.match(html, /<li>Santa Croce in Gerusalemme, Rome · St Peter&#39;s Basilica, Vatican City: <a href="#item-cross">1\. True Cross<\/a>, <a href="#item-lance">2\. Holy Lance<\/a><\/li>/);
+  assert.match(html, />×2<\/text>/, 'a cluster shows its count');
+});
+
 test('a neighbouring town ~10 km away keeps its own marker', () => {
   const places = { places: PLACES.places.concat([
     { id: 'arg', name: 'Argenteuil basilica', kind: 'site', lat: 48.9424, lon: 2.2465, precision: 'building', source: 'fixture' },
