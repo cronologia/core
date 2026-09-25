@@ -49,7 +49,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.dirname(HERE)
 ROOT = os.path.dirname(CORE)
 GAZETTEER = os.path.join(CORE, 'data', 'places.json')
-REPOS = ('fsspx', 'tariqa', 'perennialism', 'rcc')
+REPOS = ('fsspx', 'tariqa', 'perennialism', 'rcc', 'cristo')
 
 # A place string may name more than one location; this is the only separator
 # the datasets use for that. Commas are address structure, NOT a separator.
