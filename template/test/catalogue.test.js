@@ -73,6 +73,22 @@ test('different cities never share a marker, however wide the map', () => {
   assert.equal(l.pins.length, 3, 'Turin and Genoa are ~120 km apart: two markers, even at a Europe-to-Armenia extent');
 });
 
+test('a shared marker names each object with its own building', () => {
+  const html = renderCatalogue(CAT, PLACES, WORLD, REFS, UI.en);
+  assert.match(html, /1\. True Cross \(Santa Croce in Gerusalemme, Rome\); 2\. Holy Lance \(St Peter&#39;s Basilica, Vatican City\)/);
+});
+
+test('a neighbouring town ~10 km away keeps its own marker', () => {
+  const places = { places: PLACES.places.concat([
+    { id: 'arg', name: 'Argenteuil basilica', kind: 'site', lat: 48.9424, lon: 2.2465, precision: 'building', source: 'fixture' },
+  ]) };
+  const cat = { items: [
+    { id: 'a', name: 'A', site: 'Notre-Dame de Paris, Paris', sources: ['r1'] },
+    { id: 'b', name: 'B', site: 'Argenteuil basilica', sources: ['r1'] },
+  ] };
+  assert.equal(layoutCatalogue(cat, places).pins.length, 2);
+});
+
 test('each card carries its record, image attribution and exact location', () => {
   const html = renderCatalogue(CAT, PLACES, WORLD, REFS, UI.en);
   assert.match(html, /<section id="catalogue"/);
