@@ -2037,15 +2037,15 @@ ${script}    </section>
  * the attribution fields: a picture on a public site is a publication.
  *
  * The map places each object at its building. Objects kept in the same
- * place — buildings within CATALOGUE_CLUSTER_DEG of each other (about 25 km:
+ * place — buildings within CATALOGUE_CLUSTER_DEG of each other (about 10 km:
  * several relics are kept within a few kilometres in Rome) — share one
  * marker; different cities never do, whatever the map's extent. Every card
  * also links to the building's exact point on OpenStreetMap, which is the
  * precise answer the marker can only approximate.
  * ------------------------------------------------------------------------- */
 
-/** Buildings closer than this (degrees, ~25 km) share one marker: the same city. */
-const CATALOGUE_CLUSTER_DEG = 0.25;
+/** Buildings closer than this (degrees, ~10 km) share one marker: the same city. */
+const CATALOGUE_CLUSTER_DEG = 0.1;
 
 /** Licences a catalogue image may carry: reusable on a public site with attribution. */
 const CATALOGUE_LICENSES = /^(Public domain|CC0( 1\.0)?|CC BY(-SA)? [1-4]\.0( [A-Za-z-]+)?)$/;
@@ -2116,7 +2116,12 @@ function renderCatalogue(cat, places, world, refNumById, ui) {
     }
     const pinMarkup = layout.pins.map((p) => {
       const first = p.members[0];
-      const label = t.catPinLabel(first.geo.name, p.members.map((m) => `${m.n}. ${m.item.name}`).join('; '));
+      // One building: name it once. Several: each object with its own building,
+      // so no object is ever labelled with a neighbour's church.
+      const oneSite = p.members.every((m) => m.geo.id === first.geo.id);
+      const label = oneSite
+        ? t.catPinLabel(first.geo.name, p.members.map((m) => `${m.n}. ${m.item.name}`).join('; '))
+        : p.members.map((m) => `${m.n}. ${m.item.name} (${m.geo.name})`).join('; ');
       const text = p.members.length > 1 ? p.members.map((m) => m.n).join('·') : String(first.n);
       const fs_ = p.members.length > 1 ? r1f(p.fontSize * Math.max(0.45, 1.1 / Math.sqrt(p.members.length))) : p.fontSize;
       return `            <a class="pm-pin cat-pin${p.members.length > 1 ? ' cat-cluster' : ''}" href="#item-${esc(first.item.id)}" aria-label="${esc(label)}"><circle cx="${p.x}" cy="${p.y}" r="${p.r}"/><text x="${p.x}" y="${p.y}" font-size="${fs_}">${esc(text)}</text><title>${esc(label)}</title></a>`;
