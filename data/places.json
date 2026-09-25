@@ -7,7 +7,8 @@
     "precision": "settlement = a town/city/hamlet centre. country-centroid = a whole country or region; the point is NOT where anything happened and must be rendered differently from a settlement, or omitted from maps.",
     "nonGeographic": "Entries with kind \"non-geographic\" resolve deliberately to NO coordinates. \"Worldwide\", \"international\" and survey populations are scopes, not places; dropping a pin for them would invent a location the source does not claim.",
     "retrieved": "retrieved 2026-07-26",
-    "jurisdictions": "Some place strings name ecclesiastical jurisdictions (e.g. \"Diocese of Arlington\"). These are pinned at the see city with a note; the pin marks the see, never the territory."
+    "jurisdictions": "Some place strings name ecclesiastical jurisdictions (e.g. \"Diocese of Arlington\"). These are pinned at the see city with a note; the pin marks the see, never the territory.",
+    "curationField": "An entry's \"curation\" records how it was confirmed (for instance a wrong top hit the geocoder returned). It is for maintainers and is never rendered; \"note\" is reader-facing and appears on the map."
   },
   "places": [
     {
@@ -742,7 +743,7 @@
       "lon": 35.2061463,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — بيت لحم, منطقة أ, الضفة الغربية, الأراضي الفلسطينية (retrieved 2026-09-25)",
-      "note": "The top Nominatim hit for \"Bethlehem\" is Bethlehem, Pennsylvania; this entry was re-queried as \"Bethlehem, West Bank\" and confirmed by display_name."
+      "curation": "The top Nominatim hit for \"Bethlehem\" is Bethlehem, Pennsylvania; this entry was re-queried as \"Bethlehem, West Bank\" and confirmed by display_name."
     },
     {
       "id": "non-geo-bithynia",
@@ -830,14 +831,16 @@
       "name": "Jordan River",
       "kind": "non-geographic",
       "precision": "none",
-      "note": "A river, and the site of the baptism is itself disputed between rival traditions. Renders no pin rather than choose one. (The top Nominatim hit is the Jordan River in Utah.)"
+      "note": "A river, and the site of the baptism is itself disputed between rival traditions. Renders no pin rather than choose one.",
+      "curation": "The top Nominatim hit is the Jordan River in Utah."
     },
     {
       "id": "non-geo-judea",
       "name": "Judea",
       "kind": "non-geographic",
       "precision": "none",
-      "note": "A region, not a point. Renders no pin rather than invent a location. (The top Nominatim hit is a suburb of Tauranga, New Zealand.)"
+      "note": "A region, not a point. Renders no pin rather than invent a location.",
+      "curation": "The top Nominatim hit is a suburb of Tauranga, New Zealand."
     },
     {
       "id": "lirey",
@@ -865,7 +868,7 @@
       "lon": 9.2749057,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Monza, Monza e della Brianza, Lombardia, 20900, Italia (retrieved 2026-09-25)",
-      "note": "The top hit is the province of Monza e della Brianza; this is the city."
+      "curation": "The top hit is the province of Monza e della Brianza; this is the city."
     },
     {
       "id": "oviedo",
@@ -875,7 +878,7 @@
       "lon": -5.8483581,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Oviedo / Uviéu, Oviedo, Asturias / Asturies, 33003, España (retrieved 2026-09-25)",
-      "note": "The city entry, not the wider municipality returned first."
+      "curation": "The city entry, not the wider municipality returned first."
     },
     {
       "id": "trier",
