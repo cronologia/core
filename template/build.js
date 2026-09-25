@@ -88,6 +88,9 @@ const UI = {
     spineHeading: 'Events over time', spineNav: 'Over time',
     spineIntro: 'How the record is distributed across time. Bar height is the number of recorded events in that decade; the hatched part of a bar is events whose date is not yet verified against a primary source. Select a decade to jump to it in the chronology below.',
     spineBreakLabel: (n, from_, to) => `${n} decades with no recorded events (${from_}–${to})`,
+    // Suffix for years before the common era: a negative `year` is that many
+    // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
+    bce: 'BCE',
     spineColLabel: (dec, n, u) => `${dec}: ${n} event${n === 1 ? '' : 's'}${u ? `, ${u} with an unverified date` : ''}`,
     spineCaption: (n, span, u) => `${n} events, ${span}${u ? ` · ${u} with a date not yet verified against a primary source` : ''}. Gaps are shown as explicit breaks, never compressed away.`,
     mapHeading: 'Events on the map', mapNav: 'Map',
@@ -167,6 +170,9 @@ const UI = {
     spineHeading: 'Acontecimientos a lo largo del tiempo', spineNav: 'En el tiempo',
     spineIntro: 'Cómo se distribuye el registro en el tiempo. La altura de cada barra es el número de acontecimientos registrados en esa década; la parte rayada corresponde a acontecimientos cuya fecha aún no se ha verificado con una fuente primaria. Seleccione una década para ir a ella en la cronología.',
     spineBreakLabel: (n, from_, to) => `${n} décadas sin acontecimientos registrados (${from_}–${to})`,
+    // Suffix for years before the common era: a negative `year` is that many
+    // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
+    bce: 'a. C.',
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimiento${n === 1 ? '' : 's'}${u ? `, ${u} con fecha no verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimientos, ${span}${u ? ` · ${u} con fecha aún no verificada con una fuente primaria` : ''}. Los vacíos se muestran como cortes explícitos, nunca comprimidos.`,
     mapHeading: 'Acontecimientos en el mapa', mapNav: 'Mapa',
@@ -236,6 +242,9 @@ const UI = {
     spineHeading: 'Acontecimentos ao longo do tempo', spineNav: 'No tempo',
     spineIntro: 'Como o registo se distribui no tempo. A altura de cada barra é o número de acontecimentos registados nessa década; a parte tracejada corresponde a acontecimentos cuja data ainda não foi verificada com uma fonte primária. Selecione uma década para saltar para ela na cronologia.',
     spineBreakLabel: (n, from_, to) => `${n} décadas sem acontecimentos registados (${from_}–${to})`,
+    // Suffix for years before the common era: a negative `year` is that many
+    // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
+    bce: 'a.C.',
     spineColLabel: (dec, n, u) => `${dec}: ${n} acontecimento${n === 1 ? '' : 's'}${u ? `, ${u} com data não verificada` : ''}`,
     spineCaption: (n, span, u) => `${n} acontecimentos, ${span}${u ? ` · ${u} com data ainda não verificada com uma fonte primária` : ''}. As lacunas são mostradas como cortes explícitos, nunca comprimidas.`,
     mapHeading: 'Acontecimentos no mapa', mapNav: 'Mapa',
@@ -733,8 +742,31 @@ function renderVizChips(vizChips) {
 }
 
 /** Group events by decade for the chronology's section headers. */
-function decadeOf(year) {
-  return `${Math.floor(year / 10) * 10}s`;
+/**
+ * Display label for an event year. Datasets reaching back before the common
+ * era store BCE years as negative numbers (-4 is 4 BCE) and never use year 0,
+ * so the chronological sort stays numeric. Years >= 1 render exactly as
+ * before, keeping every existing site byte-identical.
+ */
+function yearLabel(year, ui) {
+  if (!(year <= 0)) return String(year);
+  return `${-year} ${(ui || UI.en).bce}`;
+}
+
+/** Display label for a decade bucket (the floor of year/10, times 10). */
+function decadeLabel(decade, ui) {
+  if (decade >= 0) return `${decade}s`;
+  // A negative bucket holds BCE years: bucket -10 is the years -10..-1.
+  return `${-decade}–${-(decade + 9)} ${(ui || UI.en).bce}`;
+}
+
+/** A layout's year span, localized (identical to layout.span for CE years). */
+function spanLabel(layout, ui) {
+  return `${yearLabel(layout.spanFrom, ui)}–${yearLabel(layout.spanTo, ui)}`;
+}
+
+function decadeOf(year, ui) {
+  return decadeLabel(Math.floor(year / 10) * 10, ui);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1219,6 +1251,8 @@ function layoutChronologySpine(spine, events) {
     totalEvents: withYear.length,
     unverified: withYear.filter((e) => e.dateVerified === false).length,
     span: `${Math.min(...years)}–${Math.max(...years)}`,
+    spanFrom: Math.min(...years),
+    spanTo: Math.max(...years),
     breaks: cells.filter((c) => c.type === 'break').length,
   };
 }
@@ -1447,10 +1481,10 @@ function renderChronologySpine(spine, events, ui) {
   const cells = layout.cells
     .map((c) => {
       if (c.type === 'break') {
-        const label = t.spineBreakLabel(c.count, c.from, c.to);
+        const label = t.spineBreakLabel(c.count, yearLabel(c.from, t), yearLabel(c.to, t));
         return `          <li class="cs-break"><span class="cs-break-mark" aria-hidden="true">⸺</span><span class="cs-break-label">${esc(label)}</span></li>`;
       }
-      const dLabel = `${c.decade}s`;
+      const dLabel = decadeLabel(c.decade, t);
       const label = t.spineColLabel(dLabel, c.total, c.unverified);
       if (c.total === 0) {
         return `          <li class="cs-col cs-empty"><span class="cs-count"></span><span class="cs-track"></span><span class="cs-label">${esc(dLabel)}</span></li>`;
@@ -1473,7 +1507,7 @@ function renderChronologySpine(spine, events, ui) {
 ${cells}
         </ol>
         </div>
-        <figcaption>${esc(t.spineCaption(layout.totalEvents, layout.span, layout.unverified))}</figcaption>
+        <figcaption>${esc(t.spineCaption(layout.totalEvents, spanLabel(layout, t), layout.unverified))}</figcaption>
       </figure>
     </section>
 
@@ -1600,6 +1634,8 @@ function layoutSwimlanes(threads, events) {
     columns,
     maxCell,
     span: `${Math.min(...years)}–${Math.max(...years)}`,
+    spanFrom: Math.min(...years),
+    spanTo: Math.max(...years),
     taggedEvents: tagged.length,
     // Events with a year but no lane: reported, never silently absent.
     untagged: withYear.length - tagged.length,
@@ -1617,8 +1653,8 @@ function renderSwimlanes(threads, events, refNumById, ui) {
 
   const headCells = layout.columns
     .map((col) => (col.type === 'break'
-      ? `<th scope="col" class="sw-break" title="${esc(t.spineBreakLabel(col.count, col.from, col.to))}"><span aria-hidden="true">⸺</span><span class="visually-hidden">${esc(t.spineBreakLabel(col.count, col.from, col.to))}</span></th>`
-      : `<th scope="col">${esc(`${col.decade}s`)}</th>`))
+      ? `<th scope="col" class="sw-break" title="${esc(t.spineBreakLabel(col.count, yearLabel(col.from, t), yearLabel(col.to, t)))}"><span aria-hidden="true">⸺</span><span class="visually-hidden">${esc(t.spineBreakLabel(col.count, yearLabel(col.from, t), yearLabel(col.to, t)))}</span></th>`
+      : `<th scope="col">${esc(decadeLabel(col.decade, t))}</th>`))
     .join('');
 
   const rows = layout.lanes
@@ -1649,7 +1685,7 @@ ${cells ? `            ${cells}\n` : ''}            <td class="sw-total">${lane.
 
   const heading = threads.heading || t.swHeading;
   const intro = threads.intro || t.swIntro;
-  const captionParts = [t.swCaption(layout.taggedEvents, layout.lanes.length, layout.span, layout.laneAssignments)]
+  const captionParts = [t.swCaption(layout.taggedEvents, layout.lanes.length, spanLabel(layout, t), layout.laneAssignments)]
     .concat(layout.untagged ? [t.swUntaggedNote(layout.untagged)] : []);
 
   return `    <section id="threads" class="viz">
@@ -1818,6 +1854,8 @@ function layoutPlacesMap(pm, events, places) {
     unresolvedStrings: [...unresolvedStrings].sort(),
     firstYears,
     span: `${firstYears[0]}–${firstYears[firstYears.length - 1]}`,
+    spanFrom: firstYears[0],
+    spanTo: firstYears[firstYears.length - 1],
     hasApprox: pins.some((p) => p.approx),
     hasUnverified: pins.some((p) => p.firstUnverified),
   };
@@ -1837,7 +1875,7 @@ function renderPlacesMap(pm, events, places, world, ui) {
   const pinMarkup = layout.pins
     .map((p) => {
       const cls = `pm-pin${p.approx ? ' pm-approx' : ''}${p.firstUnverified ? ' pm-unverified' : ''}`;
-      const label = t.mapPinLabel(p.name, p.count, p.firstYear, p.firstUnverified);
+      const label = t.mapPinLabel(p.name, p.count, yearLabel(p.firstYear, t), p.firstUnverified);
       return `            <a class="${cls}" href="#decade-${Math.floor(p.firstYear / 10) * 10}" data-year="${p.firstYear}" aria-label="${esc(label)}"><circle cx="${p.x}" cy="${p.y}" r="${p.r}"/><title>${esc(label)}</title></a>`;
     })
     .join('\n');
@@ -1846,14 +1884,14 @@ function renderPlacesMap(pm, events, places, world, ui) {
     .map((p) => {
       const flag = p.firstUnverified ? ` <span class="flag" title="${esc(t.flagTitle)}">?</span>` : '';
       const approx = p.approx ? ` <span class="pm-approx-badge">${esc(t.mapApproxBadge)}</span>` : '';
-      return `          <li>${esc(t.mapPinLabel(p.name, p.count, p.firstYear, false))}${flag}${approx}${p.note ? ` <span class="muted">— ${esc(p.note)}</span>` : ''}</li>`;
+      return `          <li>${esc(t.mapPinLabel(p.name, p.count, yearLabel(p.firstYear, t), false))}${flag}${approx}${p.note ? ` <span class="muted">— ${esc(p.note)}</span>` : ''}</li>`;
     })
     .join('\n');
 
   const legendParts = [t.mapLegendSize]
     .concat(layout.hasApprox ? [t.mapLegendApprox] : [])
     .concat(layout.hasUnverified ? [t.mapLegendUnverified] : []);
-  const captionNotes = [t.mapCaption(layout.mappedEvents, layout.pins.length, layout.span)]
+  const captionNotes = [t.mapCaption(layout.mappedEvents, layout.pins.length, spanLabel(layout, t))]
     .concat(layout.nonGeoEvents ? [t.mapNonGeoNote(layout.nonGeoEvents)] : [])
     .concat(layout.unresolvedEvents ? [t.mapUnresolvedNote(layout.unresolvedEvents)] : []);
 
@@ -1866,9 +1904,15 @@ function renderPlacesMap(pm, events, places, world, ui) {
           <button type="button" class="pm-play" data-play="${esc(t.mapPlay)}" data-pause="${esc(t.mapPause)}">${esc(t.mapPlay)}</button>
           <label><span class="visually-hidden">${esc(t.mapSliderLabel)}</span>
           <input type="range" class="pm-slider" min="${minYear}" max="${maxYear}" value="${maxYear}" step="1"></label>
-          <output class="pm-year">${maxYear}</output>
+          <output class="pm-year">${esc(yearLabel(maxYear, t))}</output>
         </div>\n`
     : '';
+  // Only a map reaching back before the common era formats the slider's year:
+  // a negative value is that many years BCE (yearLabel). Maps that start in
+  // the common era keep the plain number, so their output is unchanged.
+  const yearExpr = minYear <= 0
+    ? `(y > 0 ? String(y) : (y < 0 ? -y : 1) + ' ' + ${JSON.stringify(t.bce)})`
+    : 'y';
   const script = layout.firstYears.length > 1
     ? `      <script>(function () {
         var s = document.currentScript.closest('section');
@@ -1888,8 +1932,8 @@ function renderPlacesMap(pm, events, places, world, ui) {
             p.classList.toggle('pm-future', !vis);
             if (vis) shown += 1;
           });
-          out.textContent = y;
-          live.textContent = liveTpl.replace('{Y}', y).replace('{S}', shown).replace('{T}', total);
+          out.textContent = ${yearExpr};
+          live.textContent = liveTpl.replace('{Y}', ${yearExpr}).replace('{S}', shown).replace('{T}', total);
         }
         function stop() { if (timer) { clearInterval(timer); timer = null; play.textContent = play.getAttribute('data-play'); } }
         slider.addEventListener('input', function () { stop(); apply(Number(slider.value)); });
@@ -1952,7 +1996,7 @@ function renderEventRow(ev, refNumById, ui) {
     ? `<span class="date-note">${renderText(ev.dateNote)}</span>`
     : '';
   return `        <tr>
-          <td class="year">${esc(ev.year)}</td>
+          <td class="year">${esc(yearLabel(ev.year, ui))}</td>
           <td>${esc(ev.date || '')}${flag}</td>
           <td>${esc(ev.place || '')}</td>
           <td><strong>${esc(ev.title)}</strong>${text}${renderCites(ev.sources, refNumById)}${dateNote}</td>
@@ -2167,7 +2211,7 @@ function renderPage(data, archives, opts = {}) {
   let lastDecade = null;
   const eventRows = sortedEvents
     .map((ev) => {
-      const d = decadeOf(ev.year);
+      const d = decadeOf(ev.year, ui);
       const header = d !== lastDecade
         ? `        <tr class="decade-row" id="decade-${Math.floor(ev.year / 10) * 10}"><th colspan="4">${esc(d)}</th></tr>\n`
         : '';
@@ -2336,7 +2380,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
-  esc, formatArchiveTs, renderCites, renderVizChips, decadeOf,
+  esc, formatArchiveTs, renderCites, renderVizChips, decadeOf, yearLabel, decadeLabel, spanLabel,
   GLOSSARY_BASE, GLOSSARY_MARKER, glossaryMarkerIds, renderGlossaryLinks, renderText,
   renderLineageNode, lineageHasIndirectEdges, renderLineageLegend, renderLineageSection,
   layoutBranchTimeline, renderBranchTimeline, BT_GEOM,

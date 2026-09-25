@@ -103,7 +103,10 @@ if (!isArr(d.events) || d.events.length === 0) err('events[] missing or empty');
 else {
   d.events.forEach((ev, i) => {
     const at = `events[${i}]`;
-    if (!isNum(ev.year) || ev.year < 1500 || ev.year > 2100) err(`${at}.year must be a plausible number`);
+    // A negative year is that many years BCE (-4 is 4 BCE); there is no year 0.
+    // Ancient events carry no ISO `date` — the exact day goes in `dateNote`.
+    if (!isNum(ev.year) || ev.year < -100 || ev.year > 2100) err(`${at}.year must be a plausible number (-100..2100; negative = BCE)`);
+    else if (ev.year === 0) err(`${at}.year is 0 — there is no year 0: 1 BCE is -1, 1 CE is 1`);
     if (!isStr(ev.title)) err(`${at}.title missing`);
     if (ev.date !== undefined && !isStr(ev.date)) err(`${at}.date must be a string`);
     if (typeof ev.dateVerified !== 'boolean') err(`${at}.dateVerified must be boolean`);
