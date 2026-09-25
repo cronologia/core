@@ -4,7 +4,7 @@
     "usage": "A place string may name MORE THAN ONE location and therefore resolves to a LIST of ids. Resolve with tools/places.py, never by splitting strings ad hoc.",
     "coordinateSource": "OpenStreetMap Nominatim, ODbL 1.0 (https://osm.org/copyright). Every entry records the exact display_name it was confirmed against, so a wrong match is auditable rather than invisible.",
     "curation": "Candidates were PROPOSED by tools/places.py --propose and accepted only after reading the returned display_name. Top hits were wrong in several cases: \"Astana\" returned a castle in Malaysia, \"Cairo\" returned Cairo, Illinois, \"Fribourg\" returned the canton rather than the city where the SSPX was founded, \"Lucca\" returned the province rather than the city, and \"Bloomington (Monroe County), Indiana, USA\" returned a filling station. Nothing here was auto-accepted.",
-    "precision": "settlement = a town/city/hamlet centre. country-centroid = a whole country or region; the point is NOT where anything happened and must be rendered differently from a settlement, or omitted from maps.",
+    "precision": "settlement = a town/city/hamlet centre. country-centroid = a whole country or region; the point is NOT where anything happened and must be rendered differently from a settlement, or omitted from maps. building = a specific building (a church, a museum, a treasury), used by the object catalogue to place an object where it is kept.",
     "nonGeographic": "Entries with kind \"non-geographic\" resolve deliberately to NO coordinates. \"Worldwide\", \"international\" and survey populations are scopes, not places; dropping a pin for them would invent a location the source does not claim.",
     "retrieved": "retrieved 2026-07-26",
     "jurisdictions": "Some place strings name ecclesiastical jurisdictions (e.g. \"Diocese of Arlington\"). These are pinned at the see city with a note; the pin marks the see, never the territory.",
@@ -933,6 +933,179 @@
       "lon": 8.5410422,
       "precision": "settlement",
       "source": "OpenStreetMap Nominatim — Zürich, Bezirk Zürich, Zürich, Schweiz/Suisse/Svizzera/Svizra (retrieved 2026-09-25)"
+    },
+    {
+      "id": "turin-cathedral",
+      "name": "Turin Cathedral, Turin, Italy",
+      "kind": "site",
+      "lat": 45.0733274,
+      "lon": 7.6854108,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Cattedrale di San Giovanni Battista, Piazza San Giovanni, Quadrilatero Romano, Centro, Circoscrizione 1, Torino, Piemonte, 10122, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "oviedo-camara-santa",
+      "name": "Cámara Santa, Oviedo Cathedral, Oviedo, Spain",
+      "kind": "site",
+      "lat": 43.3625505,
+      "lon": -5.8429196,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Cámara Santa, Plaza de Alfonso II El Casto, Les Dueñes, Antiguo, Oviedo / Uviéu, Oviedo, Asturias / Asturies, 33003, España (retrieved 2026-09-25)"
+    },
+    {
+      "id": "st-peters-basilica",
+      "name": "St Peter's Basilica, Vatican City",
+      "kind": "site",
+      "lat": 41.9021569,
+      "lon": 12.4537105,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilica di San Pietro, Piazza San Pietro, Civitas Vaticana - Città del Vaticano, 00120, Civitas Vaticana - Città del Vaticano (retrieved 2026-09-25)"
+    },
+    {
+      "id": "manoppello-volto-santo",
+      "name": "Basilica of the Holy Face, Manoppello, Italy",
+      "kind": "site",
+      "lat": 42.2499213,
+      "lon": 14.062355,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilica del Volto Santo, Via Cappuccini, Contrada Carpelle, Manoppello, Pescara, Abruzzo, 65024, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "trier-cathedral",
+      "name": "Trier Cathedral, Trier, Germany",
+      "kind": "site",
+      "lat": 49.7562446,
+      "lon": 6.6435258,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Dom St. Peter zu Trier, 4b, Domfreihof, Altstadt, Mitte-Gartenfeld, Trier, Trierweiler, Rheinland-Pfalz, 54290, Deutschland (retrieved 2026-09-25)"
+    },
+    {
+      "id": "argenteuil-saint-denys",
+      "name": "Basilica of Saint-Denys, Argenteuil, France",
+      "kind": "site",
+      "lat": 48.9423998,
+      "lon": 2.2464953,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilique Saint-Denys, Ruelle de l'Église, Argenteuil, Val-d'Oise, Île-de-France, France métropolitaine, 95100, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "bruges-holy-blood",
+      "name": "Basilica of the Holy Blood, Bruges, Belgium",
+      "kind": "site",
+      "lat": 51.2081273,
+      "lon": 3.2267027,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basiliek van het Heilig Bloed, 13, Burg, Sint-Walburgakwartier, Brugge-Centrum, Brugge, West-Vlaanderen, Vlaanderen, 8000, België / Belgique / Belgien (retrieved 2026-09-25)"
+    },
+    {
+      "id": "santa-croce-gerusalemme",
+      "name": "Santa Croce in Gerusalemme, Rome, Italy",
+      "kind": "site",
+      "lat": 41.8882288,
+      "lon": 12.5158274,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilica di Santa Croce in Gerusalemme, Piazza di Santa Croce in Gerusalemme, Esquilino, Municipio Roma I, Roma, Roma Capitale, Lazio, 00182, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "monza-cathedral",
+      "name": "Monza Cathedral, Monza, Italy",
+      "kind": "site",
+      "lat": 45.5835996,
+      "lon": 9.2758497,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Duomo di Monza, Via Canonica, Centro, Monza, Monza e della Brianza, Lombardia, 20900, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "notre-dame-paris",
+      "name": "Notre-Dame de Paris, Paris, France",
+      "kind": "site",
+      "lat": 48.8529371,
+      "lon": 2.3500501,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Cathédrale Notre-Dame de Paris, 6, Parvis Notre-Dame - Place Jean-Paul II, Quartier Les Îles, Paris 4e Arrondissement, Paris, Île-de-France, France métropolitaine, 75004, France (retrieved 2026-09-25)"
+    },
+    {
+      "id": "vienna-imperial-treasury",
+      "name": "Imperial Treasury, Hofburg, Vienna, Austria",
+      "kind": "site",
+      "lat": 48.20674,
+      "lon": 16.3658462,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Kaiserliche Schatzkammer, Schweizerhof, Widmerviertel, Katastralgemeinde Innere Stadt, Innere Stadt, Wien, 1010, Österreich (retrieved 2026-09-25)"
+    },
+    {
+      "id": "etchmiadzin-treasury",
+      "name": "Manoogian Treasury, Etchmiadzin, Armenia",
+      "kind": "site",
+      "lat": 40.1613318,
+      "lon": 44.2884644,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Ալեք և Մարի Մանուկյան Գանձատուն, Մովսես Խորենացու փողոց, Վաղարշապատ, Վաղարշապատ համայնք, Արմավիրի մարզ, 1105, Հայաստան (retrieved 2026-09-25)"
+    },
+    {
+      "id": "scala-santa-rome",
+      "name": "Scala Santa, Rome, Italy",
+      "kind": "site",
+      "lat": 41.8871154,
+      "lon": 12.5068789,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Scala Santa, 14, Piazza San Giovanni in Laterano, Esquilino, Municipio Roma I, Roma, Roma Capitale, Lazio, 00183, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "santa-prassede-rome",
+      "name": "Santa Prassede, Rome, Italy",
+      "kind": "site",
+      "lat": 41.8962418,
+      "lon": 12.4986732,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilica di Santa Prassede, Via San Giovanni Gualberto, Monti, Municipio Roma I, Roma, Roma Capitale, Lazio, 00184, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "holy-sepulchre-apparition",
+      "name": "Church of the Holy Sepulchre, Jerusalem",
+      "kind": "site",
+      "lat": 31.7786426,
+      "lon": 35.2295101,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Sacellum Apparitionis, הנוצרים, ירושלים, העיר העתיקה, ירושלים | القدس, נפת ירושלים, מחוז ירושלים, 9114101, ישראל (retrieved 2026-09-25)",
+      "note": "Pinned at the Franciscan Chapel of the Apparition inside the church."
+    },
+    {
+      "id": "valencia-cathedral",
+      "name": "Valencia Cathedral, Valencia, Spain",
+      "kind": "site",
+      "lat": 39.475568,
+      "lon": -0.3751126,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Catedral de València, Plaça de l'Almoina, Ciutat Vella, València, Comarca de València, València / Valencia, Comunitat Valenciana, 46003, España (retrieved 2026-09-25)"
+    },
+    {
+      "id": "genoa-cathedral",
+      "name": "Genoa Cathedral, Genoa, Italy",
+      "kind": "site",
+      "lat": 44.4076283,
+      "lon": 8.9314092,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Cattedrale di San Lorenzo, Piazza di San Lorenzo, Sottoripa, Molo, Centro Est, Genova, Liguria, 16123, Italia (retrieved 2026-09-25)",
+      "note": "The treasury museum under the cathedral is not in OpenStreetMap; the pin marks the cathedral above it."
+    },
+    {
+      "id": "santa-maria-maggiore",
+      "name": "Santa Maria Maggiore, Rome, Italy",
+      "kind": "site",
+      "lat": 41.8976275,
+      "lon": 12.4984704,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — Basilica di Santa Maria Maggiore, Piazza di Santa Maria Maggiore, Monti, Municipio Roma I, Roma, Roma Capitale, Lazio, 00185, Italia (retrieved 2026-09-25)"
+    },
+    {
+      "id": "genoa-san-bartolomeo-armeni",
+      "name": "San Bartolomeo degli Armeni, Genoa, Italy",
+      "kind": "site",
+      "lat": 44.4131669,
+      "lon": 8.9441151,
+      "precision": "building",
+      "source": "OpenStreetMap Nominatim — San Bartolomeo degli Armeni, Corso Carlo Armellini, Castelletto, Centro Est, Genova, Liguria, 16122, Italia (retrieved 2026-09-25)"
     }
   ],
   "unresolved": []
