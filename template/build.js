@@ -2036,12 +2036,16 @@ ${script}    </section>
  * images belong here, and the validator enforces the licence vocabulary and
  * the attribution fields: a picture on a public site is a publication.
  *
- * The map places each object at its building. Objects whose buildings fall
- * within a marker's width of each other at the map's scale share one marker
- * (several relics are kept within a few kilometres in Rome); every card also
- * links to the building's exact point on OpenStreetMap, which is the precise
- * answer the marker can only approximate.
+ * The map places each object at its building. Objects kept in the same
+ * place — buildings within CATALOGUE_CLUSTER_DEG of each other (about 25 km:
+ * several relics are kept within a few kilometres in Rome) — share one
+ * marker; different cities never do, whatever the map's extent. Every card
+ * also links to the building's exact point on OpenStreetMap, which is the
+ * precise answer the marker can only approximate.
  * ------------------------------------------------------------------------- */
+
+/** Buildings closer than this (degrees, ~25 km) share one marker: the same city. */
+const CATALOGUE_CLUSTER_DEG = 0.25;
 
 /** Licences a catalogue image may carry: reusable on a public site with attribution. */
 const CATALOGUE_LICENSES = /^(Public domain|CC0( 1\.0)?|CC BY(-SA)? [1-4]\.0( [A-Za-z-]+)?)$/;
@@ -2071,12 +2075,12 @@ function layoutCatalogue(cat, places) {
   const r1 = (v) => Math.round(v * 10) / 10;
   const vbW = r1(maxX - minX); const vbH = r1(maxY - minY);
 
-  // Cluster greedily, in item order, within about one marker diameter.
+  // Cluster greedily, in item order: the same place, not "close at this zoom".
   const radius = vbW / 90;
   const pins = [];
   for (const x of mapped) {
     const px = x.geo.lon + 180; const py = 90 - x.geo.lat;
-    const near = pins.find((p) => Math.hypot(p.cx - px, p.cy - py) < radius * 2.2);
+    const near = pins.find((p) => Math.hypot(p.cx - px, p.cy - py) < CATALOGUE_CLUSTER_DEG);
     if (near) near.members.push(x);
     else pins.push({ cx: px, cy: py, members: [x] });
   }
