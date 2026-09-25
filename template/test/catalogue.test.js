@@ -58,6 +58,21 @@ test('objects kept close together share one marker; distant ones do not', () => 
   assert.equal(l.nonGeo, 1, 'a non-geographic site is counted, not mapped');
 });
 
+test('different cities never share a marker, however wide the map', () => {
+  const places = { places: PLACES.places.concat([
+    { id: 'turin', name: 'Turin Cathedral', kind: 'site', lat: 45.0733, lon: 7.6854, precision: 'building', source: 'fixture' },
+    { id: 'genoa', name: 'Genoa Cathedral', kind: 'site', lat: 44.4076, lon: 8.9314, precision: 'building', source: 'fixture' },
+    { id: 'yerevan', name: 'Etchmiadzin', kind: 'site', lat: 40.1613, lon: 44.2885, precision: 'building', source: 'fixture' },
+  ]) };
+  const cat = { items: [
+    { id: 'a', name: 'A', site: 'Turin Cathedral', sources: ['r1'] },
+    { id: 'b', name: 'B', site: 'Genoa Cathedral', sources: ['r1'] },
+    { id: 'c', name: 'C', site: 'Etchmiadzin', sources: ['r1'] },
+  ] };
+  const l = layoutCatalogue(cat, places);
+  assert.equal(l.pins.length, 3, 'Turin and Genoa are ~120 km apart: two markers, even at a Europe-to-Armenia extent');
+});
+
 test('each card carries its record, image attribution and exact location', () => {
   const html = renderCatalogue(CAT, PLACES, WORLD, REFS, UI.en);
   assert.match(html, /<section id="catalogue"/);
