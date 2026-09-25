@@ -92,6 +92,7 @@ const UI = {
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'BCE',
     catNav: 'Catalogue', catHeading: 'Catalogue',
+    catListHeading: 'Where each object is kept',
     catWhere: 'Kept at', catObject: 'The object', catVisibility: 'When it can be seen',
     catAttested: 'First attested', catDating: 'Scientific dating', catChurch: 'Acts of Church authorities',
     catOsm: 'exact location on OpenStreetMap',
@@ -183,6 +184,7 @@ const UI = {
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a. C.',
     catNav: 'Catálogo', catHeading: 'Catálogo',
+    catListHeading: 'Dónde se conserva cada objeto',
     catWhere: 'Se conserva en', catObject: 'El objeto', catVisibility: 'Cuándo puede verse',
     catAttested: 'Primera mención', catDating: 'Datación científica', catChurch: 'Actos de las autoridades de la Iglesia',
     catOsm: 'ubicación exacta en OpenStreetMap',
@@ -264,6 +266,7 @@ const UI = {
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a.C.',
     catNav: 'Catálogo', catHeading: 'Catálogo',
+    catListHeading: 'Onde cada objeto é conservado',
     catWhere: 'Conservado em', catObject: 'O objeto', catVisibility: 'Quando pode ser visto',
     catAttested: 'Primeira menção', catDating: 'Datação científica', catChurch: 'Atos das autoridades da Igreja',
     catOsm: 'localização exata no OpenStreetMap',
@@ -2122,12 +2125,21 @@ function renderCatalogue(cat, places, world, refNumById, ui) {
       const label = oneSite
         ? t.catPinLabel(first.geo.name, p.members.map((m) => `${m.n}. ${m.item.name}`).join('; '))
         : p.members.map((m) => `${m.n}. ${m.item.name} (${m.geo.name})`).join('; ');
-      const text = p.members.length > 1 ? p.members.map((m) => m.n).join('·') : String(first.n);
-      const fs_ = p.members.length > 1 ? r1f(p.fontSize * Math.max(0.45, 1.1 / Math.sqrt(p.members.length))) : p.fontSize;
+      // A cluster shows how many objects it holds; the list below the map
+      // spells each one out, so nothing depends on reading tiny numbers.
+      const text = p.members.length > 1 ? `×${p.members.length}` : String(first.n);
+      const fs_ = p.members.length > 1 ? r1f(p.fontSize * 0.8) : p.fontSize;
       return `            <a class="pm-pin cat-pin${p.members.length > 1 ? ' cat-cluster' : ''}" href="#item-${esc(first.item.id)}" aria-label="${esc(label)}"><circle cx="${p.x}" cy="${p.y}" r="${p.r}"/><text x="${p.x}" y="${p.y}" font-size="${fs_}">${esc(text)}</text><title>${esc(label)}</title></a>`;
     }).join('\n');
     const captions = [t.catMapCaption(layout.items.length - layout.nonGeo, layout.pins.length)]
       .concat(layout.nonGeo ? [t.catNonGeoNote(layout.nonGeo)] : []);
+    // Every marker in words, with a link to each object's card: the map's
+    // text equivalent, and the answer where neighbouring markers overlap.
+    const listItems = layout.pins.map((p) => {
+      const links = p.members.map((m) => `<a href="#item-${esc(m.item.id)}">${m.n}. ${esc(m.item.name)}</a>`);
+      const sites = [...new Set(p.members.map((m) => m.geo.name))];
+      return `          <li>${esc(sites.join(' · '))}: ${links.join(', ')}</li>`;
+    }).join('\n');
     mapHtml = `      <figure class="places-map cat-map">
         <div class="viz-scroll">
           <svg viewBox="${layout.viewBox}" role="img" aria-label="${esc(heading)}" preserveAspectRatio="xMidYMid meet">
@@ -2138,6 +2150,12 @@ ${pinMarkup}
         <p class="pm-legend">${esc(t.mapCredit)}</p>
         <figcaption>${captions.map(esc).join(' ')}</figcaption>
       </figure>
+      <details class="pm-list cat-list" open>
+        <summary>${esc(t.catListHeading)}</summary>
+        <ol>
+${listItems}
+        </ol>
+      </details>
 `;
   }
 
