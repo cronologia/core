@@ -592,3 +592,86 @@ figure.approval-ladder { margin: 0 0 1rem; }
   .cat-item { break-inside: avoid; margin-bottom: .8rem; }
   .cat-img img { height: auto; max-height: 180px; object-fit: contain; }
 }
+
+/* ---------------------------------------------------------------------------
+   Time river (core#108): the chronology as lane tracks, opt-in with
+   meta.layout "river". Lane 0 is the site accent; the others are fixed hues
+   chosen to stay apart from each other and readable on the light ground.
+   --------------------------------------------------------------------------- */
+.river { --rv-tw: 20px; --rv-yw: 5.6rem; --rv-top: 2.6rem; }
+.rv-l0 { --c: var(--accent); }
+.rv-l1 { --c: #13776d; }
+.rv-l2 { --c: #a8620f; }
+.rv-l3 { --c: #b03a5b; }
+.rv-l4 { --c: #3f6ea8; }
+.rv-l5 { --c: #6b7a1f; }
+.rv-l6 { --c: #7d3c98; }
+.rv-l7 { --c: #8a5a44; }
+.rv-bar { background: var(--bg); padding: .6rem 0 .4rem; border-bottom: 1px solid var(--line); display: grid; gap: .5rem; z-index: 5; }
+@media (min-width: 700px) and (min-height: 640px) { .rv-bar { position: sticky; top: var(--rv-top); } }
+.rv-controls { display: flex; flex-wrap: wrap; gap: .4rem .5rem; align-items: center; }
+.rv-controls[hidden] { display: none; }
+.rv-chip { position: relative; display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; line-height: 1.2; padding: .32rem .65rem .32rem .5rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; }
+.rv-chip input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.rv-sw { flex: none; width: .7rem; height: .7rem; border-radius: 50%; border: 2px solid var(--c, var(--ink)); background: var(--c, var(--ink)); }
+.rv-firm .rv-sw { background: transparent; }
+.rv-firm:has(input:checked) .rv-sw { background: var(--ink); border-color: var(--ink); }
+.rv-chip:has(input:not(:checked)):not(.rv-firm) { color: var(--muted); background: transparent; }
+.rv-chip:has(input:not(:checked)):not(.rv-firm) .rv-sw { background: transparent; }
+.rv-chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rv-find { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 600; color: var(--muted); margin-left: auto; }
+.rv-find input { font: inherit; font-weight: 400; color: var(--ink); padding: .3rem .55rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); width: 13rem; max-width: 60vw; }
+.rv-status { flex-basis: 100%; margin: 0; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cursor: pointer; }
+.rv-row { fill: var(--surface); }
+.rv-brk { fill: var(--line); }
+.rv-tick { stroke: var(--c); stroke-width: 2.4; stroke-linecap: round; }
+.rv-tick.rv-u { stroke-dasharray: 1.6 1.6; }
+.rv-tick.rv-off { opacity: .12; }
+.rv-axis { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.rv-win { fill: var(--accent); fill-opacity: .1; stroke: var(--accent); stroke-width: 1.2; }
+
+.rv-list { list-style: none; margin: 0; padding: .4rem 0 1rem; position: relative; container-type: inline-size; container-name: river; }
+/* One faint vertical track per lane, behind the nodes. */
+.rv-list::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--rv-yw) + 10px); width: calc(var(--rv-tw) * var(--lanes, 1));
+  background: repeating-linear-gradient(90deg, transparent 0 calc(var(--rv-tw) / 2 - 1px), var(--line) calc(var(--rv-tw) / 2 - 1px) calc(var(--rv-tw) / 2 + 1px), transparent calc(var(--rv-tw) / 2 + 1px) var(--rv-tw)); }
+.rv-e { display: grid; grid-template-columns: var(--rv-yw) calc(var(--rv-tw) * var(--lanes, 1) + 22px) minmax(0, 1fr); align-items: start; scroll-margin-top: var(--rv-clear, 1rem); }
+.rv-e[hidden] { display: none; }
+.rv-year { padding: .95rem .2rem 0 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.rv-year small { display: block; font-weight: 400; font-size: .76rem; color: var(--muted); }
+.rv-node { position: relative; align-self: stretch; }
+.rv-node i { position: absolute; top: 1.1rem; left: calc(10px + var(--rv-tw) * var(--k, 0) + var(--rv-tw) / 2 - 7px); width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 3px solid var(--bg); box-shadow: 0 0 0 1.5px var(--c); }
+.rv-u .rv-node i { background: var(--bg); border: 2px dashed var(--c); box-shadow: none; }
+.rv-node i.rv-none { --c: var(--muted); }
+.rv-card { padding: .7rem 0 1rem; border-bottom: 1px solid var(--line); min-width: 0; }
+.rv-card h3 { margin: .1rem 0 .3rem; font-size: 1.02rem; line-height: 1.35; }
+.rv-kick { margin: 0; display: flex; flex-wrap: wrap; gap: .15rem .8rem; font-size: .78rem; color: var(--muted); }
+.rv-lane { color: var(--c); font-weight: 600; }
+.rv-text { margin: 0; max-width: 70ch; }
+.rv-hit h3 { background: linear-gradient(transparent 60%, var(--accent-soft) 60%); }
+.rv-gap span { display: block; margin: .2rem 0 .2rem calc(var(--rv-yw) + 10px); padding: .2rem .7rem; font-size: .76rem; color: var(--muted); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--line) 70%, transparent) 0 4px, transparent 4px 9px); border-radius: 3px; }
+.rv-gap[hidden] { display: none; }
+.rv-empty { color: var(--muted); text-align: center; padding: 1.5rem 0; }
+.rv-empty[hidden] { display: none; }
+/* Narrow: one track; the lane is named in the card. */
+@container river (max-width: 560px) {
+  .rv-e { grid-template-columns: 3.9rem 26px minmax(0, 1fr); }
+  .rv-list::before { left: calc(3.9rem + 12px); width: 2px; background: var(--line); }
+  .rv-node i { left: 6px; }
+  .rv-gap span { margin-left: 0; }
+  .rv-year { font-size: .9rem; }
+}
+@container river (max-width: 560px) { .rv-e .rv-node i + i { display: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rv-card { animation: rv-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 50%; }
+  }
+}
+@keyframes rv-rise { from { opacity: .6; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+@media print {
+  .rv-bar { position: static; }
+  .rv-controls { display: none; }
+  .rv-e { break-inside: avoid; }
+  .rv-e[hidden] { display: grid; }
+  .rv-card { animation: none; }
+}

@@ -45,6 +45,11 @@ else {
   if (d.meta.lastUpdated && !/^\d{4}-\d{2}-\d{2}$/.test(d.meta.lastUpdated)) {
     err(`meta.lastUpdated must be YYYY-MM-DD, got ${d.meta.lastUpdated}`);
   }
+  // Which layout the chronology section uses (core#108). Absent = the table.
+  if (d.meta.layout !== undefined) {
+    const { RIVER_LAYOUTS } = require('../build.js');
+    if (!RIVER_LAYOUTS.has(d.meta.layout)) err(`meta.layout must be one of ${[...RIVER_LAYOUTS].map((v) => JSON.stringify(v)).join(', ')}, got ${JSON.stringify(d.meta.layout)}`);
+  }
   // Optional header pill links to visual sections (viz-chips).
   if (d.meta.vizChips !== undefined) {
     if (!isArr(d.meta.vizChips)) err('meta.vizChips must be an array');
