@@ -684,3 +684,57 @@ svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cur
   .rv-e[hidden] { display: grid; }
   .rv-card { animation: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Dark mode (core#113): follows the reader's system setting; the light page
+   is untouched. A self-contained block, appended last, so it layers over any
+   site's copy of the stylesheet: it redefines the base tokens and restates
+   only the rules that hard-code a light colour. The site accent is a dark
+   hue, so wherever it is TEXT it is lifted to --accent-hi; where it is a fill
+   it stays the accent. Screen only: print keeps the light page.
+   --------------------------------------------------------------------------- */
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #121418; --surface: #1a1d23; --ink: #e4e6ea; --muted: #9ba2ae; --line: #2d313a;
+    --accent-hi: color-mix(in srgb, var(--accent) 45%, #ffffff);
+    --accent-soft: color-mix(in srgb, var(--accent) 26%, #1a1d23);
+    --accent-dark: var(--accent-hi);
+    --card: var(--surface);
+  }
+  .site-header { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, #000000), var(--accent)); }
+  .site-nav { background: #0d0f13; box-shadow: 0 1px 0 var(--line); }
+  a { color: var(--accent-hi); }
+  .site-nav a { color: #e8e6e1; }
+  .facts dt, .flag, .related-link a, sup.cite a, ol.references a, .archive-link:hover,
+  .lang-switch a:hover, .lang-switch .lang-current, .party-link a { color: var(--accent-hi); }
+  .glossary-link { color: var(--accent-hi); border-bottom-color: var(--accent-hi); }
+  .notice-attribution { background: #2a2416; }
+  .i18n-disclaimer { background: #2a2416; border-bottom-color: #4a3d1f; color: #e3cf8f; }
+  table.meetings thead th { background: #0d0f13; }
+  table.meetings tbody tr:nth-child(even) { background: #16191e; }
+  .site-footer code { background: #262a31; }
+  .lineage-branch.lineage-separate { background: #211d14; }
+  .lineage-separate .tree-status { color: #e7c58a; background: #3a2f18; }
+  .tree-edge-label { background: #23262d; }
+  .nc-track { background: #262a31; }
+  .latam-bg { fill: #2a2e36; stroke: #121418; }
+  .latam-c { fill: #353a44; stroke: #121418; }
+  .latam-c.map-t1, .atlas-swatch.map-t1 { fill: color-mix(in srgb, var(--accent) 70%, #2a2e36); background: color-mix(in srgb, var(--accent) 70%, #2a2e36); }
+  .latam-c.map-t2, .atlas-swatch.map-t2 { fill: color-mix(in srgb, var(--accent) 45%, #2a2e36); background: color-mix(in srgb, var(--accent) 45%, #2a2e36); }
+  .latam-c.map-t3, .atlas-swatch.map-t3 { fill: color-mix(in srgb, var(--accent) 25%, #2a2e36); background: color-mix(in srgb, var(--accent) 25%, #2a2e36); }
+  .atlas-swatch { background: #353a44; }
+  .sw-has-unverified { background-image: repeating-linear-gradient(45deg, rgba(18,20,24,.55) 0 3px, transparent 3px 6px); }
+  .al-tab[aria-selected="true"] { color: #121418; }
+  .al-favourable .al-node-status, .al-favourable .al-status { color: #7fd1a0; }
+  .al-negative .al-node-status, .al-negative .al-status { color: #f0a0ab; }
+  .al-inconclusive .al-node-status, .al-inconclusive .al-status,
+  .al-reported-undocumented .al-node-status, .al-reported-undocumented .al-status { color: #e3c77a; }
+  .al-pending .al-node-status, .al-pending .al-status { color: #8cc8e6; }
+  .al-adjacent .al-node-status, .al-adjacent .al-status { color: #c3a9e8; }
+  .rv-l0 { --c: var(--accent-hi); }
+  .rv-lanes .rv-l0 { --c: #9d93ff; }
+  .rv-l1 { --c: #4fc4b5; } .rv-l2 { --c: #e3a24f; } .rv-l3 { --c: #f07aa8; }
+  .rv-l4 { --c: #6fb4e8; } .rv-l5 { --c: #a8c25a; } .rv-l6 { --c: #d49a7e; } .rv-l7 { --c: #a3adbb; }
+  .rv-win { fill: var(--accent-hi); stroke: var(--accent-hi); }
+}
