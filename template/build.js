@@ -2338,7 +2338,7 @@ function renderRiverItem(it, layout, refNumById, t, anchorId) {
   const text = ev.text ? `\n            <p class="rv-text">${renderText(ev.text)}${renderCites(ev.sources, refNumById)}</p>` : `\n            <p class="rv-text">${renderCites(ev.sources, refNumById)}</p>`;
   const note = ev.dateNote ? `\n            <p class="date-note">${renderText(ev.dateNote)}</p>` : '';
   return `        <li class="rv-e${unverified ? ' rv-u' : ''}"${anchorId ? ` id="${anchorId}"` : ''} data-i="${it.i}" data-lanes="${esc(it.laneIds.join(' '))}" data-decade="${esc(decadeLabel(it.decade, t))}">
-          <div class="rv-year">${esc(yearLabel(ev.year, t))}${ev.date ? `<small>${esc(ev.date)}</small>` : ''}${flag}</div>
+          <div class="rv-year">${esc(yearLabel(ev.year, t))}${ev.date && ev.date !== String(ev.year) ? `<small>${esc(ev.date)}</small>` : ''}${flag}</div>
           <div class="rv-node" aria-hidden="true">${nodes}</div>
           <div class="rv-card">
             ${kick ? `<p class="rv-kick">${kick}</p>\n            ` : ''}<h3>${esc(ev.title)}</h3>${text}${note}

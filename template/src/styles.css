@@ -72,7 +72,10 @@ h3 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; }
 .facts dd { margin: 0; }
 
 /* Chronology table */
-.table-scroll { overflow-x: auto; }
+/* position: relative makes the scroller the containing block of absolutely
+   positioned descendants (.visually-hidden labels in table cells). Without it
+   they escape the clip and widen the page: 3,134px on a 390px phone. */
+.table-scroll { position: relative; overflow-x: auto; }
 table.meetings { width: 100%; border-collapse: collapse; font-size: .92rem; background: var(--surface); }
 table.meetings th, table.meetings td { text-align: left; padding: .55rem .65rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 table.meetings thead th { background: #2a2f3a; color: #fff; position: sticky; top: 0; }
@@ -145,6 +148,9 @@ ul.tree ul li::before { content: ""; position: absolute; top: 1em; left: -1.05re
    dashed connector = indirect reference/association, NOT lineage */
 ul.tree ul li.tree-edge-indirect::before { border-top-style: dashed; }
 .tree-edge-label { font-size: .72rem; font-style: italic; color: var(--muted); background: #f3f1ec; border: 1px dashed var(--line); border-radius: 999px; padding: 0 .5rem; white-space: nowrap; }
+/* A long relation label ("afinidade contestada — Sedgwick afirma, …") cannot
+   stay on one line on a phone: it widened the page. Let it wrap there. */
+@media (max-width: 640px) { .tree-edge-label { white-space: normal; border-radius: .6rem; } }
 .lineage-legend { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: .75rem 0 .25rem; font-size: .82rem; color: var(--muted); }
 .legend-item { display: inline-flex; align-items: center; gap: .45rem; }
 .legend-swatch { display: inline-block; width: 2rem; height: 0; border-top: 2px solid var(--muted); }
@@ -153,7 +159,7 @@ ul.tree ul li.tree-edge-indirect::before { border-top-style: dashed; }
 /* Branch timeline ("subway diagram"; rendered only when the data declares
    `branchTimeline`). The SVG keeps its natural size inside a horizontal
    scroll container on small screens; print scales it to the page. */
-.viz-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.viz-scroll { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 figure.branch-timeline { margin: 1rem 0 0; }
 .branch-timeline-svg { display: block; }
 .branch-timeline-svg text { font-family: inherit; }

@@ -66,3 +66,14 @@ test('styles.css: every screen component is styled outside @media print', () => 
     `these components are styled ONLY inside @media print, so they render unstyled ` +
     `on screen: ${invisible.join(', ')}`);
 });
+
+test('styles.css: scroll containers clip absolutely positioned descendants', () => {
+  // .visually-hidden labels inside the swimlane and spine tables are
+  // absolutely positioned; a scroller that is not a containing block lets them
+  // escape and widen the whole page on a phone.
+  for (const sel of ['.viz-scroll', '.table-scroll']) {
+    const rule = stripped.match(new RegExp(`^\\${sel} \\{([^}]*)\\}`, 'm'));
+    assert.ok(rule, `${sel} rule missing`);
+    assert.match(rule[1], /position:\s*relative/, `${sel} must be position: relative`);
+  }
+});
