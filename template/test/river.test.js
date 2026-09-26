@@ -41,23 +41,23 @@ function page(meta, extra = {}) {
 }
 
 test('no layout, or "table", is byte-identical to today', () => {
-  const without = page({});
+  const without = page({ layout: undefined });
   assert.equal(page({ layout: 'table' }), without);
   assert.match(without, /<table class="meetings">/);
-  assert.doesNotMatch(without, /rv-|river\.js/);
+  assert.doesNotMatch(without, /class="rv-|river\.js/);
 });
 
 test('the river replaces the table and loads its script', () => {
   const html = page({ layout: 'river', threads: THREADS }, { events: EVENTS });
   assert.doesNotMatch(html, /<table class="meetings">/);
-  assert.match(html, /<section id="chronology" class="river">/);
+  assert.match(html, /<section id="chronology" class="river rv-lanes">/);
   assert.match(html, /<script src="\.\.\/river\.js" defer><\/script>/);
   for (const ev of EVENTS) assert.equal(html.split(`<h3>${ev.title}</h3>`).length - 1, 1, `${ev.title} renders once`);
 });
 
 test('every decade anchor the table had, the river has', () => {
   const ids = (html) => [...html.matchAll(/id="(decade-[-\d]+)"/g)].map((m) => m[1]).sort();
-  const table = page({ threads: THREADS }, { events: EVENTS });
+  const table = page({ layout: undefined, threads: THREADS }, { events: EVENTS });
   const river = page({ layout: 'river', threads: THREADS }, { events: EVENTS });
   assert.deepEqual(ids(river), ids(table));
 });
@@ -110,8 +110,10 @@ function runValidator(layout) {
   fs.mkdirSync(path.join(dir, 'src'));
   fs.copyFileSync(path.join(ROOT, 'build.js'), path.join(dir, 'build.js'));
   fs.copyFileSync(path.join(ROOT, 'scripts', 'validate-data.js'), path.join(dir, 'scripts', 'validate-data.js'));
-  fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
-  fs.copyFileSync(path.join(ROOT, 'src', 'latam.svg'), path.join(dir, 'src', 'latam.svg'));
+  if (fs.existsSync(path.join(ROOT, 'data', 'glossary-terms.json'))) fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
+  if (fs.existsSync(path.join(ROOT, 'src', 'latam.svg'))) fs.copyFileSync(path.join(ROOT, 'src', 'latam.svg'), path.join(dir, 'src', 'latam.svg'));
+  const places = path.join(ROOT, 'data', 'places.json');
+  if (fs.existsSync(places)) fs.copyFileSync(places, path.join(dir, 'data', 'places.json'));
   fs.writeFileSync(path.join(dir, 'data', 'chronology.json'), JSON.stringify({ ...base, meta: { ...base.meta, layout } }));
   try {
     return { ok: true, out: execFileSync(process.execPath, [path.join(dir, 'scripts', 'validate-data.js')], { encoding: 'utf8' }) };

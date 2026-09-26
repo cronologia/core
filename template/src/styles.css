@@ -595,18 +595,21 @@ figure.approval-ladder { margin: 0 0 1rem; }
 
 /* ---------------------------------------------------------------------------
    Time river (core#108): the chronology as lane tracks, opt-in with
-   meta.layout "river". Lane 0 is the site accent; the others are fixed hues
-   chosen to stay apart from each other and readable on the light ground.
+   meta.layout "river". A single-track river takes the site accent. With a
+   lane taxonomy (.rv-lanes) every lane takes a fixed hue from one palette,
+   chosen to stay apart from each other and readable on the light ground; a
+   site accent could otherwise land next to one of them (rcc: rose on rose).
    --------------------------------------------------------------------------- */
 .river { --rv-tw: 20px; --rv-yw: 5.6rem; --rv-top: 2.6rem; }
 .rv-l0 { --c: var(--accent); }
+.rv-lanes .rv-l0 { --c: #4338a0; }
 .rv-l1 { --c: #13776d; }
 .rv-l2 { --c: #a8620f; }
-.rv-l3 { --c: #b03a5b; }
-.rv-l4 { --c: #3f6ea8; }
-.rv-l5 { --c: #6b7a1f; }
-.rv-l6 { --c: #7d3c98; }
-.rv-l7 { --c: #8a5a44; }
+.rv-l3 { --c: #b0306a; }
+.rv-l4 { --c: #2f7fb5; }
+.rv-l5 { --c: #5e7a1a; }
+.rv-l6 { --c: #8a5a44; }
+.rv-l7 { --c: #555f6d; }
 .rv-bar { background: var(--bg); padding: .6rem 0 .4rem; border-bottom: 1px solid var(--line); display: grid; gap: .5rem; z-index: 5; }
 @media (min-width: 700px) and (min-height: 640px) { .rv-bar { position: sticky; top: var(--rv-top); } }
 .rv-controls { display: flex; flex-wrap: wrap; gap: .4rem .5rem; align-items: center; }
