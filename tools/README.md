@@ -600,6 +600,38 @@ and that an unreadable portal fails rather than reporting all-clear.
 [core#83]: https://github.com/cronologia/core/issues/83
 [ADR-0008]: ../adr/0008-shared-logic-is-imported-not-mirrored.md
 
+## `build-drift.py` — is every site's build.js in step, and every difference declared?
+
+`template-drift.py` watches the shared scripts; this watches the rest of the
+machinery a site copies: `build.js` function by function, `TRANSLATABLE_KEYS`,
+`src/river.js`, and the self-contained stylesheet blocks (time river, dark
+mode). The time-river rollout ([core#108]) found 21 of 22 sites on copies of
+`build.js` weeks to months old, three of them carrying fixes the template never
+received, and every difference had to be classified by hand first.
+
+```sh
+python3 tools/build-drift.py                    # discover sites, fetch from GitHub
+python3 tools/build-drift.py --root ..          # sibling checkouts instead
+python3 tools/build-drift.py --hash renderPage  # the template function's current hash
+```
+
+A site that changes a template function **on purpose** declares it in
+`.template-drift.json` with a reason and the `base` hash of the template's
+version it was reconciled with. Findings:
+
+| kind | meaning | fix |
+|---|---|---|
+| `DRIFT` | a function, key, `river.js` or stylesheet block differs and is not declared | port the template's version, or declare the customisation |
+| `MISSING` | template machinery the site has not adopted | adopt it (`skills/adopt-template`) |
+| `STALE` | the template changed a function this site customises | port the change into the site's version, then bump `base` |
+| `UNUSED-DECLARATION` | declared, but identical to the template | delete the declaration |
+
+`STALE` is the case that used to fail silently: a fix inside a function a site
+had changed reached nobody. The weekly workflow `build-drift.yml` runs this and
+also runs whenever `template/` changes on `main`.
+
+[core#108]: https://github.com/cronologia/core/issues/108
+
 ## `template-drift.py` — has a template fix reached the repos that run it?
 
 Vendored **skills** have drift detection (`sync-skills.py --check`). Vendored

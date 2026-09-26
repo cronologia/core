@@ -32,7 +32,13 @@ shared base (fsspx's genealogy, tl's map); it never forks it.
    ```
    Commit the ported files and the regenerated `docs/` in one change; update the
    project's `AGENTS.md` repository map to name the new script or key.
-6. **Improvements flow back up.** If you fixed something in the project copy,
+6. **Declare what you customise on purpose.** If the site must change a
+   template `build.js` function (a page order, a site-only section wired into
+   `renderPage`), list it in `.template-drift.json` with the reason and the
+   template's current hash (`python3 tools/build-drift.py --hash <name>`).
+   `tools/build-drift.py` treats any undeclared difference as drift, and flags
+   a declaration STALE when the template's version later changes.
+7. **Improvements flow back up.** If you fixed something in the project copy,
    port the fix to `core/template/` too — otherwise the next project inherits
    the bug. Template changes must stay backward-compatible: existing datasets
    keep validating and keep building byte-identical output.
