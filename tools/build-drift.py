@@ -76,6 +76,19 @@ CSS_HEADER = "/* ---------------------------------------------------------------
 
 FUNC_RE = re.compile(r"^(?:async )?function ([A-Za-z0-9_$]+)\(")
 
+# Sites the portal lists whose build.js is NOT a copy of the template: a
+# different program that shares the filename. Checking them would report
+# every template function as MISSING forever, the check would be muted, and
+# the muting would take the real signal with it (template-drift.py excludes
+# validate-data.js for the same reason). Listed with the reason so the
+# omission is not mistaken for an oversight.
+NOT_TEMPLATE_BUILD = {
+    "fsp": "its own generator over data/forum.json (the Foro de Sao Paulo site); "
+           "shares the architecture, not the code",
+    "glossary": "its own generator over data/glossary.json, one page per term; "
+                "the template's chronology renderers do not apply",
+}
+
 
 def functions(src):
     """Top-level function declarations: name -> full text (to the closing `}` line)."""
@@ -240,6 +253,9 @@ def main(argv=None):
 
     report, bad = {}, 0
     for repo in repos:
+        if repo in NOT_TEMPLATE_BUILD:
+            report[repo] = [("SKIPPED", NOT_TEMPLATE_BUILD[repo])]
+            continue
         if args.root:
             read = lambda path, repo=repo: read_local(args.root, repo, path)  # noqa: E731
         else:
@@ -258,9 +274,13 @@ def main(argv=None):
         for repo, findings in report.items():
             if not findings:
                 print(f"ok    {repo}")
-            for kind, detail in findings:
-                print(f"{kind:<19} {repo}: {detail}")
-        print(f"\n{len(report) - bad} of {len(report)} site(s) in step with the template.")
+            elif findings[0][0] == "SKIPPED":
+                print(f"skip  {repo}: {findings[0][1]}")
+            else:
+                for kind, detail in findings:
+                    print(f"{kind:<19} {repo}: {detail}")
+        checked = [r for r, f in report.items() if not (f and f[0][0] == "SKIPPED")]
+        print(f"\n{len(checked) - bad} of {len(checked)} template-built site(s) in step with the template.")
     return 1 if bad else 0
 
 
