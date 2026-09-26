@@ -130,3 +130,10 @@ test('the validator accepts "river" and rejects an unknown layout', () => {
   assert.equal(r.ok, false);
   assert.match(r.out, /meta\.layout must be one of "table", "river", got "grid"/);
 });
+
+test('a date that only repeats the year is not printed twice', () => {
+  const evs = [{ year: 1921, date: '1921', title: 'Y', sources: [REF] }, { year: 1922, date: '1922-05-01', title: 'D', sources: [REF] }];
+  const html = renderRiver(evs, undefined, new Map([[REF, 1]]), UI.en);
+  assert.match(html, /<div class="rv-year">1921<\/div>/);
+  assert.match(html, /<div class="rv-year">1922<small>1922-05-01<\/small><\/div>/);
+});
