@@ -1,0 +1,60 @@
+name: Build drift
+
+# Has the template's build machinery reached every site, and is every
+# site-specific change to it declared? (tools/build-drift.py)
+#
+# The time-river rollout (core#108) found 21 of 22 sites on copies of build.js
+# weeks to months old, three carrying fixes the template never got, and each
+# difference had to be classified by hand before the site could move. This
+# check classifies them continuously: a function that differs from the
+# template must be declared in the site's .template-drift.json; a declared one
+# goes STALE when the template's version changes, so a core fix cannot again
+# miss a site that had customised the function it lands in.
+#
+# Reads each site's files from raw.githubusercontent.com: no token, no API.
+# Runs weekly, on demand, and whenever template/ or the tool changes on main,
+# so a template change that touches a customised function shows up the same
+# day. It reports; it does not block core PRs (a template fix must be able to
+# land first and be ported after).
+
+on:
+  schedule:
+    - cron: '30 6 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'template/**'
+      - 'tools/build-drift.py'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated slugs to check (blank = discover from the portal)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare every site's build machinery with the template
+        run: |
+          set -o pipefail
+          if [ -n "${{ github.event.inputs.repos }}" ]; then
+            python3 tools/build-drift.py --repos '${{ github.event.inputs.repos }}' | tee report.txt
+          else
+            python3 tools/build-drift.py | tee report.txt
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          { echo '## Build drift'; echo; echo '```'; cat report.txt 2>/dev/null || echo '(no report)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
