@@ -54,8 +54,8 @@ function runValidator(mutate) {
   fs.mkdirSync(path.join(dir, 'src'));
   fs.copyFileSync(path.join(ROOT, 'build.js'), path.join(dir, 'build.js'));
   fs.copyFileSync(path.join(ROOT, 'scripts', 'validate-data.js'), path.join(dir, 'scripts', 'validate-data.js'));
-  fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
-  fs.copyFileSync(path.join(ROOT, 'src', 'latam.svg'), path.join(dir, 'src', 'latam.svg'));
+  if (fs.existsSync(path.join(ROOT, 'data', 'glossary-terms.json'))) fs.copyFileSync(path.join(ROOT, 'data', 'glossary-terms.json'), path.join(dir, 'data', 'glossary-terms.json'));
+  if (fs.existsSync(path.join(ROOT, 'src', 'latam.svg'))) fs.copyFileSync(path.join(ROOT, 'src', 'latam.svg'), path.join(dir, 'src', 'latam.svg'));
   const places = path.join(ROOT, 'data', 'places.json');
   if (fs.existsSync(places)) fs.copyFileSync(places, path.join(dir, 'data', 'places.json'));
   const d = JSON.parse(JSON.stringify(base));

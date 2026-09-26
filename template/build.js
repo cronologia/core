@@ -66,6 +66,10 @@ const TRANSLATABLE_KEYS = new Set([
   // Lane bases are prose and RENDER on the page (renderSwimlanes publishes each
   // lane's grounding), so they are translated like any other visible prose.
   'basis', 'intro',
+  // The lineage figure's typed-edge legend labels (`lineage.edgeLegend.direct`
+  // and `.indirect`) render under the tree as prose. Found untranslated in
+  // rcc, fixed there, upstreamed here.
+  'direct', 'indirect',
   // `organizations[].founded` reads as a date and is written as a sentence
   // ("1817, Ghent (Belgium); in Brazil from the 19th–20th century"). It RENDERS
   // — the card prints "Fundada em <founded>" — so leaving it out put English
@@ -104,6 +108,9 @@ const UI = {
     rvReading: 'Reading', rvAll: (n) => `all ${n} events`, rvSome: (n, total) => `${n} of ${total} events shown`,
     rvEmpty: 'No events match. Clear the search or turn a storyline back on.',
     rvRibbonLabel: (n, lanes) => `Overview of all ${n} events${lanes ? ` in ${lanes} storylines` : ''}; long gaps in the record are drawn as breaks`,
+    // The numbers chart's own labels (upstreamed from rcc, which localized them).
+    ncAxisNote: (max, unit) => `axis: 0–${max} ${unit}`,
+    ncCaptionMeta: (src, unit) => ` — reported by ${src}, in ${unit}`,
     catNav: 'Catalogue', catHeading: 'Catalogue',
     catListHeading: 'Where each object is kept',
     catWhere: 'Kept at', catObject: 'The object', catVisibility: 'When it can be seen',
@@ -200,6 +207,8 @@ const UI = {
     rvReading: 'Leyendo', rvAll: (n) => `los ${n} acontecimientos`, rvSome: (n, total) => `${n} de ${total} acontecimientos mostrados`,
     rvEmpty: 'Ningún acontecimiento coincide. Borre la búsqueda o vuelva a activar un relato.',
     rvRibbonLabel: (n, lanes) => `Vista general de los ${n} acontecimientos${lanes ? ` en ${lanes} relatos` : ''}; los grandes vacíos del registro se dibujan como cortes`,
+    ncAxisNote: (max, unit) => `eje: 0–${max} ${unit}`,
+    ncCaptionMeta: (src, unit) => ` — reportado por ${src}, en ${unit}`,
     catNav: 'Catálogo', catHeading: 'Catálogo',
     catListHeading: 'Dónde se conserva cada objeto',
     catWhere: 'Se conserva en', catObject: 'El objeto', catVisibility: 'Cuándo puede verse',
@@ -286,6 +295,8 @@ const UI = {
     rvReading: 'Lendo', rvAll: (n) => `todos os ${n} acontecimentos`, rvSome: (n, total) => `${n} de ${total} acontecimentos exibidos`,
     rvEmpty: 'Nenhum acontecimento corresponde. Limpe a busca ou reative uma narrativa.',
     rvRibbonLabel: (n, lanes) => `Visão geral dos ${n} acontecimentos${lanes ? ` em ${lanes} narrativas` : ''}; as grandes lacunas do registro aparecem como cortes`,
+    ncAxisNote: (max, unit) => `eixo: 0–${max} ${unit}`,
+    ncCaptionMeta: (src, unit) => ` — reportado por ${src}, em ${unit}`,
     catNav: 'Catálogo', catHeading: 'Catálogo',
     catListHeading: 'Onde cada objeto é conservado',
     catWhere: 'Conservado em', catObject: 'O objeto', catVisibility: 'Quando pode ser visto',
@@ -1130,8 +1141,9 @@ function layoutNumbersChart(nc) {
 }
 
 /** Render the contested-numbers chart (per-series axes + cited caption), or ''. */
-function renderNumbersChart(nc, refNumById) {
+function renderNumbersChart(nc, refNumById, ui) {
   const layout = layoutNumbersChart(nc);
+  const u = ui || UI.en;
   if (!layout) return '';
 
   const fmtTick = (t) => (Number.isInteger(t) ? String(t) : String(Math.round(t * 10) / 10));
@@ -1153,7 +1165,7 @@ function renderNumbersChart(nc, refNumById) {
               <span class="nc-series-label">${esc(s.label)}</span>
               <span class="nc-source-badge">${esc(s.sourceLabel)}</span>
             </div>
-            <div class="nc-axis-note">axis: 0–${esc(fmtTick(s.axisMax))} ${esc(s.unit)}</div>
+            <div class="nc-axis-note">${u.ncAxisNote(esc(fmtTick(s.axisMax)), esc(s.unit))}</div>
 ${rows}
             <div class="nc-axis"><span class="nc-year"></span><span class="nc-ticks">${ticks}</span><span class="nc-value"></span></div>
           </div>`;
@@ -1161,7 +1173,7 @@ ${rows}
     .join('\n');
 
   const captionItems = layout.series
-    .map((s) => `            <li><strong>${esc(s.label)}</strong> — reported by ${esc(s.sourceLabel)}, in ${esc(s.unit)}${renderCites(s.sources, refNumById)}</li>`)
+    .map((s) => `            <li><strong>${esc(s.label)}</strong>${u.ncCaptionMeta(esc(s.sourceLabel), esc(s.unit))}${renderCites(s.sources, refNumById)}</li>`)
     .join('\n');
 
   const heading = nc.heading || 'Numbers';
@@ -2246,11 +2258,11 @@ function layoutRiver(events, threads) {
   const columns = decadeColumns(new Set(sorted.map((e) => decadeBucket(e.year))), collapseAfterOf(threads));
 
   // Ribbon geometry: equal decade columns, fixed-width breaks, in a 1000-wide
-  // viewBox; a short span is not stretched past a readable column width.
-  const W = 1000; const BRK = 16; const MAX_COL = 48;
+  // viewBox, so the ribbon always spans the full width of the section.
+  const W = 1000; const BRK = 16;
   const nBreaks = columns.filter((c) => c.type === 'break').length;
   const nDec = columns.length - nBreaks;
-  const colW = Math.min(MAX_COL, (W - nBreaks * BRK) / Math.max(1, nDec));
+  const colW = (W - nBreaks * BRK) / Math.max(1, nDec);
   let x = 0;
   const colAt = new Map();
   const r1 = (v) => Math.round(v * 10) / 10;
@@ -2338,11 +2350,11 @@ function renderRiverItem(it, layout, refNumById, t, anchorId) {
 function renderRiver(events, threads, refNumById, ui) {
   const t = ui || UI.en;
   const layout = layoutRiver(events, threads);
-  const head = `    <section id="chronology" class="river">
+  const head = (declared) => `    <section id="chronology" class="river${declared ? ' rv-lanes' : ''}">
       <h2>${esc(t.chronologyHeading)}</h2>
       <p class="section-intro">${t.chronologyIntro}</p>
 `;
-  if (!layout) return `${head}    </section>\n`;
+  if (!layout) return `${head(false)}    </section>\n`;
   const nL = layout.lanes.length;
   const chips = layout.declared
     ? layout.lanes.map((l, k) => `<label class="rv-chip rv-l${k % 8}"><input type="checkbox" data-lane="${esc(l.id)}" checked><span class="rv-sw"></span>${esc(l.label)}</label>`).join('\n          ')
@@ -2361,7 +2373,7 @@ function renderRiver(events, threads, refNumById, ui) {
     lastDecade = it.decade;
     return out + renderRiverItem(it, layout, refNumById, t, anchor);
   }).join('\n');
-  return `${head}      <div class="rv-bar">
+  return `${head(layout.declared)}      <div class="rv-bar">
 ${controls}
 ${renderRiverRibbon(layout, t)}
       </div>
@@ -2591,7 +2603,7 @@ function renderPage(data, archives, opts = {}) {
   // then byte-identical to a build without these features).
   const lineageHtml = renderLineageSection(lineage, refNumById);
   const branchTimelineHtml = renderBranchTimeline(branchTimeline, refNumById);
-  const numbersChartHtml = renderNumbersChart(numbersChart, refNumById);
+  const numbersChartHtml = renderNumbersChart(numbersChart, refNumById, ui);
   const chronologySpineHtml = renderChronologySpine(chronologySpine, events, ui);
   const approvalLadderHtml = renderApprovalLadder(data.approvalLadder, refNumById, ui);
   const placesMapHtml = renderPlacesMap(placesMap, events, opts.places, opts.world, ui);
