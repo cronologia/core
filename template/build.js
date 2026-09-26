@@ -91,6 +91,10 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'BCE',
+    rvFilterLabel: 'Filter the chronology', rvFirm: 'Firm dates only', rvFind: 'Find',
+    rvReading: 'Reading', rvAll: (n) => `all ${n} events`, rvSome: (n, total) => `${n} of ${total} events shown`,
+    rvEmpty: 'No events match. Clear the search or turn a storyline back on.',
+    rvRibbonLabel: (n, lanes) => `Overview of all ${n} events${lanes ? ` in ${lanes} storylines` : ''}; long gaps in the record are drawn as breaks`,
     catNav: 'Catalogue', catHeading: 'Catalogue',
     catListHeading: 'Where each object is kept',
     catWhere: 'Kept at', catObject: 'The object', catVisibility: 'When it can be seen',
@@ -183,6 +187,10 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a. C.',
+    rvFilterLabel: 'Filtrar la cronología', rvFirm: 'Solo fechas firmes', rvFind: 'Buscar',
+    rvReading: 'Leyendo', rvAll: (n) => `los ${n} acontecimientos`, rvSome: (n, total) => `${n} de ${total} acontecimientos mostrados`,
+    rvEmpty: 'Ningún acontecimiento coincide. Borre la búsqueda o vuelva a activar un relato.',
+    rvRibbonLabel: (n, lanes) => `Vista general de los ${n} acontecimientos${lanes ? ` en ${lanes} relatos` : ''}; los grandes vacíos del registro se dibujan como cortes`,
     catNav: 'Catálogo', catHeading: 'Catálogo',
     catListHeading: 'Dónde se conserva cada objeto',
     catWhere: 'Se conserva en', catObject: 'El objeto', catVisibility: 'Cuándo puede verse',
@@ -265,6 +273,10 @@ const UI = {
     // Suffix for years before the common era: a negative `year` is that many
     // years BCE (-4 is 4 BCE; there is no year 0). See yearLabel().
     bce: 'a.C.',
+    rvFilterLabel: 'Filtrar a cronologia', rvFirm: 'Apenas datas firmes', rvFind: 'Buscar',
+    rvReading: 'Lendo', rvAll: (n) => `todos os ${n} acontecimentos`, rvSome: (n, total) => `${n} de ${total} acontecimentos exibidos`,
+    rvEmpty: 'Nenhum acontecimento corresponde. Limpe a busca ou reative uma narrativa.',
+    rvRibbonLabel: (n, lanes) => `Visão geral dos ${n} acontecimentos${lanes ? ` em ${lanes} narrativas` : ''}; as grandes lacunas do registro aparecem como cortes`,
     catNav: 'Catálogo', catHeading: 'Catálogo',
     catListHeading: 'Onde cada objeto é conservado',
     catWhere: 'Conservado em', catObject: 'O objeto', catVisibility: 'Quando pode ser visto',
@@ -2188,6 +2200,170 @@ ${cards}
 }
 const r1f = (v) => Math.round(v * 10) / 10;
 
+/* ---------------------------------------------------------------------------
+ * Time river: the chronology as lane tracks instead of a table (core#108).
+ *
+ * Opt-in per site with `meta.layout: "river"`; absent (or "table"), the
+ * chronology is the table and the page is byte-identical (ADR-0001). The river
+ * renders the SAME events with the SAME caveats as the table: the `?` flag,
+ * the `dateNote`, the citations and the `decade-NNNN` anchors every other
+ * figure links to. What it adds:
+ *
+ * - one vertical track per `meta.threads` lane (one track when the site
+ *   declares none); an event sits on every lane it belongs to;
+ * - a ribbon above the list: every event as a tick on its lane rows, on the
+ *   SAME column model as the spine and the swimlanes (decadeColumns), so a gap
+ *   is collapsed at exactly the decades where those figures collapse it;
+ * - a gap row in the list wherever the ribbon breaks, with the same label;
+ * - filters (per lane, firm dates only) and a find box, added by
+ *   src/river.js. Without the script the controls stay hidden and the page is
+ *   a complete, readable list: nothing is behind the script except filtering.
+ *
+ * The swimlanes table, where a site has one, still renders: it is the
+ * accessible tabular form and carries the lanes' editorial note and bases.
+ * Lane labels render verbatim (the chips use the full label).
+ * ------------------------------------------------------------------------- */
+
+const RIVER_LAYOUTS = new Set(['table', 'river']);
+
+/** Pure layout for the river: lanes, sorted events, ribbon columns and gap rows. */
+function layoutRiver(events, threads) {
+  const withYear = (events || []).filter((e) => Number.isFinite(e.year));
+  if (withYear.length === 0) return null;
+  const declared = threads && Array.isArray(threads.lanes) && threads.lanes.length > 0;
+  const lanes = declared ? threads.lanes.map((l) => ({ id: l.id, label: l.label })) : [{ id: '', label: '' }];
+  const laneIdx = new Map(lanes.map((l, i) => [l.id, i]));
+  const sorted = [...withYear].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
+  const columns = decadeColumns(new Set(sorted.map((e) => decadeBucket(e.year))), collapseAfterOf(threads));
+
+  // Ribbon geometry: equal decade columns, fixed-width breaks, in a 1000-wide
+  // viewBox; a short span is not stretched past a readable column width.
+  const W = 1000; const BRK = 16; const MAX_COL = 48;
+  const nBreaks = columns.filter((c) => c.type === 'break').length;
+  const nDec = columns.length - nBreaks;
+  const colW = Math.min(MAX_COL, (W - nBreaks * BRK) / Math.max(1, nDec));
+  let x = 0;
+  const colAt = new Map();
+  const r1 = (v) => Math.round(v * 10) / 10;
+  for (const c of columns) {
+    if (c.type === 'break') { c.x = r1(x); c.w = BRK; x += BRK; } else { c.x = r1(x); c.w = r1(colW); colAt.set(c.decade, c); x += colW; }
+  }
+  const width = r1(x);
+
+  const items = sorted.map((ev, i) => {
+    const ids = declared && Array.isArray(ev.threads) ? ev.threads.filter((t) => laneIdx.has(t)) : [];
+    const k = declared ? ids.map((t) => laneIdx.get(t)) : [0];
+    const col = colAt.get(decadeBucket(ev.year));
+    const tx = r1(col.x + ((ev.year - col.decade) + 0.5) / 10 * col.w);
+    return { ev, i, lanes: k, laneIds: ids, x: tx, decade: decadeBucket(ev.year) };
+  });
+  // A gap row goes between two consecutive events whenever a break column
+  // lies between their decades — the same breaks the ribbon draws.
+  const gapsBefore = new Map();
+  for (let i = 1; i < items.length; i += 1) {
+    const brk = columns.find((c) => c.type === 'break' && c.from > items[i - 1].decade && c.to < items[i].decade + 10);
+    if (brk) gapsBefore.set(i, brk);
+  }
+  return { lanes, declared, items, columns, width, gapsBefore, untagged: declared ? items.filter((it) => it.lanes.length === 0).length : 0 };
+}
+
+function renderRiverRibbon(layout, t) {
+  const ROW = 11; const TOP = 2; const nL = layout.lanes.length;
+  const H = TOP + nL * ROW + 16;
+  const rows = layout.lanes.map((l, k) => `<rect class="rv-row" x="0" y="${TOP + k * ROW}" width="${layout.width}" height="${ROW - 2}"/>`).join('');
+  const breaks = layout.columns.filter((c) => c.type === 'break')
+    .map((c) => `<rect class="rv-brk" x="${r1f(c.x + c.w / 2 - 2)}" y="${TOP}" width="4" height="${nL * ROW - 2}"><title>${esc(t.spineBreakLabel(c.count, yearLabel(c.from, t), yearLabel(c.to, t)))}</title></rect>`).join('');
+  const ticks = layout.items.flatMap((it) => it.lanes.map((k) => `<line class="rv-tick rv-l${k % 8}${it.ev.dateVerified === false ? ' rv-u' : ''}" data-i="${it.i}" x1="${it.x}" x2="${it.x}" y1="${TOP + k * ROW + 1.5}" y2="${TOP + k * ROW + ROW - 3.5}"/>`)).join('');
+  // Axis: the first and last year, and each side of every break.
+  const marks = [];
+  const first = layout.items[0].ev.year; const last = layout.items[layout.items.length - 1].ev.year;
+  marks.push({ x: 0, label: yearLabel(first, t), anchor: 'start' });
+  layout.columns.forEach((c, i) => {
+    if (c.type !== 'break') return;
+    const prev = layout.items.filter((it) => it.decade < c.from).pop();
+    const next = layout.items.find((it) => it.decade > c.to);
+    if (prev && i > 0) marks.push({ x: c.x, label: yearLabel(prev.ev.year, t), anchor: 'end' });
+    if (next) marks.push({ x: c.x + c.w, label: yearLabel(next.ev.year, t), anchor: 'start' });
+  });
+  marks.push({ x: layout.width, label: yearLabel(last, t), anchor: 'end' });
+  const seen = new Set(); let lastEnd = -Infinity;
+  const axis = marks.filter((m) => {
+    const key = `${m.label}@${m.anchor}`; if (seen.has(key)) return false; seen.add(key);
+    const w = m.label.length * 6.2;
+    const x0 = m.anchor === 'end' ? m.x - w : m.x; const x1 = m.anchor === 'end' ? m.x : m.x + w;
+    if (x0 < lastEnd + 8 && m !== marks[marks.length - 1]) return false;
+    lastEnd = x1; return true;
+  }).map((m) => `<text class="rv-axis" x="${m.x}" y="${H - 3}" text-anchor="${m.anchor}">${esc(m.label)}</text>`).join('');
+  const label = t.rvRibbonLabel(layout.items.length, layout.declared ? nL : 0);
+  return `        <svg class="rv-ribbon" viewBox="-4 0 ${r1f(layout.width + 8)} ${H}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="${esc(label)}">
+          ${rows}${breaks}
+          ${ticks}
+          ${axis}<rect class="rv-win" x="0" y="0" width="0" height="${nL * ROW + TOP}"/>
+        </svg>`;
+}
+
+function renderRiverItem(it, layout, refNumById, t, anchorId) {
+  const ev = it.ev;
+  const unverified = ev.dateVerified === false;
+  const flag = unverified ? ` <span class="flag" title="${esc(t.flagTitle)}">?</span>` : '';
+  const laneNames = it.laneIds.map((id) => layout.lanes.find((l) => l.id === id).label);
+  const kick = [
+    ...laneNames.map((n, j) => `<span class="rv-lane rv-l${it.lanes[j] % 8}">${esc(n)}</span>`),
+    ev.place ? `<span>${esc(ev.place)}</span>` : '',
+  ].filter(Boolean).join('');
+  const nodes = it.lanes.length
+    ? it.lanes.map((k) => `<i class="rv-l${k % 8}" style="--k:${k}"></i>`).join('')
+    : '<i class="rv-l0 rv-none" style="--k:0"></i>';
+  const text = ev.text ? `\n            <p class="rv-text">${renderText(ev.text)}${renderCites(ev.sources, refNumById)}</p>` : `\n            <p class="rv-text">${renderCites(ev.sources, refNumById)}</p>`;
+  const note = ev.dateNote ? `\n            <p class="date-note">${renderText(ev.dateNote)}</p>` : '';
+  return `        <li class="rv-e${unverified ? ' rv-u' : ''}"${anchorId ? ` id="${anchorId}"` : ''} data-i="${it.i}" data-lanes="${esc(it.laneIds.join(' '))}" data-decade="${esc(decadeLabel(it.decade, t))}">
+          <div class="rv-year">${esc(yearLabel(ev.year, t))}${ev.date ? `<small>${esc(ev.date)}</small>` : ''}${flag}</div>
+          <div class="rv-node" aria-hidden="true">${nodes}</div>
+          <div class="rv-card">
+            ${kick ? `<p class="rv-kick">${kick}</p>\n            ` : ''}<h3>${esc(ev.title)}</h3>${text}${note}
+          </div>
+        </li>`;
+}
+
+/** The chronology section as a river. Called only when meta.layout is "river". */
+function renderRiver(events, threads, refNumById, ui) {
+  const t = ui || UI.en;
+  const layout = layoutRiver(events, threads);
+  const head = `    <section id="chronology" class="river">
+      <h2>${esc(t.chronologyHeading)}</h2>
+      <p class="section-intro">${t.chronologyIntro}</p>
+`;
+  if (!layout) return `${head}    </section>\n`;
+  const nL = layout.lanes.length;
+  const chips = layout.declared
+    ? layout.lanes.map((l, k) => `<label class="rv-chip rv-l${k % 8}"><input type="checkbox" data-lane="${esc(l.id)}" checked><span class="rv-sw"></span>${esc(l.label)}</label>`).join('\n          ')
+    : '';
+  const controls = `        <div class="rv-controls" role="group" aria-label="${esc(t.rvFilterLabel)}" hidden>
+          ${chips}${chips ? '\n          ' : ''}<label class="rv-chip rv-firm"><input type="checkbox" data-firm><span class="rv-sw"></span>${esc(t.rvFirm)}</label>
+          <label class="rv-find">${esc(t.rvFind)} <input type="search" autocomplete="off"></label>
+          <p class="rv-status" aria-live="polite" data-all="${esc(t.rvAll('{n}'))}" data-some="${esc(t.rvSome('{n}', '{total}'))}" data-reading="${esc(t.rvReading)}"></p>
+        </div>`;
+  let lastDecade = null;
+  const rows = layout.items.map((it) => {
+    let out = '';
+    const brk = layout.gapsBefore.get(it.i);
+    if (brk) out += `        <li class="rv-gap"><span>${esc(t.spineBreakLabel(brk.count, yearLabel(brk.from, t), yearLabel(brk.to, t)))}</span></li>\n`;
+    const anchor = it.decade !== lastDecade ? `decade-${it.decade}` : '';
+    lastDecade = it.decade;
+    return out + renderRiverItem(it, layout, refNumById, t, anchor);
+  }).join('\n');
+  return `${head}      <div class="rv-bar">
+${controls}
+${renderRiverRibbon(layout, t)}
+      </div>
+      <ol class="rv-list" style="--lanes:${nL}">
+${rows}
+      </ol>
+      <p class="rv-empty" hidden>${esc(t.rvEmpty)}</p>
+    </section>
+`;
+}
+
 /** Out-of-vocabulary `references[].type` values seen this build (core#74). */
 const UNKNOWN_REF_TYPES = new Set();
 
@@ -2414,6 +2590,7 @@ function renderPage(data, archives, opts = {}) {
   const tierMapHtml = renderTierMap(tierMap, refNumById, ui);
   const swimlanesHtml = renderSwimlanes(threads, events, refNumById, ui);
 
+  const river = meta && meta.layout === 'river';
   const sortedEvents = [...events].sort((a, b) => a.year - b.year || String(a.date || '').localeCompare(String(b.date || '')));
 
   // Chronology rows with a decade header row whenever the decade changes.
@@ -2453,7 +2630,7 @@ function renderPage(data, archives, opts = {}) {
   <title>${esc(meta.title)}</title>
   <meta name="description" content="${esc(meta.description)}">
 ${ANALYTICS}
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css">${river ? '\n  <script src="../river.js" defer></script>' : ''}
 ${seoHead(meta, base, route, lang)}
 </head>
 <body>
@@ -2487,7 +2664,7 @@ ${factRows}
       </dl>
     </section>
 
-    <section id="chronology">
+${river ? renderRiver(events, threads, refNumById, ui) : `    <section id="chronology">
       <h2>${esc(ui.chronologyHeading)}</h2>
       <p class="section-intro">${ui.chronologyIntro}</p>
       <div class="table-scroll">
@@ -2501,7 +2678,7 @@ ${eventRows}
       </table>
       </div>
     </section>
-
+`}
 ${swimlanesHtml}${placesMapHtml}${catalogueHtml}${tierMapHtml}${lineageHtml}${branchTimelineHtml}${numbersChartHtml}    <section id="figures">
       <h2>${esc(ui.figuresHeading)}</h2>
       <div class="party-grid">
@@ -2561,6 +2738,8 @@ function main() {
   fs.writeFileSync(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(base, ROUTES));
   fs.writeFileSync(path.join(OUT_DIR, 'robots.txt'), renderRobots(base));
   fs.copyFileSync(path.join(SRC_DIR, 'styles.css'), path.join(OUT_DIR, 'styles.css'));
+  // The river's filters and reading window; copied only for sites that use it.
+  if (data.meta && data.meta.layout === 'river') fs.copyFileSync(path.join(SRC_DIR, 'river.js'), path.join(OUT_DIR, 'river.js'));
   // Catalogue images: only the files the data references, so docs/ carries
   // nothing the site does not show.
   const catImages = ((data.catalogue && data.catalogue.items) || [])
@@ -2607,6 +2786,7 @@ module.exports = {
   layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   layoutCatalogue, renderCatalogue, osmLink, CATALOGUE_LICENSES,
+  layoutRiver, renderRiver, RIVER_LAYOUTS,
   loadPlaces, loadWorld,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,

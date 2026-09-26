@@ -20,6 +20,7 @@ data/archives.json       MACHINE-GENERATED Wayback snapshot cache (written by sc
 data/glossary-terms.json VENDORED, PINNED list of cronologia/glossary term ids (written by scripts/sync-glossary-terms.js; committed) — validates [[term-id]] cross-links offline
 data/places.json         VENDORED, PINNED copy of the cronologia/core gazetteer (written by scripts/sync-places.js; committed) — coordinates for the optional placesMap renderer; only needed when placesMap is declared
 src/styles.css           Stylesheet (copied into the build)
+src/river.js             Time-river filters, find box and reading window (copied into the build ONLY when meta.layout is "river"; the page is complete without it)
 src/latam.svg            VENDORED Latin America base map (Natural Earth, public domain) — used by the `map` tier renderer; regenerate with scripts/gen-latam-svg.js (dev-only, needs npm)
 src/world-land.json      COMMITTED world basemap for the placesMap renderer (Natural Earth 1:110m, public domain; see its _meta) — only needed when placesMap is declared
 scripts/validate-data.js Schema check (runs in CI before the build) — also fails on unknown glossary [[term-id]] links
@@ -173,6 +174,19 @@ byte-identical to a build without the feature. Shapes are shown in
   load-bearing hedge ("Antecedents (attributed, not adopted)"). Gap collapsing is
   shared with the spine via `decadeColumns()`, so two figures on one page cannot
   disagree about the same gap.
+
+- **`meta.layout: "river"`** — the **time river** (`renderRiver`, core#108):
+  the `#chronology` section as one vertical track per `meta.threads` lane (one
+  track without a taxonomy) instead of the table, with a ribbon overview above
+  it. Absent or `"table"` = the table, byte-identical. The river keeps every
+  caveat the table shows (`?` flag, `dateNote`, citations) and every
+  `decade-NNNN` anchor; its ribbon breaks and gap rows come from
+  `decadeColumns()`, so they match the spine and the swimlanes; lane labels in
+  the filter chips render verbatim. `src/river.js` adds the lane / firm-date
+  filters, the find box and the ribbon's reading window; the controls are
+  `hidden` in the markup, so without the script nothing dead is shown. The
+  swimlanes table still renders where declared: it carries the lanes' note and
+  bases.
 
 Print baseline: `src/styles.css` ships an `@media print` block (nav/chips
 hidden, figures `break-inside: avoid`, the subway SVG scaled to page width) —

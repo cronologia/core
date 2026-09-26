@@ -47,7 +47,7 @@ test('styles.css: every screen component is styled outside @media print', () => 
   // that each component is styled for SCREEN somewhere. A selector that appears
   // only inside print queries has no screen styling at all, which is exactly
   // what the missing brace did to the spine, the swimlanes and the ladder.
-  const COMPONENTS = ['.al-cascade', '.al-node-link', '.al-details', '.cs-track-list', '.date-note', '.sw-grid'];
+  const COMPONENTS = ['.al-cascade', '.al-node-link', '.al-details', '.cs-track-list', '.date-note', '.sw-grid', '.rv-list', '.rv-e'];
   const lines = stripped.split('\n');
   let depth = 0;
   let atRule = null;
