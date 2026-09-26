@@ -2309,7 +2309,9 @@ function renderRiverRibbon(layout, t) {
   marks.push({ x: layout.width, label: yearLabel(last, t), anchor: 'end' });
   const seen = new Set(); let lastEnd = -Infinity;
   const axis = marks.filter((m) => {
-    const key = `${m.label}@${m.anchor}`; if (seen.has(key)) return false; seen.add(key);
+    // One label per year: a segment holding a single year puts that year on
+    // both its edges, and printing it twice ("2023 2023") reads as a bug.
+    if (seen.has(m.label)) return false; seen.add(m.label);
     const w = m.label.length * 6.2;
     const x0 = m.anchor === 'end' ? m.x - w : m.x; const x1 = m.anchor === 'end' ? m.x : m.x + w;
     if (x0 < lastEnd + 8 && m !== marks[marks.length - 1]) return false;

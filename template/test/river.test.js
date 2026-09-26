@@ -137,3 +137,12 @@ test('a date that only repeats the year is not printed twice', () => {
   assert.match(html, /<div class="rv-year">1921<\/div>/);
   assert.match(html, /<div class="rv-year">1922<small>1922-05-01<\/small><\/div>/);
 });
+
+test('the ribbon axis prints each year once', () => {
+  // 1676 sits alone between two long gaps: both edges of its segment are 1676.
+  const evs = [1676, 1762, 1910].map((year, i) => ({ year, title: `E${i}`, sources: [REF] }));
+  const html = renderRiver(evs, undefined, new Map([[REF, 1]]), UI.en);
+  const labels = [...html.matchAll(/<text class="rv-axis"[^>]*>([^<]*)</g)].map((m) => m[1]);
+  assert.deepEqual(labels, [...new Set(labels)], `repeated axis label in ${labels.join(', ')}`);
+});
+
