@@ -64,6 +64,57 @@ function normalizeArchiveUrl(url) {
   return String(url).replace(/^http:\/\/web\.archive\.org\//, 'https://web.archive.org/');
 }
 
+/**
+ * Encode a URL as a Wayback query parameter. encodeURIComponent leaves `*`
+ * raw, and Wayback reads a raw `*` as a wildcard, so a page whose real path
+ * contains one (LacusCurtius: .../Annals/15B*.html) never matched its own
+ * capture (cristo#13).
+ */
+function wbEncode(url) {
+  return encodeURIComponent(url).replace(/\*/g, '%2A');
+}
+
+/**
+ * A URL that is itself on the Internet Archive (an archive.org item, a
+ * web.archive.org capture) is its own preserved copy: there is nothing to
+ * snapshot, and queueing it only spends a save slot every run (cristo#13).
+ */
+function selfArchived(url) {
+  return /^https?:\/\/(web\.)?archive\.org\//.test(url);
+}
+
+/**
+ * The redirect chain of a URL, first hop to last, without following into a
+ * bot wall: a DOI resolves through doi.org to a publisher that may answer the
+ * final hop with a challenge (ACS, cristo#13), while an earlier hop - the
+ * publisher's canonical /doi/ page - was captured long ago. Returns [] when
+ * the probe itself fails.
+ */
+async function redirectChain(url, max = 6) {
+  const chain = [];
+  let cur = url;
+  for (let i = 0; i < max; i++) {
+    let res;
+    try {
+      res = await fetch(cur, { method: 'HEAD', redirect: 'manual', headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(30000) });
+    } catch {
+      break;
+    }
+    const loc = res.headers.get('location');
+    if (!(res.status >= 300 && res.status < 400 && loc)) break;
+    cur = new URL(loc, cur).href;
+    if (chain.includes(cur) || cur === url) break;
+    chain.push(cur);
+  }
+  return chain;
+}
+
+/** A redirect hop and, for a DOI view (/doi/abs/<doi>), its canonical page. */
+function hopCandidates(hop) {
+  const canonical = hop.replace(/\/doi\/(abs|full|pdf|epdf)\//, '/doi/');
+  return canonical === hop ? [hop] : [hop, canonical];
+}
+
 /** Age of a 14-digit Wayback timestamp in whole days (Infinity if unparsable). */
 function snapshotAgeDays(ts) {
   if (!/^\d{14}$/.test(String(ts))) return Infinity;
@@ -84,7 +135,7 @@ async function request(url, { headOnly = false } = {}) {
 
 /** Query the availability API. Returns {archiveUrl, timestamp} | null | 'inconclusive'. */
 async function lookupSnapshot(url) {
-  const api = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
+  const api = `https://archive.org/wayback/available?url=${wbEncode(url)}`;
   let res;
   try {
     res = await request(api);
@@ -115,7 +166,7 @@ async function lookupSnapshot(url) {
 
 /** Trigger Save Page Now. Returns {archiveUrl, timestamp} | 'inconclusive' | null. */
 async function savePage(url) {
-  const saveUrl = `https://web.archive.org/save/${url}`;
+  const saveUrl = `https://web.archive.org/save/${url.replace(/\*/g, '%2A')}`;
   let res;
   try {
     res = await request(saveUrl);
@@ -263,11 +314,34 @@ async function main() {
       continue;
     }
 
+    if (selfArchived(url)) {
+      console.log(`self-archived (the Internet Archive's own item): ${label}`);
+      skipped++;
+      continue;
+    }
+
     // No entry yet: look up an existing snapshot first (cheap).
     console.log(`checking: ${label}`);
     await politePause(LOOKUP_DELAY_MS);
-    const found = await lookupSnapshot(url);
+    let found = await lookupSnapshot(url);
     looked++;
+    // Nothing under the cited URL: a capture may exist under a hop of its
+    // redirect chain (a DOI's publisher page, a moved section index).
+    if (found === null) {
+      // Publisher platforms serve a DOI's article at /doi/<doi> and at views of
+      // it (/doi/abs/, /doi/full/, /doi/pdf/); captures usually hold the
+      // canonical one while the resolver lands on a view.
+      const hops = (await redirectChain(url)).flatMap(hopCandidates);
+      for (const hop of hops) {
+        await sleep(LOOKUP_DELAY_MS);
+        const viaHop = await lookupSnapshot(hop);
+        if (viaHop && viaHop !== 'inconclusive') {
+          found = { ...viaHop, via: hop };
+          console.log(`  snapshot found under a redirect hop: ${hop}`);
+          break;
+        }
+      }
+    }
     if (found === 'inconclusive') {
       pending++;
       continue;
@@ -305,7 +379,11 @@ async function main() {
   );
 }
 
-main().catch((e) => {
-  console.error(`archive-refs: ${e.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(`archive-refs: ${e.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = { wbEncode, selfArchived, hopCandidates, collectReferences };
