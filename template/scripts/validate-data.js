@@ -116,6 +116,8 @@ else {
     if (ev.date !== undefined && !isStr(ev.date)) err(`${at}.date must be a string`);
     if (typeof ev.dateVerified !== 'boolean') err(`${at}.dateVerified must be boolean`);
     checkSources(at, ev.sources, true);
+    // Key events (core#3): a short label the ribbon prints above the lanes.
+    if (ev.highlight !== undefined && (!isStr(ev.highlight) || ev.highlight.length > 28)) err(`${at}.highlight must be a short label (1-28 characters)`);
     // Disputed dates (core#120): attributed claims, each with its own sources.
     // The event's own year must lie inside the claimed range, so placement is
     // always one of the claims or between them - never a date nobody claims.
@@ -135,6 +137,11 @@ else {
       }
     }
   });
+}
+
+if (isArr(d.events)) {
+  const n = d.events.filter((e) => e && e.highlight !== undefined).length;
+  if (n > 6) err(`events: ${n} highlighted; the ribbon names at most 6 key events (core#3)`);
 }
 
 // ---- threads (per-repo lane taxonomy — core#23) -----------------------------

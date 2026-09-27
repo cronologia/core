@@ -73,6 +73,8 @@ const TRANSLATABLE_KEYS = new Set([
   // `events[].dateClaims[].by` names who dates the event that way, and why
   // (core#120). It renders as prose under the event.
   'by',
+  // `events[].highlight` - a key event's short ribbon label (core#3).
+  'highlight',
   // `organizations[].founded` reads as a date and is written as a sentence
   // ("1817, Ghent (Belgium); in Brazil from the 19th–20th century"). It RENDERS
   // — the card prints "Fundada em <founded>" — so leaving it out put English
@@ -2310,12 +2312,24 @@ function layoutRiver(events, threads) {
 }
 
 function renderRiverRibbon(layout, t) {
-  const ROW = 11; const TOP = 2; const nL = layout.lanes.length;
+  // Key events (core#3): an event may carry `highlight: "<short label>"`; the
+  // ribbon names those few above the lanes, so the overview doubles as the
+  // top-of-page summary. No highlights, no label row: byte-identical output.
+  const hl = layout.items.filter((it) => typeof it.ev.highlight === 'string' && it.ev.highlight);
+  const ROW = 11; const TOP = hl.length ? 15 : 2; const nL = layout.lanes.length;
   const H = TOP + nL * ROW + 16;
   const rows = layout.lanes.map((l, k) => `<rect class="rv-row" x="0" y="${TOP + k * ROW}" width="${layout.width}" height="${ROW - 2}"/>`).join('');
   const breaks = layout.columns.filter((c) => c.type === 'break')
     .map((c) => `<rect class="rv-brk" x="${r1f(c.x + c.w / 2 - 2)}" y="${TOP}" width="4" height="${nL * ROW - 2}"><title>${esc(t.spineBreakLabel(c.count, yearLabel(c.from, t), yearLabel(c.to, t)))}</title></rect>`).join('');
   const ticks = layout.items.flatMap((it) => it.lanes.map((k) => `<line class="rv-tick rv-l${k % 8}${it.ev.dateVerified === false ? ' rv-u' : ''}" data-i="${it.i}" x1="${it.x}" x2="${it.x}" y1="${TOP + k * ROW + 1.5}" y2="${TOP + k * ROW + ROW - 3.5}"/>`)).join('');
+  let hlEnd = -Infinity;
+  const hlMarks = hl.map((it) => {
+    const w = it.ev.highlight.length * 5.6;
+    const x = Math.min(Math.max(it.x, w / 2), layout.width - w / 2);
+    const text = x - w / 2 < hlEnd + 6 ? '' : `<text class="rv-hl" x="${r1f(x)}" y="10" text-anchor="middle">${esc(it.ev.highlight)}</text>`;
+    if (text) hlEnd = x + w / 2;
+    return `<line class="rv-hl-tick" data-i="${it.i}" x1="${it.x}" x2="${it.x}" y1="${text ? 12 : 2}" y2="${TOP + nL * ROW - 2}"/>${text}`;
+  }).join('');
   // Axis: the first and last year, and each side of every break.
   const marks = [];
   const first = layout.items[0].ev.year; const last = layout.items[layout.items.length - 1].ev.year;
@@ -2341,7 +2355,7 @@ function renderRiverRibbon(layout, t) {
   const label = t.rvRibbonLabel(layout.items.length, layout.declared ? nL : 0);
   return `        <svg class="rv-ribbon" viewBox="-4 0 ${r1f(layout.width + 8)} ${H}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="${esc(label)}">
           ${rows}${breaks}
-          ${ticks}
+          ${ticks}${hlMarks}
           ${axis}<rect class="rv-win" x="0" y="0" width="0" height="${nL * ROW + TOP}"/>
         </svg>`;
 }
@@ -2843,7 +2857,7 @@ module.exports = {
   layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   layoutCatalogue, renderCatalogue, osmLink, CATALOGUE_LICENSES,
-  layoutRiver, renderRiver, RIVER_LAYOUTS, renderDateClaims,
+  layoutRiver, renderRiver, RIVER_LAYOUTS, renderDateClaims, renderRiverRibbon,
   loadPlaces, loadWorld,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,
