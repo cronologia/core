@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: read
+  issues: write   # the watchdog issue (core#99)
 
 concurrency:
   group: build-drift
@@ -46,6 +47,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Compare every site's build machinery with the template
+        id: check
         run: |
           set -o pipefail
           if [ -n "${{ github.event.inputs.repos }}" ]; then
@@ -58,3 +60,10 @@ jobs:
         if: always()
         run: |
           { echo '## Build drift'; echo; echo '```'; cat report.txt 2>/dev/null || echo '(no report)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Watchdog issue
+        if: always()
+        uses: ./.github/actions/watchdog
+        with:
+          outcome: ${{ steps.check.outcome }}
+          full-run: ${{ github.event.inputs.repos == '' }}
