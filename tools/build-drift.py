@@ -49,6 +49,10 @@ What it checks, per site
    `"tests"` in `.template-drift.json`, with a reason and the template test's
    hash as `base` - the same contract, and the same STALE signal, as a
    customised function. A test a site needs in addition goes in a new file.
+7. The portal's copy of each site's colour (core#122): the landing page at
+   cronologia.github.io keeps one accent per site for its project cards; it
+   must equal the site's declared --accent, or the card shows a colour the
+   site no longer uses.
 5. The vendored skills: the site's `.claude/skills/_synced.json` must record
    the same skills, with the same hashes, as core's `skills/` (core#117). A
    core change to a skill otherwise turns every site's CI red on its next,
@@ -299,6 +303,31 @@ def check_style_only(read, tpl):
     return findings
 
 
+PORTAL_REPO = "cronologia.github.io"
+
+
+def portal_accents(src):
+    """repo slug -> the accent the portal's build-index.js keeps for it."""
+    if not src:
+        return {}
+    var_of = dict(re.findall(r"id: '([a-z]+)', cls: 'p-([a-z]+)'", src))
+    colours = dict(re.findall(r"--([a-z]+): (#[0-9a-fA-F]{6});", src))
+    return {repo: colours[var].lower() for repo, var in var_of.items() if var in colours}
+
+
+def check_portal_accent(read, repo, portal):
+    """A finding when the portal's card colour for this site differs from the site's --accent."""
+    if repo not in portal:
+        return []
+    css = read("src/styles.css") or ""
+    at = css.find(":root")
+    m = re.search(r"--accent:\s*(#[0-9a-fA-F]{6})", css[at:css.find("}", at)]) if at != -1 else None
+    if m and m.group(1).lower() != portal[repo]:
+        return [("PORTAL", f"the portal's card colour {portal[repo]} differs from this site's --accent {m.group(1).lower()}; "
+                           f"update build-index.js in {PORTAL_REPO}")]
+    return []
+
+
 def load_template():
     with open(os.path.join(TEMPLATE, "build.js"), encoding="utf-8") as fh:
         build = fh.read()
@@ -357,6 +386,13 @@ def main(argv=None):
         print("No sites to check: the portal did not list any. That is a finding, not a pass.")
         return 1
 
+    if args.root:
+        portal = portal_accents(read_local(args.root, PORTAL_REPO, "build-index.js"))
+    else:
+        try:
+            portal = portal_accents(read_remote(PORTAL_REPO, "build-index.js"))
+        except (urllib.error.URLError, TimeoutError):
+            portal = {}
     report, bad = {}, 0
     for repo in repos:
         if repo in NOT_TEMPLATE_BUILD:
@@ -367,7 +403,7 @@ def main(argv=None):
             else:
                 read = lambda path, repo=repo: read_remote(repo, path)  # noqa: E731
             try:
-                findings = check_style_only(read, tpl)
+                findings = check_style_only(read, tpl) + check_portal_accent(read, repo, portal)
             except (urllib.error.URLError, TimeoutError) as e:
                 findings = [("UNREACHABLE", str(e))]
             report[repo] = findings or [("SKIPPED", NOT_TEMPLATE_BUILD[repo] + "; dark-mode block in step")]
@@ -379,7 +415,7 @@ def main(argv=None):
         else:
             read = lambda path, repo=repo: read_remote(repo, path)  # noqa: E731
         try:
-            findings = check_site(read, tpl)
+            findings = check_site(read, tpl) + check_portal_accent(read, repo, portal)
         except (urllib.error.URLError, TimeoutError) as e:
             findings = [("UNREACHABLE", str(e))]
         report[repo] = findings

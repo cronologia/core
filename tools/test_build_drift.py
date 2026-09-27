@@ -156,6 +156,15 @@ class BuildDrift(unittest.TestCase):
         self.assertEqual([k for k, _ in bd.check_style_only({"src/styles.css": "body {}\n"}.get, t)], ["MISSING"])
         self.assertEqual([k for k, _ in bd.check_style_only({"src/styles.css": dark.replace(".dk", ".xx")}.get, t)], ["DRIFT"])
 
+    def test_portal_accent_must_match_the_site(self):
+        src = "{ id: 'cristo', cls: 'p-cristo' }\n{ id: 'marioferreirasantos', cls: 'p-mfs' }\n--cristo: #4338A0; --mfs: #7b2d5e;"
+        portal = bd.portal_accents(src)
+        self.assertEqual(portal, {"cristo": "#4338a0", "marioferreirasantos": "#7b2d5e"})
+        css = lambda c: {"src/styles.css": f":root {{\n  --accent: {c};\n}}"}.get
+        self.assertEqual(bd.check_portal_accent(css("#4338a0"), "cristo", portal), [])
+        self.assertEqual([k for k, _ in bd.check_portal_accent(css("#123456"), "cristo", portal)], ["PORTAL"])
+        self.assertEqual(bd.check_portal_accent(css("#123456"), "not-on-portal", portal), [])
+
 
 if __name__ == "__main__":
     unittest.main()
