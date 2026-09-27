@@ -310,28 +310,51 @@ test('dateNote is translatable, or it renders in English on every localized page
     'dateNote must be in TRANSLATABLE_KEYS — rendering it untranslated just moves the bug');
 });
 
-/* Out-of-vocabulary reference types (core#74). The closed vocabulary falls back
- * to the raw value, which puts an English word on a localized page — the exact
- * thing the fallback line's own comment forbids. Every repo in the family has
- * offenders, so this reports rather than throws for now; the test pins that the
- * report actually happens, because a warning nobody emits is the same as none. */
-const { renderReference, UNKNOWN_REF_TYPES } = require('../build.js');
+/* Reference types are a closed vocabulary (core#74). validate-data.js rejects a
+ * type outside it; the renderer, which used to fall back to the raw English
+ * word, now refuses to render one - a missing label is a machinery defect. */
+const { renderReference } = require('../build.js');
+const { execFileSync } = require('node:child_process');
+const os = require('node:os');
 
-test('an unknown reference type is collected for reporting, not swallowed', () => {
-  UNKNOWN_REF_TYPES.clear();
-  const ref = (type) => ({ id: 'x', title: 'T', url: 'https://e.org', publisher: 'P', type });
-  renderReference(ref('official'), 1, {}, UI.es);
-  assert.equal(UNKNOWN_REF_TYPES.size, 0, 'a known type must not be reported');
+test('a known reference type renders its localized label', () => {
+  const ref = { id: 'x', title: 'T', url: 'https://e.org', publisher: 'P', type: 'official' };
+  assert.match(renderReference(ref, 1, {}, UI.es), new RegExp(UI.es.refTypes.official));
+});
 
-  renderReference(ref('primary'), 2, {}, UI.es);
-  renderReference(ref('devotional'), 3, {}, UI.es);
-  renderReference(ref('primary'), 4, {}, UI.es);
-  assert.deepEqual([...UNKNOWN_REF_TYPES].sort(), ['devotional', 'primary'],
-    'every distinct offender is named, and named once');
+test('an unknown reference type is refused, never printed raw', () => {
+  const ref = { id: 'x', title: 'T', url: 'https://e.org', publisher: 'P', type: 'devotional' };
+  assert.throws(() => renderReference(ref, 1, {}, UI.es), /devotional.*core#74/);
+});
 
-  // And the defect itself: the raw English word does reach the Spanish page.
-  assert.match(renderReference(ref('devotional'), 5, {}, UI.es), /devotional/);
-  UNKNOWN_REF_TYPES.clear();
+test('validate-data.js rejects out-of-vocabulary types in every references array', () => {
+  const root = path.join(__dirname, '..');
+  const d = JSON.parse(fs.readFileSync(path.join(root, 'data', 'chronology.example.json'), 'utf8'));
+  d.references[0].type = 'primary';
+  d.philosophers = { references: [{ id: 'nested', title: 'T', url: 'https://e.org', publisher: 'P', type: 'blog' }] };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reftypes-'));
+  fs.mkdirSync(path.join(dir, 'scripts')); fs.mkdirSync(path.join(dir, 'data'));
+  fs.copyFileSync(path.join(root, 'scripts', 'validate-data.js'), path.join(dir, 'scripts', 'validate-data.js'));
+  fs.copyFileSync(path.join(root, 'build.js'), path.join(dir, 'build.js'));
+  fs.cpSync(path.join(root, 'src'), path.join(dir, 'src'), { recursive: true });
+  for (const f of ['glossary-terms.json', 'places.json']) {
+    if (fs.existsSync(path.join(root, 'data', f))) fs.copyFileSync(path.join(root, 'data', f), path.join(dir, 'data', f));
+  }
+  fs.writeFileSync(path.join(dir, 'data', 'chronology.json'), JSON.stringify(d));
+  let out = '';
+  try { execFileSync(process.execPath, ['scripts/validate-data.js'], { cwd: dir, encoding: 'utf8', stdio: 'pipe' }); }
+  catch (e) { out = `${e.stdout}${e.stderr}`; }
+  finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  assert.match(out, /2 reference type\(s\) outside the closed vocabulary/);
+  assert.match(out, /"primary"/);
+  assert.match(out, /philosophers\.references\[0\] \(nested\): "blog"/, 'nested references arrays are checked too');
+});
+
+test("the validator's vocabulary is exactly the renderer's refTypes table", () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'validate-data.js'), 'utf8');
+  const body = src.match(/const REF_TYPES = new Set\(\[([^\]]*)\]\)/)[1];
+  const validator = [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(validator, Object.keys(UI.en.refTypes).sort());
 });
 
 test('refTypes: every declared type has a label in all three locales', () => {

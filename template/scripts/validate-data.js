@@ -537,6 +537,40 @@ if (d.disambiguation !== undefined) {
   }
 })();
 
+// ---- reference types: a closed vocabulary (core#74) -------------------------
+// `type` is chrome, not prose: the renderer looks it up in the UI table, so a
+// type outside the table would print a raw English word on a localized page.
+// Every `references` array in the dataset is checked - the top-level one and
+// any a site nests (olavo's philosophers carry their own) - and every
+// offender is named in one run. The set must equal build.js's UI.en.refTypes
+// (a test enforces it). Classify by what the document IS; a stance or a
+// judgement of primacy belongs in the translated publisherNote.
+const REF_TYPES = new Set([
+  'news', 'academic', 'archive', 'official', 'encyclopedia', 'web', 'corpus', 'database',
+  'video', 'index', 'book', 'report', 'legal', 'testimony', 'analysis',
+]);
+(function checkRefTypes() {
+  const bad = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) node.forEach((v, i) => walk(v, `${at}[${i}]`));
+    else if (node && typeof node === 'object') {
+      for (const k of Object.keys(node)) {
+        if (k === 'references' && Array.isArray(node[k])) {
+          node[k].forEach((r, i) => {
+            if (r && isStr(r.type) && !REF_TYPES.has(r.type)) bad.push(`${at ? at + '.' : ''}references[${i}] (${r.id || '?'}): "${r.type}"`);
+          });
+        }
+        walk(node[k], at ? `${at}.${k}` : k);
+      }
+    }
+  };
+  walk(d, '');
+  if (bad.length) {
+    err(`${bad.length} reference type(s) outside the closed vocabulary (${[...REF_TYPES].join(', ')}):\n    ` +
+      bad.join('\n    ') + '\n    Retype by what the document is; put any stance in publisherNote (core#74).');
+  }
+})();
+
 if (errors.length) {
   console.error(`✗ ${errors.length} problem(s):\n` + errors.map((e) => `  - ${e}`).join('\n'));
   process.exit(1);
