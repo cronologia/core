@@ -40,6 +40,10 @@ What it checks, per site
 4. The self-contained stylesheet blocks (time river, dark mode) must be
    identical to the template's. A site may add rules of its own anywhere
    else in its stylesheet.
+5. The vendored skills: the site's `.claude/skills/_synced.json` must record
+   the same skills, with the same hashes, as core's `skills/` (core#117). A
+   core change to a skill otherwise turns every site's CI red on its next,
+   unrelated push - which is how the #114 skill edit surfaced.
 
 What it deliberately does NOT check: the UI string tables and other data
 literals (sites extend them; the sites' own tests render them), and the whole
@@ -68,6 +72,7 @@ CORE = os.path.dirname(HERE)
 TEMPLATE = os.path.join(CORE, "template")
 RAW = "https://raw.githubusercontent.com/cronologia/{repo}/main/{path}"
 DECL = ".template-drift.json"
+SKILLS_MANIFEST = ".claude/skills/_synced.json"
 
 # The self-contained stylesheet blocks: each starts at its header comment and
 # runs to the next header comment of the same shape or to the end of file.
@@ -192,6 +197,20 @@ def check_site(read, tpl):
     elif river != tpl["river"]:
         findings.append(("DRIFT", "src/river.js differs from the template"))
 
+    if tpl.get("skills") is not None:
+        raw = read(SKILLS_MANIFEST)
+        try:
+            recorded = {e.get("name"): e.get("sha256") for e in json.loads(raw).get("skills", [])} if raw else None
+        except (json.JSONDecodeError, AttributeError):
+            recorded = None
+        if recorded is None:
+            findings.append(("MISSING", f"{SKILLS_MANIFEST} (vendored skills)"))
+        else:
+            stale = sorted(n for n in set(tpl["skills"]) | set(recorded) if tpl["skills"].get(n) != recorded.get(n))
+            if stale:
+                findings.append(("SKILLS", f"vendored skills behind core: {', '.join(stale)}; "
+                                           f"run python3 core/tools/sync-skills.py <site> and commit"))
+
     css = read("src/styles.css") or ""
     for marker in CSS_BLOCKS:
         at = css.find(marker)
@@ -206,6 +225,15 @@ def check_site(read, tpl):
     return findings
 
 
+def canonical_skills():
+    """name -> sha256 of core's skills, hashed exactly as sync-skills.py does."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("sync_skills", os.path.join(HERE, "sync-skills.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return {name: mod.digest(text) for name, _path, text in mod.discover_skills()}
+
+
 def load_template():
     with open(os.path.join(TEMPLATE, "build.js"), encoding="utf-8") as fh:
         build = fh.read()
@@ -214,6 +242,7 @@ def load_template():
     with open(os.path.join(TEMPLATE, "src", "styles.css"), encoding="utf-8") as fh:
         css = fh.read()
     return {
+        "skills": canonical_skills(),
         "functions": functions(build),
         "keys": translatable_keys(build),
         "river": river,

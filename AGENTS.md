@@ -145,3 +145,9 @@ different commits. Therefore:
    workflow ends with the `./.github/actions/watchdog` step (core#99): a failing
    run opens or updates one `watchdog` issue, a clean full run closes it. A
    session starts by reading open `watchdog` issues.
+7. **A skill change ships with its resync.** Sites vendor `skills/` and their
+   CI checks the copy against core `main`, so merging a skill edit alone turns
+   every site red on its next, unrelated push (core#117). Run
+   `python3 tools/sync-skills.py <site>` for every site and ship those commits
+   in the same wave. `build-drift` reports the stale sites on the skill PR
+   itself and, after merge, in its watchdog issue until the wave lands.

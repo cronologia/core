@@ -24,7 +24,14 @@ on:
     branches: [main]
     paths:
       - 'template/**'
+      - 'skills/**'
       - 'tools/build-drift.py'
+  # A PR that edits a skill shows, before merge, every site whose vendored copy
+  # it will make stale (core#117). Red here is information, not a veto: the
+  # fix is the resync wave that must ship with the skill change.
+  pull_request:
+    paths:
+      - 'skills/**'
   workflow_dispatch:
     inputs:
       repos:
@@ -62,7 +69,7 @@ jobs:
           { echo '## Build drift'; echo; echo '```'; cat report.txt 2>/dev/null || echo '(no report)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Watchdog issue
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         uses: ./.github/actions/watchdog
         with:
           outcome: ${{ steps.check.outcome }}
