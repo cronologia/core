@@ -135,3 +135,9 @@ different commits. Therefore:
    gazetteer), and no agent working in core touches a project dataset.
 4. **Document the decision, not just the code.** A change to the shared
    contract gets an ADR in `adr/`; a change to the method gets a skill edit.
+5. **Every ticket carries a suggestion.** A ticket that reports a defect, asks a
+   question or needs a decision ends with a `## Suggestion` section: the option
+   you would take and why, the first concrete step, and what you checked to
+   ground it. An open question with no recommendation stalls; a recommendation
+   the maintainer can reject in one line does not. Applies to issues and to
+   status comments that leave a decision open, in every cronologia repo.
