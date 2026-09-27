@@ -2,7 +2,7 @@
   --bg: #faf8f5;
   --surface: #ffffff;
   --ink: #1d2330;
-  --muted: #6b7280;
+  --muted: #595f6b;
   --accent: __ACCENT__;
   --accent-dark: __ACCENT_DARK__;
   --accent-soft: __ACCENT_SOFT__;
@@ -302,7 +302,7 @@ figure.chrono-spine figcaption {
 .lang-switch { float: right; display: flex; gap: .35rem; align-items: center; font-size: .8rem; font-weight: 700; }
 .lang-switch a { color: var(--muted); text-decoration: none; padding: .1rem .3rem; border-radius: 3px; }
 .lang-switch a:hover { color: var(--accent); background: var(--accent-soft); }
-.lang-switch .lang-current { color: var(--accent); background: var(--accent-soft); padding: .1rem .3rem; border-radius: 3px; }
+.lang-switch .lang-current { color: var(--accent-dark); background: var(--accent-soft); padding: .1rem .3rem; border-radius: 3px; }
 
 /* Machine-translation disclaimer (non-English pages) */
 .i18n-disclaimer {
@@ -421,8 +421,8 @@ table.sw-grid tbody th[scope="row"] {
 /* Four steps of intensity — always alongside the printed number, never instead. */
 .sw-i1 { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .sw-i2 { background: color-mix(in srgb, var(--accent) 28%, transparent); }
-.sw-i3 { background: color-mix(in srgb, var(--accent) 46%, transparent); }
-.sw-i4 { background: color-mix(in srgb, var(--accent) 64%, transparent); }
+.sw-i3 { background: var(--accent); }
+.sw-i4 { background: var(--accent-dark); }
 .sw-i3 a, .sw-i4 a { color: #fff; }
 .sw-zero { background: transparent; }
 .sw-zero::after { content: '·'; color: var(--muted); }
@@ -610,9 +610,9 @@ figure.approval-ladder { margin: 0 0 1rem; }
 .rv-l0 { --c: var(--accent); }
 .rv-lanes .rv-l0 { --c: #4338a0; }
 .rv-l1 { --c: #13776d; }
-.rv-l2 { --c: #a8620f; }
+.rv-l2 { --c: #9d5c0e; }
 .rv-l3 { --c: #b0306a; }
-.rv-l4 { --c: #2f7fb5; }
+.rv-l4 { --c: #2a72a2; }
 .rv-l5 { --c: #5e7a1a; }
 .rv-l6 { --c: #8a5a44; }
 .rv-l7 { --c: #555f6d; }
@@ -734,6 +734,10 @@ svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cur
   .al-adjacent .al-node-status, .al-adjacent .al-status { color: #c3a9e8; }
   .rv-l0 { --c: var(--accent-hi); }
   .rv-lanes .rv-l0 { --c: #9d93ff; }
+  /* The light scheme's solid heat steps would sink into the dark page; the
+     translucent steps keep the scale reading dark-to-bright. */
+  .sw-i3 { background: color-mix(in srgb, var(--accent) 46%, transparent); }
+  .sw-i4 { background: color-mix(in srgb, var(--accent) 64%, transparent); }
   .rv-l1 { --c: #4fc4b5; } .rv-l2 { --c: #e3a24f; } .rv-l3 { --c: #f07aa8; }
   .rv-l4 { --c: #6fb4e8; } .rv-l5 { --c: #a8c25a; } .rv-l6 { --c: #d49a7e; } .rv-l7 { --c: #a3adbb; }
   .rv-win { fill: var(--accent-hi); stroke: var(--accent-hi); }
