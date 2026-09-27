@@ -686,6 +686,24 @@ svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cur
 }
 
 /* ---------------------------------------------------------------------------
+   Citation previews (core#119): a click or tap on [n] shows the reference
+   beside the claim (src/cite.js). Colours come from the page tokens, so the
+   dark scheme needs nothing of its own. Never printed.
+   --------------------------------------------------------------------------- */
+.cite-pop {
+  position: fixed; inset: auto; margin: 0; max-width: min(26rem, calc(100vw - 16px));
+  padding: .7rem .85rem .6rem; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px; font-size: .88rem; line-height: 1.45;
+  box-shadow: 0 8px 28px rgb(0 0 0 / .18);
+}
+.cite-pop-head { margin: 0 0 .3rem; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cite-pop-body > a:first-child { font-weight: 600; }
+.cite-pop-body .ref-meta { margin-top: .15rem; }
+.cite-pop-foot { margin: .5rem 0 0; font-size: .8rem; }
+sup.cite a[aria-expanded] { text-decoration: underline; }
+@media print { .cite-pop { display: none !important; } }
+
+/* ---------------------------------------------------------------------------
    Dark mode (core#113): follows the reader's system setting; the light page
    is untouched. A self-contained block, appended last, so it layers over any
    site's copy of the stylesheet: it redefines the base tokens and restates

@@ -21,16 +21,18 @@ function b() {
   return 1;
 }
 """
-TPL_CSS = f"body {{}}\n{H}\n   Time river (core#108): x\n   --- */\n.rv {{}}\n\n{H}\n   Dark mode (core#113): y\n   --- */\n.dk {{}}\n"
+TPL_CSS = (f"body {{}}\n{H}\n   Time river (core#108): x\n   --- */\n.rv {{}}\n\n"
+           f"{H}\n   Citation previews (core#119): c\n   --- */\n.cp {{}}\n\n"
+           f"{H}\n   Dark mode (core#113): y\n   --- */\n.dk {{}}\n")
 
 
 def tpl():
     return {"functions": bd.functions(TPL_BUILD), "keys": bd.translatable_keys(TPL_BUILD),
-            "river": "RIVER", "css": {m: bd.css_block(TPL_CSS, m) for m in bd.CSS_BLOCKS}}
+            "scripts": {"src/river.js": "RIVER", "src/cite.js": "CITE"}, "css": {m: bd.css_block(TPL_CSS, m) for m in bd.CSS_BLOCKS}}
 
 
 def site(build=TPL_BUILD, decl=None, river="RIVER", css=TPL_CSS):
-    files = {"build.js": build, "src/river.js": river, "src/styles.css": css}
+    files = {"build.js": build, "src/river.js": river, "src/cite.js": "CITE", "src/styles.css": css}
     if decl is not None:
         files[bd.DECL] = json.dumps(decl)
     return lambda path: files.get(path)
@@ -70,14 +72,14 @@ class BuildDrift(unittest.TestCase):
     def test_river_and_css_blocks(self):
         self.assertEqual(self.kinds(site(river="OLD")), ["DRIFT"])
         self.assertEqual(self.kinds(site(css=TPL_CSS.replace(".dk {}", ".dk { x }"))), ["DRIFT"])
-        self.assertEqual(self.kinds(site(css="body {}\n")), ["MISSING", "MISSING"])
+        self.assertEqual(self.kinds(site(css="body {}\n")), ["MISSING"] * len(bd.CSS_BLOCKS))
 
     def test_site_rules_after_a_block_are_allowed(self):
         css = TPL_CSS.replace(f"\n{H}\n   Dark mode", f"/* site rules */\n.mine {{}}\n\n{H}\n   Dark mode")
         self.assertEqual(self.kinds(site(css=css)), [])
 
     def skills_site(self, manifest):
-        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/styles.css": TPL_CSS}
+        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/cite.js": "CITE", "src/styles.css": TPL_CSS}
         if manifest is not None:
             files[bd.SKILLS_MANIFEST] = json.dumps({"skills": [{"name": n, "sha256": h} for n, h in manifest.items()]})
         t = dict(tpl(), skills={"a": "h1", "b": "h2"})
@@ -104,7 +106,7 @@ class BuildDrift(unittest.TestCase):
     TPL_TEST = "const x = 1;\n// >>> ADOPT: dataset\nconst DATASET = 'chronology.example.json';\n// <<< ADOPT\ntest('a', () => {});\n"
 
     def shared_site(self, site_test, decl_tests=None):
-        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/styles.css": TPL_CSS}
+        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/cite.js": "CITE", "src/styles.css": TPL_CSS}
         if site_test is not None:
             files["test/a.test.js"] = site_test
         if decl_tests is not None:
