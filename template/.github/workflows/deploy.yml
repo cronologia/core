@@ -89,6 +89,34 @@ jobs:
         with:
           path: docs
 
+  # Rendered-page checks (core#123): no page wider than a 390px phone, and
+  # WCAG AA text contrast in the light and the dark scheme. Every visual
+  # defect of the #108-#116 waves passed the gate above and was caught only in
+  # a browser. Playwright is installed here, for this job only; the build
+  # stays zero-dependency. Advisory while it beds in: it never blocks deploy.
+  page-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: cronologia/core
+          path: .core-template
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock --prefix .core-template/tools playwright@1.63.0
+          .core-template/tools/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Check the rendered pages
+        run: node .core-template/tools/page-check.js docs
+
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: build

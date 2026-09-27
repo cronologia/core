@@ -151,3 +151,7 @@ different commits. Therefore:
    `python3 tools/sync-skills.py <site>` for every site and ship those commits
    in the same wave. `build-drift` reports the stale sites on the skill PR
    itself and, after merge, in its watchdog issue until the wave lands.
+8. **A wave that touches a stylesheet or a renderer runs the page checks**
+   before it ships: `node tools/page-check.js <site>/docs` (core#123), which
+   needs Playwright and a Chromium. Sites run it in CI as the advisory
+   `page-check` job; fix what it reports rather than muting it.
