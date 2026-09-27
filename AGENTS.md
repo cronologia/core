@@ -141,3 +141,7 @@ different commits. Therefore:
    ground it. An open question with no recommendation stalls; a recommendation
    the maintainer can reject in one line does not. Applies to issues and to
    status comments that leave a decision open, in every cronologia repo.
+6. **A scheduled check must be able to reach a reader.** Every scheduled
+   workflow ends with the `./.github/actions/watchdog` step (core#99): a failing
+   run opens or updates one `watchdog` issue, a clean full run closes it. A
+   session starts by reading open `watchdog` issues.

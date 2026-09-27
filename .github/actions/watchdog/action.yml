@@ -1,0 +1,60 @@
+name: Watchdog issue
+description: >-
+  Make a scheduled check's result visible (core#99). On failure, open - or
+  update - one issue per workflow, labelled `watchdog`, carrying the report.
+  On a clean full run, close it. A red scheduled run with no reader is the
+  failure mode core#99 measured: 61 failed published-drift runs over 30 days,
+  seen by no one.
+
+inputs:
+  outcome:
+    description: "The checking step's outcome: success or failure."
+    required: true
+  report:
+    description: Path of the report file to quote in the issue.
+    required: false
+    default: report.txt
+  full-run:
+    description: >-
+      'true' when the run covered every site. Only a full clean run closes the
+      issue; a clean run over a hand-picked subset proves nothing about the rest.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        OUTCOME: ${{ inputs.outcome }}
+        REPORT: ${{ inputs.report }}
+        FULL: ${{ inputs.full-run }}
+        WORKFLOW: ${{ github.workflow }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        title="Watchdog: ${WORKFLOW} is failing"
+        gh label create watchdog --color B60205 \
+          --description "A scheduled check is failing (core#99)" --force >/dev/null
+        existing=$(gh issue list --label watchdog --state open --search "\"${title}\" in:title" \
+          --json number,title --jq ".[] | select(.title == \"${title}\") | .number" | head -1 || true)
+        body=$(mktemp)
+        {
+          echo "Run: ${RUN_URL}"
+          echo
+          echo '```'
+          if [ -s "${REPORT}" ]; then tail -c 60000 "${REPORT}"; else echo "(no report produced)"; fi
+          echo '```'
+          echo
+          echo "This issue closes itself on the next clean full run."
+        } > "$body"
+        if [ "${OUTCOME}" = "failure" ]; then
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --body-file "$body"
+          else
+            gh issue create --title "${title}" --label watchdog --body-file "$body"
+          fi
+        elif [ "${OUTCOME}" = "success" ] && [ "${FULL}" = "true" ] && [ -n "${existing}" ]; then
+          gh issue close "${existing}" --comment "Clean full run: ${RUN_URL}"
+        fi
