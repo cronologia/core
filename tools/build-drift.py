@@ -275,6 +275,22 @@ def canonical_skills():
     return {name: mod.digest(text) for name, _path, text in mod.discover_skills()}
 
 
+# The blocks a site with its own generator still carries (core#122).
+STYLE_ONLY_BLOCKS = ("Dark mode (core#113)",)
+
+
+def check_style_only(read, tpl):
+    css = read("src/styles.css") or ""
+    findings = []
+    for marker in STYLE_ONLY_BLOCKS:
+        at = css.find(marker)
+        if at == -1:
+            findings.append(("MISSING", f"stylesheet block '{marker}'"))
+        elif not css[css.rfind(CSS_HEADER, 0, at):].startswith(tpl["css"][marker]):
+            findings.append(("DRIFT", f"stylesheet block '{marker}' differs from the template"))
+    return findings
+
+
 def load_template():
     with open(os.path.join(TEMPLATE, "build.js"), encoding="utf-8") as fh:
         build = fh.read()
@@ -336,7 +352,19 @@ def main(argv=None):
     report, bad = {}, 0
     for repo in repos:
         if repo in NOT_TEMPLATE_BUILD:
-            report[repo] = [("SKIPPED", NOT_TEMPLATE_BUILD[repo])]
+            # Their build.js is another program, but the dark-mode block is a
+            # stylesheet contract any generator can honour (core#122).
+            if args.root:
+                read = lambda path, repo=repo: read_local(args.root, repo, path)  # noqa: E731
+            else:
+                read = lambda path, repo=repo: read_remote(repo, path)  # noqa: E731
+            try:
+                findings = check_style_only(read, tpl)
+            except (urllib.error.URLError, TimeoutError) as e:
+                findings = [("UNREACHABLE", str(e))]
+            report[repo] = findings or [("SKIPPED", NOT_TEMPLATE_BUILD[repo] + "; dark-mode block in step")]
+            if findings:
+                bad += 1
             continue
         if args.root:
             read = lambda path, repo=repo: read_local(args.root, repo, path)  # noqa: E731
