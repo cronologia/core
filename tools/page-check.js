@@ -68,6 +68,23 @@ function contrastProbe(dark) {
       const v = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
       return { r: v[0], g: v[1], b: v[2], a: v.length > 3 ? v[3] : 1 };
     }
+    m = c && c.match(/okl(ch|ab)\(([^)]+)\)/);
+    if (m) {
+      // oklch()/oklab() - what relative colour syntax computes to (core#118).
+      const v = m[2].split(/[ /]+/).filter(Boolean).map((x) => (x.endsWith('%') ? parseFloat(x) / 100 : parseFloat(x)));
+      let [L, A, B] = v;
+      if (m[1] === 'ch') { const h = (B * Math.PI) / 180; [A, B] = [A * Math.cos(h), A * Math.sin(h)]; }
+      const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+      const mm = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+      const s = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3;
+      const enc = (x) => 255 * Math.min(1, Math.max(0, x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055));
+      return {
+        r: enc(4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * s),
+        g: enc(-1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * s),
+        b: enc(-0.0041960863 * l - 0.7034186147 * mm + 1.7076147010 * s),
+        a: v.length > 3 ? v[3] : 1,
+      };
+    }
     m = c && c.match(/color\(srgb ([^)]+)\)/);
     if (m) {
       const v = m[1].split(/[ /]+/).filter(Boolean).map(Number);

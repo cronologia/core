@@ -38,8 +38,8 @@ What it checks, per site
    on the site's localized pages.
 3. The client scripts (src/river.js, src/cite.js) must be byte-identical to
    the template's.
-4. The self-contained stylesheet blocks (time river, citation previews, dark
-   mode) must be
+4. The self-contained stylesheet blocks (time river, citation previews, look
+   and feel, dark mode) must be
    identical to the template's. A site may add rules of its own anywhere
    else in its stylesheet.
 6. The shared tests (core#121): every `test/*.test.js` the template ships
@@ -86,7 +86,7 @@ SKILLS_MANIFEST = ".claude/skills/_synced.json"
 
 # The self-contained stylesheet blocks: each starts at its header comment and
 # runs to the next header comment of the same shape or to the end of file.
-CSS_BLOCKS = ("Time river (core#108)", "Citation previews (core#119)", "Dark mode (core#113)")
+CSS_BLOCKS = ("Time river (core#108)", "Citation previews (core#119)", "Look and feel (core#118)", "Dark mode (core#113)")
 # Client scripts a site ships byte-identical to the template.
 CLIENT_SCRIPTS = ("src/river.js", "src/cite.js")
 CSS_HEADER = "/* ---------------------------------------------------------------------------"

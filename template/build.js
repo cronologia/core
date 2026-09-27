@@ -2804,6 +2804,9 @@ function main() {
   fs.copyFileSync(path.join(SRC_DIR, 'styles.css'), path.join(OUT_DIR, 'styles.css'));
   // The river's filters and reading window; copied only for sites that use it.
   if (data.meta && data.meta.layout === 'river') fs.copyFileSync(path.join(SRC_DIR, 'river.js'), path.join(OUT_DIR, 'river.js'));
+  // The self-hosted text face (core#118), referenced from styles.css.
+  fs.mkdirSync(path.join(OUT_DIR, 'fonts'), { recursive: true });
+  for (const f of fs.readdirSync(path.join(SRC_DIR, 'fonts'))) fs.copyFileSync(path.join(SRC_DIR, 'fonts', f), path.join(OUT_DIR, 'fonts', f));
   // Citation previews (core#119): shipped whenever there are references to cite.
   if (Array.isArray(data.references) && data.references.length) fs.copyFileSync(path.join(SRC_DIR, 'cite.js'), path.join(OUT_DIR, 'cite.js'));
   // Catalogue images: only the files the data references, so docs/ carries
