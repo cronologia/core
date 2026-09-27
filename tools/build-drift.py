@@ -238,19 +238,7 @@ def check_site(read, tpl):
             if name not in tpl["tests"]:
                 findings.append(("UNUSED-DECLARATION", f"test/{name} is declared but the template ships no such test"))
 
-    if tpl.get("skills") is not None:
-        raw = read(SKILLS_MANIFEST)
-        try:
-            recorded = {e.get("name"): e.get("sha256") for e in json.loads(raw).get("skills", [])} if raw else None
-        except (json.JSONDecodeError, AttributeError):
-            recorded = None
-        if recorded is None:
-            findings.append(("MISSING", f"{SKILLS_MANIFEST} (vendored skills)"))
-        else:
-            stale = sorted(n for n in set(tpl["skills"]) | set(recorded) if tpl["skills"].get(n) != recorded.get(n))
-            if stale:
-                findings.append(("SKILLS", f"vendored skills behind core: {', '.join(stale)}; "
-                                           f"run python3 core/tools/sync-skills.py <site> and commit"))
+    findings.extend(check_skills(read, tpl))
 
     css = read("src/styles.css") or ""
     for marker in CSS_BLOCKS:
@@ -279,9 +267,29 @@ def canonical_skills():
 STYLE_ONLY_BLOCKS = ("Dark mode (core#113)",)
 
 
+def check_skills(read, tpl):
+    """The vendored-skills manifest against core's skills/ (core#117)."""
+    if tpl.get("skills") is None:
+        return []
+    raw = read(SKILLS_MANIFEST)
+    try:
+        recorded = {e.get("name"): e.get("sha256") for e in json.loads(raw).get("skills", [])} if raw else None
+    except (json.JSONDecodeError, AttributeError):
+        recorded = None
+    if recorded is None:
+        return [("MISSING", f"{SKILLS_MANIFEST} (vendored skills)")]
+    stale = sorted(n for n in set(tpl["skills"]) | set(recorded) if tpl["skills"].get(n) != recorded.get(n))
+    if stale:
+        return [("SKILLS", f"vendored skills behind core: {', '.join(stale)}; "
+                           f"run python3 core/tools/sync-skills.py <site> and commit")]
+    return []
+
+
 def check_style_only(read, tpl):
+    """fsp and glossary: their own generators, but the family's stylesheet and
+    skills contracts still apply (core#122; the #114 skill edit left both red)."""
     css = read("src/styles.css") or ""
-    findings = []
+    findings = check_skills(read, tpl)
     for marker in STYLE_ONLY_BLOCKS:
         at = css.find(marker)
         if at == -1:
