@@ -685,6 +685,8 @@ svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cur
   .rv-card { animation: none; }
 }
 
+.rv-ribbon .rv-hl { font-size: 9.5px; font-weight: 700; fill: var(--ink); }
+.rv-ribbon .rv-hl-tick { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2; opacity: .55; }
 .rv-claims { margin: .55rem 0 0; font-size: .86rem; }
 .rv-claims-h { margin: 0 0 .3rem; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .rv-claims-h span { font-weight: 600; letter-spacing: 0; text-transform: none; margin-left: .3rem; }
@@ -752,6 +754,22 @@ sup.cite a[aria-expanded] { text-decoration: underline; }
   font-family: var(--font-text); font-variant-numeric: oldstyle-nums proportional-nums;
 }
 .rv-text { font-size: 1.04rem; line-height: 1.55; }
+
+/* ---------------------------------------------------------------------------
+   Print (core#3): the page on paper. On screen a reference is a link; on paper
+   it is only useful with its address, and with the archived copy's address
+   when the live one may be gone. Headings never end a page.
+   --------------------------------------------------------------------------- */
+@page { margin: 16mm 14mm; }
+@media print {
+  ol.references a[href^="http"]:not(.archive-link)::after,
+  ol.references a.archive-link::after {
+    content: " <" attr(href) ">"; font-size: .72rem; font-weight: 400; color: #444; word-break: break-all;
+  }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+  .notice, ol.references li, .rv-claims { break-inside: avoid; page-break-inside: avoid; }
+  .rv-empty, .rv-status { display: none; }
+}
 
 /* ---------------------------------------------------------------------------
    Dark mode (core#113): follows the reader's system setting; the light page

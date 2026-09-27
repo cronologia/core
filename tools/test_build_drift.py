@@ -24,6 +24,7 @@ function b() {
 TPL_CSS = (f"body {{}}\n{H}\n   Time river (core#108): x\n   --- */\n.rv {{}}\n\n"
            f"{H}\n   Citation previews (core#119): c\n   --- */\n.cp {{}}\n\n"
            f"{H}\n   Look and feel (core#118): l\n   --- */\n.lf {{}}\n\n"
+           f"{H}\n   Print (core#3): p\n   --- */\n.pr {{}}\n\n"
            f"{H}\n   Dark mode (core#113): y\n   --- */\n.dk {{}}\n")
 
 
