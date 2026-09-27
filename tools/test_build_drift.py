@@ -101,6 +101,50 @@ class BuildDrift(unittest.TestCase):
         self.assertIn("adopt-template", skills)
         self.assertTrue(all(len(h) == 64 for h in skills.values()))
 
+    TPL_TEST = "const x = 1;\n// >>> ADOPT: dataset\nconst DATASET = 'chronology.example.json';\n// <<< ADOPT\ntest('a', () => {});\n"
+
+    def shared_site(self, site_test, decl_tests=None):
+        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/styles.css": TPL_CSS}
+        if site_test is not None:
+            files["test/a.test.js"] = site_test
+        if decl_tests is not None:
+            files[bd.DECL] = json.dumps({"tests": decl_tests})
+        t = dict(tpl(), tests={"a.test.js": bd.mask_adopt(self.TPL_TEST)})
+        return sorted(k for k, _ in bd.check_site(files.get, t))
+
+    def test_shared_test_identical_outside_adopt_is_in_step(self):
+        site_copy = self.TPL_TEST.replace("chronology.example.json", "chronology.json")
+        self.assertEqual(self.shared_site(site_copy), [])
+
+    def test_shared_test_changed_outside_adopt_is_drift(self):
+        self.assertEqual(self.shared_site(self.TPL_TEST.replace("const x = 1", "const x = 2")), ["DRIFT"])
+
+    def test_missing_shared_test(self):
+        self.assertEqual(self.shared_site(None), ["MISSING"])
+
+    def test_declared_shared_test(self):
+        base = bd.fhash(bd.mask_adopt(self.TPL_TEST))
+        changed = self.TPL_TEST.replace("const x = 1", "const x = 2")
+        self.assertEqual(self.shared_site(changed, {"a.test.js": {"reason": "r", "base": base}}), [])
+        self.assertEqual(self.shared_site(changed, {"a.test.js": {"reason": "r", "base": "000000000000"}}), ["STALE"])
+        self.assertEqual(self.shared_site(self.TPL_TEST, {"a.test.js": {"reason": "r", "base": base}}), ["UNUSED-DECLARATION"])
+
+    def test_adopt_tests_carries_site_regions_by_label(self):
+        spec2 = importlib.util.spec_from_file_location("adopt_tests", os.path.join(HERE, "adopt-tests.py"))
+        at = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(at)
+        tpl_text = ("new();\n// >>> ADOPT: dataset  (the file)\nconst D = 'example';\n// <<< ADOPT\n"
+                    "// >>> ADOPT: allow\nconst A = [];\n// <<< ADOPT\n")
+        site_text = ("old();\n// >>> ADOPT: dataset  (the file)\nconst D = 'chronology';\n// <<< ADOPT\n"
+                     "// >>> ADOPT: allow\nconst A = ['x'];\n// <<< ADOPT\n")
+        merged = at.merge(tpl_text, site_text)
+        self.assertIn("new();", merged)
+        self.assertNotIn("old();", merged)
+        self.assertIn("const D = 'chronology';", merged)
+        self.assertIn("const A = ['x'];", merged)
+        self.assertEqual(at.merge(tpl_text, None), tpl_text)
+        self.assertEqual(bd.mask_adopt(merged), bd.mask_adopt(tpl_text))
+
 
 if __name__ == "__main__":
     unittest.main()
