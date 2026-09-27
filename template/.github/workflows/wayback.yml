@@ -1,6 +1,7 @@
 name: Wayback preservation
 
-# Weekly Internet Archive preservation of every reference URL in
+# Internet Archive preservation (weekly, and on every dataset change) of every
+# reference URL in
 # data/chronology.json. Runs scripts/archive-refs.js (availability lookup +
 # polite Save Page Now for unarchived URLs), rebuilds the site so the
 # "archived" fallback links render, and commits data/archives.json + docs/
@@ -15,6 +16,17 @@ name: Wayback preservation
 on:
   schedule:
     - cron: '17 6 * * 1' # weekly, Monday 06:17 UTC (off the top of the hour)
+  # And whenever the dataset changes on main (core#96): a wave that adds
+  # references used to publish them with no archived fallback until the next
+  # Monday. The job only looks up and saves what archives.json lacks, so a push
+  # that adds nothing costs a few lookups. Its own commit (archives.json and
+  # docs/) is excluded here, and a GITHUB_TOKEN push starts no workflow anyway.
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - '!data/archives.json'
+      - '!data/i18n/**'
   workflow_dispatch:
 
 permissions:
