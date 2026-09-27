@@ -84,12 +84,30 @@ test('translation cache is applied where present', () => {
   const keys = Object.keys(es);
   if (keys.length === 0) return;
   const html = renderPage(localizeData(data, es, 'es'), {}, { lang: 'es', base: siteBase(data.meta), route: '' });
-  const hit = keys.find((k) => JSON.stringify(data).includes(k));
+  const src = JSON.stringify(data);
+  // Two conditions, and the test was wrong about both once (upstreamed from
+  // olavo, core#121).
+  //
+  // The translation must DIFFER from its key. Timeline dates are translatable
+  // and most of them are bare years, so "1886" is a dictionary entry whose
+  // Spanish is "1886" — finding that in the page proves nothing at all about
+  // whether the cache was applied.
+  //
+  // And the key must render on THIS page. The check renders the index; a
+  // philosopher-timeline string lives on a sub-page and will never appear here.
+  //
+  // What actually broke it: JavaScript enumerates integer-like object keys
+  // FIRST, in ascending numeric order, ahead of every string key. Adding bare
+  // years to the dictionary silently moved "391" to the front of Object.keys(),
+  // so `keys.find(...)` — which used to land on real prose — started returning
+  // an identity mapping from a page this test does not render.
+  const hit = keys.find((k) => es[k] !== k && src.includes(k) && html.includes(esc(es[k])));
+  const candidates = keys.filter((k) => es[k] !== k && src.includes(k));
+  assert.ok(candidates.length > 0, 'no dictionary entry differs from its key — the cache is doing nothing');
   // Compare against the ESCAPED translation: renderPage HTML-escapes text, so a
   // translation containing an apostrophe or ampersand ("Iglesia's", "A & B")
-  // never appears verbatim in the markup. Comparing the raw value made this test
-  // fail for any project whose first matching string had such a character.
-  if (hit) assert.ok(html.includes(esc(es[hit])), 'expected a Spanish translation to appear in the es page');
+  // never appears verbatim in the markup.
+  assert.ok(hit, 'expected at least one real Spanish translation to appear in the es index page');
 });
 
 test('sitemap lists every route × locale with alternates; robots points to it', () => {
