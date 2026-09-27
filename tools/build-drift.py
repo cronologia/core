@@ -40,6 +40,13 @@ What it checks, per site
 4. The self-contained stylesheet blocks (time river, dark mode) must be
    identical to the template's. A site may add rules of its own anywhere
    else in its stylesheet.
+6. The shared tests (core#121): every `test/*.test.js` the template ships
+   must exist in the site and match it OUTSIDE its `// >>> ADOPT` ...
+   `// <<< ADOPT` regions (those hold the site's dataset name and allowlists
+   by design). A site that must change a shared test declares it under
+   `"tests"` in `.template-drift.json`, with a reason and the template test's
+   hash as `base` - the same contract, and the same STALE signal, as a
+   customised function. A test a site needs in addition goes in a new file.
 5. The vendored skills: the site's `.claude/skills/_synced.json` must record
    the same skills, with the same hashes, as core's `skills/` (core#117). A
    core change to a skill otherwise turns every site's CI red on its next,
@@ -55,6 +62,7 @@ Usage
     python3 tools/build-drift.py --repos cristo,rcc
     python3 tools/build-drift.py --root ..         # sibling checkouts instead of fetching
     python3 tools/build-drift.py --hash renderPage # print a template function's hash
+    python3 tools/build-drift.py --hash data-invariants.test.js   # ... or a shared test's
 Exit status 1 when any site has a finding. Stdlib only, no token.
 """
 
@@ -78,6 +86,8 @@ SKILLS_MANIFEST = ".claude/skills/_synced.json"
 # runs to the next header comment of the same shape or to the end of file.
 CSS_BLOCKS = ("Time river (core#108)", "Dark mode (core#113)")
 CSS_HEADER = "/* ---------------------------------------------------------------------------"
+
+ADOPT_RE = re.compile(r"(// >>> ADOPT[^\n]*\n).*?(// <<< ADOPT)", re.S)
 
 FUNC_RE = re.compile(r"^(?:async )?function ([A-Za-z0-9_$]+)\(")
 
@@ -109,6 +119,11 @@ def functions(src):
         out[m.group(1)] = "\n".join(lines[i:j + 1])
         i = j + 1
     return out
+
+
+def mask_adopt(text):
+    """A shared test with its ADOPT regions' contents blanked."""
+    return ADOPT_RE.sub(lambda m: m.group(1) + m.group(2), text)
 
 
 def fhash(text):
@@ -197,6 +212,27 @@ def check_site(read, tpl):
     elif river != tpl["river"]:
         findings.append(("DRIFT", "src/river.js differs from the template"))
 
+    if tpl.get("tests") is not None:
+        declared_tests = {}
+        if decl_raw:
+            declared_tests = json.loads(decl_raw).get("tests", {})
+        for name, text in sorted(tpl["tests"].items()):
+            site_text = read(f"test/{name}")
+            d = declared_tests.get(name)
+            if d is None:
+                if site_text is None:
+                    findings.append(("MISSING", f"test/{name} - shared test not adopted"))
+                elif mask_adopt(site_text) != text:
+                    findings.append(("DRIFT", f"test/{name} differs from the template outside its ADOPT regions and is not declared in {DECL}"))
+            elif site_text is not None and mask_adopt(site_text) == text:
+                findings.append(("UNUSED-DECLARATION", f"test/{name} is declared customized but matches the template; remove it from {DECL}"))
+            elif d.get("base") != fhash(text):
+                findings.append(("STALE", f"test/{name}: the template's version changed since this customisation was reconciled "
+                                          f"(declared base {d.get('base')}, template now {fhash(text)}); port the change, then bump base"))
+        for name in declared_tests:
+            if name not in tpl["tests"]:
+                findings.append(("UNUSED-DECLARATION", f"test/{name} is declared but the template ships no such test"))
+
     if tpl.get("skills") is not None:
         raw = read(SKILLS_MANIFEST)
         try:
@@ -241,7 +277,14 @@ def load_template():
         river = fh.read()
     with open(os.path.join(TEMPLATE, "src", "styles.css"), encoding="utf-8") as fh:
         css = fh.read()
+    tdir = os.path.join(TEMPLATE, "test")
+    tests = {}
+    for name in sorted(os.listdir(tdir)):
+        if name.endswith(".test.js"):
+            with open(os.path.join(tdir, name), encoding="utf-8") as fh:
+                tests[name] = mask_adopt(fh.read())
     return {
+        "tests": tests,
         "skills": canonical_skills(),
         "functions": functions(build),
         "keys": translatable_keys(build),
@@ -268,6 +311,9 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     tpl = load_template()
+    if args.hash and args.hash in tpl["tests"]:
+        print(fhash(tpl["tests"][args.hash]))
+        return 0
     if args.hash:
         if args.hash not in tpl["functions"]:
             print(f"template defines no function {args.hash}()", file=sys.stderr)
