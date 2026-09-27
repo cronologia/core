@@ -149,6 +149,13 @@ class BuildDrift(unittest.TestCase):
         self.assertEqual(at.merge(tpl_text, None), tpl_text)
         self.assertEqual(bd.mask_adopt(merged), bd.mask_adopt(tpl_text))
 
+    def test_style_only_site_checks_the_dark_block(self):
+        t = tpl()
+        dark = t["css"]["Dark mode (core#113)"]
+        self.assertEqual(bd.check_style_only({"src/styles.css": "body {}\n" + dark + "\n"}.get, t), [])
+        self.assertEqual([k for k, _ in bd.check_style_only({"src/styles.css": "body {}\n"}.get, t)], ["MISSING"])
+        self.assertEqual([k for k, _ in bd.check_style_only({"src/styles.css": dark.replace(".dk", ".xx")}.get, t)], ["DRIFT"])
+
 
 if __name__ == "__main__":
     unittest.main()

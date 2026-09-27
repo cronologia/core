@@ -15,7 +15,7 @@
  *             per element kind.
  *
  * Usage:
- *   node tools/page-check.js <docs-dir> [--only width|contrast]
+ *   node tools/page-check.js <docs-dir> [--only width|contrast] [--exclude <subdir>]...
  * Needs the `playwright` package and a Chromium it can launch; set
  * CHROMIUM_PATH to use a preinstalled browser. Dev/CI tooling only: no site
  * build depends on it, so the build stays zero-dependency.
@@ -119,7 +119,8 @@ function contrastProbe(dark) {
   for (const el of document.querySelectorAll('body *')) {
     if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
     const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || cs.display === 'none' || el.closest('.visually-hidden,[hidden],svg')) continue;
+    // aria-hidden marks decoration (WCAG 1.4.3 exempts it), e.g. an empty cell's dot.
+    if (cs.visibility === 'hidden' || cs.display === 'none' || el.closest('.visually-hidden,[hidden],svg,[aria-hidden="true"]')) continue;
     const fg = parse(cs.color);
     const bg = bgOf(el);
     if (!fg || !bg) continue;
@@ -140,16 +141,23 @@ async function main(argv) {
   const args = argv.slice(2);
   const onlyAt = args.indexOf('--only');
   const only = onlyAt >= 0 ? args.splice(onlyAt, 2)[1] : null;
+  // --exclude <dir>: skip pages under a docs/ subdirectory that is not the
+  // site's own design (fsp's docs/archive holds preserved third-party pages).
+  const excludes = [];
+  for (let at; (at = args.indexOf('--exclude')) >= 0;) excludes.push(args.splice(at, 2)[1]);
   const dir = args[0];
   if (!dir || !fs.existsSync(dir)) {
-    console.error('usage: node tools/page-check.js <docs-dir> [--only width|contrast]');
+    console.error('usage: node tools/page-check.js <docs-dir> [--only width|contrast] [--exclude <subdir>]...');
     return 2;
   }
   const { chromium } = require('playwright');
   const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   // Redirect stubs (the language picker at docs/index.html) render nothing a
   // reader stays on.
-  const files = htmlFiles(path.resolve(dir)).filter((f) => !/location\.replace\(|http-equiv="refresh"/.test(fs.readFileSync(f, 'utf8')));
+  const root = path.resolve(dir);
+  const files = htmlFiles(root)
+    .filter((f) => !excludes.some((x) => path.relative(root, f).split(path.sep)[0] === x.replace(/\/$/, '')))
+    .filter((f) => !/location\.replace\(|http-equiv="refresh"/.test(fs.readFileSync(f, 'utf8')));
   let bad = 0;
   const report = (file, kind, lines) => {
     bad++;
