@@ -116,6 +116,24 @@ else {
     if (ev.date !== undefined && !isStr(ev.date)) err(`${at}.date must be a string`);
     if (typeof ev.dateVerified !== 'boolean') err(`${at}.dateVerified must be boolean`);
     checkSources(at, ev.sources, true);
+    // Disputed dates (core#120): attributed claims, each with its own sources.
+    // The event's own year must lie inside the claimed range, so placement is
+    // always one of the claims or between them - never a date nobody claims.
+    if (ev.dateClaims !== undefined) {
+      if (!isArr(ev.dateClaims) || ev.dateClaims.length < 2) err(`${at}.dateClaims must list at least two claims (one date is not a dispute)`);
+      else {
+        ev.dateClaims.forEach((c, j) => {
+          const ct = `${at}.dateClaims[${j}]`;
+          if (!Number.isInteger(c.year) || c.year === 0) err(`${ct}.year must be a non-zero integer (1 BCE is -1)`);
+          if (c.to !== undefined && (!Number.isInteger(c.to) || c.to === 0 || c.to < c.year)) err(`${ct}.to must be a non-zero integer, not before year`);
+          if (!isStr(c.by)) err(`${ct}.by missing: say who dates it this way (attribute, don't assert)`);
+          checkSources(ct, c.sources, true);
+        });
+        const lo = Math.min(...ev.dateClaims.map((c) => c.year));
+        const hi = Math.max(...ev.dateClaims.map((c) => (Number.isInteger(c.to) ? c.to : c.year)));
+        if (isNum(ev.year) && (ev.year < lo || ev.year > hi)) err(`${at}.year ${ev.year} lies outside its dateClaims (${lo}..${hi}); place the event on a claimed date`);
+      }
+    }
   });
 }
 

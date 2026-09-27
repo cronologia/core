@@ -685,6 +685,18 @@ svg.rv-ribbon { display: block; width: 100%; height: auto; max-height: 7rem; cur
   .rv-card { animation: none; }
 }
 
+.rv-claims { margin: .55rem 0 0; font-size: .86rem; }
+.rv-claims-h { margin: 0 0 .3rem; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.rv-claims-h span { font-weight: 600; letter-spacing: 0; text-transform: none; margin-left: .3rem; }
+.rv-span { position: relative; height: 12px; margin: 0 .4rem .35rem; border-bottom: 1px solid var(--line); max-width: 22rem; }
+.rv-span i, .rv-span b { position: absolute; bottom: -1px; }
+.rv-span .rv-ct { width: 2px; height: 9px; margin-left: -1px; background: var(--accent); }
+.rv-span .rv-cr { height: 5px; min-width: 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); border: 1px solid var(--accent); border-radius: 2px; }
+.rv-span b { width: 9px; height: 9px; margin-left: -4.5px; bottom: -5px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); }
+.rv-claims ul { margin: 0; padding-left: 1.1rem; }
+.rv-claims li { margin: .1rem 0; }
+.rv-cyr { font-weight: 700; font-variant-numeric: tabular-nums; }
+
 /* ---------------------------------------------------------------------------
    Citation previews (core#119): a click or tap on [n] shows the reference
    beside the claim (src/cite.js). Colours come from the page tokens, so the

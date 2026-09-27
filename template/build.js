@@ -70,6 +70,9 @@ const TRANSLATABLE_KEYS = new Set([
   // and `.indirect`) render under the tree as prose. Found untranslated in
   // rcc, fixed there, upstreamed here.
   'direct', 'indirect',
+  // `events[].dateClaims[].by` names who dates the event that way, and why
+  // (core#120). It renders as prose under the event.
+  'by',
   // `organizations[].founded` reads as a date and is written as a sentence
   // ("1817, Ghent (Belgium); in Brazil from the 19th–20th century"). It RENDERS
   // — the card prints "Fundada em <founded>" — so leaving it out put English
@@ -107,6 +110,8 @@ const UI = {
     rvFilterLabel: 'Filter the chronology', rvFirm: 'Firm dates only', rvFind: 'Find',
     rvReading: 'Reading', rvAll: (n) => `all ${n} events`, rvSome: (n, total) => `${n} of ${total} events shown`,
     rvEmpty: 'No events match. Clear the search or turn a storyline back on.',
+    // Disputed dates (core#120): the heading over an event's attributed date claims.
+    rvClaims: 'Competing dates',
     rvRibbonLabel: (n, lanes) => `Overview of all ${n} events${lanes ? ` in ${lanes} storylines` : ''}; long gaps in the record are drawn as breaks`,
     // The numbers chart's own labels (upstreamed from rcc, which localized them).
     ncAxisNote: (max, unit) => `axis: 0–${max} ${unit}`,
@@ -212,6 +217,7 @@ const UI = {
     rvFilterLabel: 'Filtrar la cronología', rvFirm: 'Solo fechas firmes', rvFind: 'Buscar',
     rvReading: 'Leyendo', rvAll: (n) => `los ${n} acontecimientos`, rvSome: (n, total) => `${n} de ${total} acontecimientos mostrados`,
     rvEmpty: 'Ningún acontecimiento coincide. Borre la búsqueda o vuelva a activar un relato.',
+    rvClaims: 'Fechas en disputa',
     rvRibbonLabel: (n, lanes) => `Vista general de los ${n} acontecimientos${lanes ? ` en ${lanes} relatos` : ''}; los grandes vacíos del registro se dibujan como cortes`,
     ncAxisNote: (max, unit) => `eje: 0–${max} ${unit}`,
     ncCaptionMeta: (src, unit) => ` — reportado por ${src}, en ${unit}`,
@@ -304,6 +310,7 @@ const UI = {
     rvFilterLabel: 'Filtrar a cronologia', rvFirm: 'Apenas datas firmes', rvFind: 'Buscar',
     rvReading: 'Lendo', rvAll: (n) => `todos os ${n} acontecimentos`, rvSome: (n, total) => `${n} de ${total} acontecimentos exibidos`,
     rvEmpty: 'Nenhum acontecimento corresponde. Limpe a busca ou reative uma narrativa.',
+    rvClaims: 'Datas em disputa',
     rvRibbonLabel: (n, lanes) => `Visão geral dos ${n} acontecimentos${lanes ? ` em ${lanes} narrativas` : ''}; as grandes lacunas do registro aparecem como cortes`,
     ncAxisNote: (max, unit) => `eixo: 0–${max} ${unit}`,
     ncCaptionMeta: (src, unit) => ` — reportado por ${src}, em ${unit}`,
@@ -2339,6 +2346,32 @@ function renderRiverRibbon(layout, t) {
         </svg>`;
 }
 
+/**
+ * Disputed dates (core#120). An event whose sources disagree on its date may
+ * carry `dateClaims`: two or more `{ year, to?, by, sources }`, each an
+ * attributed claim ("7-5 BC: Maas, from Herod's death"). The event keeps its
+ * own `year` for placement, and the validator holds it inside the claimed
+ * range, so the river never sits on a date nobody claims. Rendered as a small
+ * scale across the claimed years - a tick per year claimed, a bar per range,
+ * the event's own position marked - over the attributed list. Attribution,
+ * not a verdict: the list is in date order, and no claim is marked preferred.
+ */
+function renderDateClaims(ev, refNumById, t) {
+  const cl = Array.isArray(ev.dateClaims) ? ev.dateClaims.slice().sort((a, b) => a.year - b.year) : [];
+  if (cl.length < 2) return '';
+  const end = (c) => (Number.isFinite(c.to) ? c.to : c.year);
+  const lo = Math.min(...cl.map((c) => c.year));
+  const hi = Math.max(...cl.map(end));
+  const pct = (y) => (hi === lo ? 50 : ((y - lo) / (hi - lo)) * 100);
+  const range = (a, b) => (b !== a ? `${yearLabel(a, t)}–${yearLabel(b, t)}` : yearLabel(a, t));
+  const marks = cl.map((c) => (end(c) !== c.year
+    ? `<i class="rv-cr" style="left:${r1f(pct(c.year))}%;width:${r1f(pct(end(c)) - pct(c.year))}%"></i>`
+    : `<i class="rv-ct" style="left:${r1f(pct(c.year))}%"></i>`)).join('');
+  const items = cl.map((c) => `<li><span class="rv-cyr">${esc(range(c.year, end(c)))}</span> ${renderText(c.by)}${renderCites(c.sources, refNumById)}</li>`).join('');
+  return `\n            <div class="rv-claims"><p class="rv-claims-h">${esc(t.rvClaims)} <span>${esc(range(lo, hi))}</span></p>` +
+    `<div class="rv-span" aria-hidden="true">${marks}<b style="left:${r1f(pct(ev.year))}%"></b></div><ul>${items}</ul></div>`;
+}
+
 function renderRiverItem(it, layout, refNumById, t, anchorId) {
   const ev = it.ev;
   const unverified = ev.dateVerified === false;
@@ -2357,7 +2390,7 @@ function renderRiverItem(it, layout, refNumById, t, anchorId) {
           <div class="rv-year">${esc(yearLabel(ev.year, t))}${ev.date && ev.date !== String(ev.year) ? `<small>${esc(ev.date)}</small>` : ''}${flag}</div>
           <div class="rv-node" aria-hidden="true">${nodes}</div>
           <div class="rv-card">
-            ${kick ? `<p class="rv-kick">${kick}</p>\n            ` : ''}<h3>${esc(ev.title)}</h3>${text}${note}
+            ${kick ? `<p class="rv-kick">${kick}</p>\n            ` : ''}<h3>${esc(ev.title)}</h3>${text}${note}${renderDateClaims(ev, refNumById, t)}
           </div>
         </li>`;
 }
@@ -2807,7 +2840,7 @@ module.exports = {
   layoutSwimlanes, renderSwimlanes,
   PLACE_COMPOUND_SEP, placeIndex, resolvePlaceString, layoutPlacesMap, renderPlacesMap,
   layoutCatalogue, renderCatalogue, osmLink, CATALOGUE_LICENSES,
-  layoutRiver, renderRiver, RIVER_LAYOUTS,
+  layoutRiver, renderRiver, RIVER_LAYOUTS, renderDateClaims,
   loadPlaces, loadWorld,
   renderPage,
   LOCALES, ROUTES, OG_LOCALE, UI, loadDict, loadDictMeta, disclaimerFor, renderApprovalLadder, ladderRungs, STATUS_GLYPH,
