@@ -76,6 +76,31 @@ class BuildDrift(unittest.TestCase):
         css = TPL_CSS.replace(f"\n{H}\n   Dark mode", f"/* site rules */\n.mine {{}}\n\n{H}\n   Dark mode")
         self.assertEqual(self.kinds(site(css=css)), [])
 
+    def skills_site(self, manifest):
+        files = {"build.js": TPL_BUILD, "src/river.js": "RIVER", "src/styles.css": TPL_CSS}
+        if manifest is not None:
+            files[bd.SKILLS_MANIFEST] = json.dumps({"skills": [{"name": n, "sha256": h} for n, h in manifest.items()]})
+        t = dict(tpl(), skills={"a": "h1", "b": "h2"})
+        return sorted(k for k, _ in bd.check_site(files.get, t))
+
+    def test_skills_in_step(self):
+        self.assertEqual(self.skills_site({"a": "h1", "b": "h2"}), [])
+
+    def test_skill_changed_upstream_is_reported(self):
+        self.assertEqual(self.skills_site({"a": "old", "b": "h2"}), ["SKILLS"])
+
+    def test_skill_added_or_removed_upstream_is_reported(self):
+        self.assertEqual(self.skills_site({"a": "h1"}), ["SKILLS"])
+        self.assertEqual(self.skills_site({"a": "h1", "b": "h2", "gone": "h3"}), ["SKILLS"])
+
+    def test_missing_manifest_is_reported(self):
+        self.assertEqual(self.skills_site(None), ["MISSING"])
+
+    def test_canonical_skills_hash_like_sync_skills(self):
+        skills = bd.canonical_skills()
+        self.assertIn("adopt-template", skills)
+        self.assertTrue(all(len(h) == 64 for h in skills.values()))
+
 
 if __name__ == "__main__":
     unittest.main()
