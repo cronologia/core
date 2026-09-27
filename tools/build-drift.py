@@ -36,8 +36,10 @@ What it checks, per site
 2. TRANSLATABLE_KEYS: the template's keys must all be present (a site may add
    its own). A key the template translates and the site does not is English
    on the site's localized pages.
-3. src/river.js must be byte-identical to the template's.
-4. The self-contained stylesheet blocks (time river, dark mode) must be
+3. The client scripts (src/river.js, src/cite.js) must be byte-identical to
+   the template's.
+4. The self-contained stylesheet blocks (time river, citation previews, dark
+   mode) must be
    identical to the template's. A site may add rules of its own anywhere
    else in its stylesheet.
 6. The shared tests (core#121): every `test/*.test.js` the template ships
@@ -84,7 +86,9 @@ SKILLS_MANIFEST = ".claude/skills/_synced.json"
 
 # The self-contained stylesheet blocks: each starts at its header comment and
 # runs to the next header comment of the same shape or to the end of file.
-CSS_BLOCKS = ("Time river (core#108)", "Dark mode (core#113)")
+CSS_BLOCKS = ("Time river (core#108)", "Citation previews (core#119)", "Dark mode (core#113)")
+# Client scripts a site ships byte-identical to the template.
+CLIENT_SCRIPTS = ("src/river.js", "src/cite.js")
 CSS_HEADER = "/* ---------------------------------------------------------------------------"
 
 ADOPT_RE = re.compile(r"(// >>> ADOPT[^\n]*\n).*?(// <<< ADOPT)", re.S)
@@ -206,11 +210,12 @@ def check_site(read, tpl):
         if missing:
             findings.append(("DRIFT", f"TRANSLATABLE_KEYS lacks template keys: {', '.join(missing)}"))
 
-    river = read("src/river.js")
-    if river is None:
-        findings.append(("MISSING", "src/river.js"))
-    elif river != tpl["river"]:
-        findings.append(("DRIFT", "src/river.js differs from the template"))
+    for rel in CLIENT_SCRIPTS:
+        text = read(rel)
+        if text is None:
+            findings.append(("MISSING", rel))
+        elif text != tpl["scripts"][rel]:
+            findings.append(("DRIFT", f"{rel} differs from the template"))
 
     if tpl.get("tests") is not None:
         declared_tests = {}
@@ -273,8 +278,10 @@ def canonical_skills():
 def load_template():
     with open(os.path.join(TEMPLATE, "build.js"), encoding="utf-8") as fh:
         build = fh.read()
-    with open(os.path.join(TEMPLATE, "src", "river.js"), encoding="utf-8") as fh:
-        river = fh.read()
+    scripts = {}
+    for rel in CLIENT_SCRIPTS:
+        with open(os.path.join(TEMPLATE, rel), encoding="utf-8") as fh:
+            scripts[rel] = fh.read()
     with open(os.path.join(TEMPLATE, "src", "styles.css"), encoding="utf-8") as fh:
         css = fh.read()
     tdir = os.path.join(TEMPLATE, "test")
@@ -288,7 +295,7 @@ def load_template():
         "skills": canonical_skills(),
         "functions": functions(build),
         "keys": translatable_keys(build),
-        "river": river,
+        "scripts": scripts,
         "css": {m: css_block(css, m) for m in CSS_BLOCKS},
     }
 

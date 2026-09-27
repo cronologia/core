@@ -165,6 +165,12 @@ const UI = {
     //     source's stance is not its medium; `publisherNote` again.
     // `testimony` and `analysis` ARE kinds and were missing; the sourcing rules
     // name testimony explicitly as a class with its own corroboration bar.
+    // Citation previews (core#119): the popover's heading ('Reference 3') and its
+    // link back to the full list.
+    citeLabel: 'Reference', citeAll: 'All references',
+    // The archive-copy link in the reference list; was hardcoded English on
+    // every localized page.
+    archivedLabel: 'archived',
     refTypes: {
       news: 'news', academic: 'academic', archive: 'archive', official: 'official',
       encyclopedia: 'encyclopedia', web: 'web', corpus: 'corpus', database: 'database',
@@ -250,6 +256,10 @@ const UI = {
     footer: 'Sitio estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Datos abiertos — correcciones bienvenidas mediante pull request.\n      Parte de la familia de proyectos Cronologia.',
     refsIntro: (n, a) => `${n} fuentes${a ? ` · ${a} con copia en Internet Archive` : ''}. Las fuentes abarcan el\n      espectro de perspectivas de forma deliberada; las afirmaciones controvertidas se atribuyen a sus autores.`,
     orgFounded: 'Fundada en',
+    // Citation previews (core#119): the popover's heading ('Referencia 3') and its
+    // link back to the full list.
+    citeLabel: 'Referencia', citeAll: 'Todas las referencias',
+    archivedLabel: 'archivado',
     refTypes: {
       news: 'prensa', academic: 'académico', archive: 'archivo', official: 'oficial',
       encyclopedia: 'enciclopedia', web: 'web', corpus: 'corpus', database: 'base de datos',
@@ -338,6 +348,10 @@ const UI = {
     footer: 'Site estático compilado a partir de <code>data/chronology.json</code> por <code>build.js</code>. Dados abertos — correções bem-vindas via pull request.\n      Parte da família de projetos Cronologia.',
     refsIntro: (n, a) => `${n} fontes${a ? ` · ${a} com cópia no Internet Archive` : ''}. As fontes abrangem o\n      espectro de perspectivas de forma deliberada; afirmações controversas são atribuídas aos seus autores.`,
     orgFounded: 'Fundada em',
+    // Citation previews (core#119): the popover's heading ('Referência 3') and its
+    // link back to the full list.
+    citeLabel: 'Referência', citeAll: 'Todas as referências',
+    archivedLabel: 'arquivado',
     refTypes: {
       news: 'imprensa', academic: 'acadêmico', archive: 'arquivo', official: 'oficial',
       encyclopedia: 'enciclopédia', web: 'web', corpus: 'corpus', database: 'base de dados',
@@ -2449,7 +2463,7 @@ function renderOrgCard(org, refNumById, ui) {
 function renderReference(r, n, archives, ui) {
   const snap = archives[r.url];
   const archived = snap && snap.archiveUrl
-    ? ` · <a class="archive-link" href="${esc(snap.archiveUrl)}" rel="noopener noreferrer" target="_blank">🗄 archived${snap.timestamp ? ` ${esc(formatArchiveTs(snap.timestamp))}` : ''}</a>`
+    ? ` · <a class="archive-link" href="${esc(snap.archiveUrl)}" rel="noopener noreferrer" target="_blank">🗄 ${esc((ui && ui.archivedLabel) || 'archived')}${snap.timestamp ? ` ${esc(formatArchiveTs(snap.timestamp))}` : ''}</a>`
     : '';
   const NOTE_INLINE_MAX = 110;
   const note = r.publisherNote || '';
@@ -2647,7 +2661,7 @@ function renderPage(data, archives, opts = {}) {
   <title>${esc(meta.title)}</title>
   <meta name="description" content="${esc(meta.description)}">
 ${ANALYTICS}
-  <link rel="stylesheet" href="../styles.css">${river ? '\n  <script src="../river.js" defer></script>' : ''}
+  <link rel="stylesheet" href="../styles.css">${river ? '\n  <script src="../river.js" defer></script>' : ''}${references.length ? `\n  <script src="../cite.js" defer data-label="${esc(ui.citeLabel)}" data-all="${esc(ui.citeAll)}"></script>` : ''}
 ${seoHead(meta, base, route, lang)}
 </head>
 <body>
@@ -2757,6 +2771,8 @@ function main() {
   fs.copyFileSync(path.join(SRC_DIR, 'styles.css'), path.join(OUT_DIR, 'styles.css'));
   // The river's filters and reading window; copied only for sites that use it.
   if (data.meta && data.meta.layout === 'river') fs.copyFileSync(path.join(SRC_DIR, 'river.js'), path.join(OUT_DIR, 'river.js'));
+  // Citation previews (core#119): shipped whenever there are references to cite.
+  if (Array.isArray(data.references) && data.references.length) fs.copyFileSync(path.join(SRC_DIR, 'cite.js'), path.join(OUT_DIR, 'cite.js'));
   // Catalogue images: only the files the data references, so docs/ carries
   // nothing the site does not show.
   const catImages = ((data.catalogue && data.catalogue.items) || [])
