@@ -768,6 +768,9 @@ sup.cite a[aria-expanded] { text-decoration: underline; }
      translucent steps keep the scale reading dark-to-bright. */
   .sw-i3 { background: color-mix(in srgb, var(--accent) 46%, transparent); }
   .sw-i4 { background: color-mix(in srgb, var(--accent) 64%, transparent); }
+  .rv-span .rv-ct { background: var(--accent-hi); }
+  .rv-span .rv-cr { border-color: var(--accent-hi); background: color-mix(in srgb, var(--accent-hi) 35%, transparent); }
+  .rv-span b { border-color: var(--accent-hi); }
   .rv-l1 { --c: #4fc4b5; } .rv-l2 { --c: #e3a24f; } .rv-l3 { --c: #f07aa8; }
   .rv-l4 { --c: #6fb4e8; } .rv-l5 { --c: #a8c25a; } .rv-l6 { --c: #d49a7e; } .rv-l7 { --c: #a3adbb; }
   .rv-win { fill: var(--accent-hi); stroke: var(--accent-hi); }
